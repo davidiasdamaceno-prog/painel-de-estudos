@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Estudos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: pure-black app shell, one rounded sidebar card, fluid cards with hairline borders, mono numerals, white-on-black primary actions. Dark by choice. */
+:root {
+  --bg: #000000;
+  --card: #0b0b0b;
+  --card-2: #121212;
+  --line: #1c1c1c;
+  --line-2: #2c2c2c;
+  --ink: #f1f1f1;
+  --ink-2: #b4b4b4;
+  --muted: #727272;
+  --good: #0ca30c;
+  --warn: #fab219;
+  --bad: #e66767;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.45 var(--sans); color-scheme: dark; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3, h4, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+:focus-visible { outline: 2px solid #8a8a8a; outline-offset: 2px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.ink2 { color: var(--ink-2); }
+[hidden] { display: none !important; }
+
+/* shell */
+.app { height: 100%; display: grid; grid-template-rows: 46px minmax(0, 1fr); }
+.titlebar { display: flex; align-items: center; gap: 12px; padding: 0 20px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: .01em; }
+.brand svg { display: block; }
+.brand b { font-weight: 700; }
+.crumb { color: var(--muted); font-size: 13px; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.chip-info { font: 12px var(--mono); color: var(--ink-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 4px 11px; }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid transparent; background: transparent; border-radius: 9px; color: var(--ink-2); }
+.icon-btn:hover { background: var(--card-2); border-color: var(--line); color: var(--ink); }
+#menuBtn { display: none; }
+.shell { display: grid; grid-template-columns: 256px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 20px; padding: 0 20px 18px 14px; min-height: 0; }
+.side { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 12px; overflow: auto; align-self: stretch; }
+.nav-home, .nav-g, .nav-i { display: flex; align-items: center; gap: 12px; width: 100%; background: transparent; border: 0; border-radius: 10px; color: var(--ink-2); text-align: left; }
+.nav-home { padding: 11px 14px; font-weight: 600; font-size: 14px; color: var(--ink); }
+.nav-home[aria-current="page"], .nav-i[aria-current="page"] { background: #1a1a1a; color: var(--ink); }
+.nav-g { margin-top: 12px; padding: 10px 14px 10px 14px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-2); justify-content: space-between; }
+.nav-g:hover, .nav-i:hover, .nav-home:hover { background: #141414; }
+.nav-g svg { transition: transform .15s; }
+.nav-g[aria-expanded="true"] svg { transform: rotate(90deg); }
+.nav-i { padding: 10px 14px; font-size: 13px; }
+.nav-i svg, .nav-home svg { flex: none; opacity: .8; }
+.main { overflow: auto; min-width: 0; padding: 2px 2px 20px 0; }
+.view { display: grid; gap: 16px; align-content: start; }
+.view-head { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; padding: 2px 2px 0; }
+.view-head h1 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.view-head p { color: var(--muted); margin-top: 3px; max-width: 62ch; }
+.view-head .grow { flex: 1; }
+
+/* cards */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; min-width: 0; }
+.card.tight { padding: 16px 18px; }
+.lbl { font-size: 11px; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-2); }
+.sub { font-size: 12px; color: var(--muted); }
+.big { font: 600 34px/1.1 var(--mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.big small { font-size: 26px; font-weight: 500; margin-left: 6px; color: var(--ink-2); }
+.g-top { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; }
+.g-bot { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.g-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.hero-side { text-align: right; }
+.hero-side .v { font: 600 15px var(--mono); margin-top: 4px; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 16px 0 6px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { border: 1px solid var(--line-2); border-radius: 999px; padding: 6px 14px; background: transparent; color: var(--ink-2); font-size: 12px; line-height: 1.2; }
+.pill:hover { border-color: #555; color: var(--ink); }
+.pill[aria-pressed="true"] { background: #f1f1f1; border-color: #f1f1f1; color: #000; font-weight: 500; }
+.pill .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
+.pill .n { font-family: var(--mono); opacity: .65; margin-left: 6px; font-size: 11px; }
+
+/* buttons & forms */
+.btn { border: 1px solid var(--line-2); background: transparent; color: var(--ink); border-radius: 10px; padding: 9px 16px; font-size: 12.5px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn:hover { background: var(--card-2); border-color: #444; }
+.btn.primary { background: #f5f5f5; color: #000; border-color: #f5f5f5; letter-spacing: .02em; text-transform: uppercase; font-size: 12px; font-weight: 600; }
+.btn.primary:hover { background: #fff; }
+.btn.primary.block { width: 100%; padding: 14px; }
+.btn.sm { padding: 6px 11px; font-size: 12px; border-radius: 8px; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.link { background: none; border: 0; padding: 0; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.link:hover { color: var(--ink); }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 11px; text-transform: uppercase; letter-spacing: .02em; color: var(--ink-2); }
+input[type=text], input[type=number], input[type=date], select, textarea { width: 100%; background: #0f0f0f; border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 12px; min-height: 38px; }
+textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
+input:focus, select:focus, textarea:focus { border-color: #8a8a8a; outline: none; }
+select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, #888 50%), linear-gradient(135deg, #888 50%, transparent 50%); background-position: calc(100% - 17px) 16px, calc(100% - 12px) 16px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.row > .field { flex: 1 1 150px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+
+/* tables */
+.scroll-x { overflow-x: auto; }
+table.tbl { width: 100%; border-collapse: collapse; min-width: 640px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; color: var(--ink-2); padding: 0 10px 12px; }
+.tbl td { padding: 11px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+.tbl tr.click { cursor: pointer; }
+.tbl tr.click:hover td { background: #101010; }
+.tbl td.num, .tbl th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tbl .ico { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--card-2); display: grid; place-items: center; color: var(--ink-2); flex: none; }
+.cell-name { display: flex; align-items: center; gap: 14px; }
+.cell-name .t { font-size: 13.5px; }
+.cell-name .s { font-size: 11px; color: var(--muted); }
+.delta { font-family: var(--mono); font-size: 12px; display: inline-flex; align-items: center; gap: 5px; }
+.delta.up svg { color: var(--good); } .delta.down svg { color: var(--bad); }
+.tag { display: inline-block; border: 1px solid var(--line-2); border-radius: 6px; padding: 1px 7px; font-size: 11px; color: var(--ink-2); }
+.tag.solid { background: #1b1b1b; }
+.go { color: var(--muted); }
+
+/* charts */
+.chart { position: relative; width: 100%; min-height: 120px; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { font: 10px var(--mono); fill: var(--muted); }
+.chart .lblv { fill: var(--ink); font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; color: var(--ink-2); font-size: 12px; }
+.legend i { display: inline-block; width: 14px; height: 2px; border-radius: 2px; margin-right: 7px; vertical-align: 3px; position: relative; }
+.legend i::after { content: ""; position: absolute; left: 4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: inherit; box-shadow: 0 0 0 2px var(--card); }
+.tip { position: absolute; pointer-events: none; z-index: 5; background: #151515; border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; font: 12px var(--mono); white-space: nowrap; box-shadow: 0 6px 24px rgba(0,0,0,.6); }
+.tip .th { color: var(--ink-2); margin-bottom: 4px; font-family: var(--sans); font-size: 11px; }
+.tip .tr { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tip .tr b { font-weight: 500; }
+.tip .sw { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.empty { color: var(--muted); padding: 34px 8px; text-align: center; border: 1px dashed var(--line-2); border-radius: 12px; }
+.empty b { color: var(--ink-2); font-weight: 500; display: block; margin-bottom: 4px; }
+.bars { display: grid; gap: 12px; }
+.bar-row { display: grid; grid-template-columns: minmax(90px, 150px) 1fr 64px; align-items: center; gap: 12px; }
+.bar-row .n { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-row .tr { height: 10px; background: #151515; border-radius: 4px; position: relative; overflow: visible; }
+.bar-row .fl { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; min-width: 2px; }
+.bar-row .mk { position: absolute; top: -3px; bottom: -3px; width: 1px; background: #888; }
+.bar-row .v { font: 12px var(--mono); text-align: right; color: var(--ink); white-space: nowrap; }
+.bars.wide .bar-row { grid-template-columns: minmax(90px, 150px) 1fr 104px; }
+.heat { border-collapse: separate; border-spacing: 3px; min-width: 100%; }
+.heat th { font: 10px var(--mono); color: var(--muted); font-weight: 400; padding: 2px 4px; white-space: nowrap; }
+.heat th.rh { text-align: left; font-family: var(--sans); font-size: 12px; color: var(--ink-2); padding-right: 12px; }
+.heat td { text-align: center; font: 11px var(--mono); padding: 8px 6px; border-radius: 6px; min-width: 44px; }
+
+/* health list */
+.checks { display: grid; }
+.check { display: grid; grid-template-columns: 22px 1fr; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); }
+.check:first-child { border-top: 0; padding-top: 4px; }
+.chk { width: 20px; height: 20px; border: 1px solid #555; border-radius: 4px; display: grid; place-items: center; margin-top: 1px; }
+.chk.on { border-color: var(--good); color: var(--good); }
+.chk.off { border-color: var(--warn); color: var(--warn); }
+.check .t { font-size: 13.5px; }
+.check .s { font-size: 12px; color: var(--muted); }
+.events { display: grid; margin-top: 14px; }
+.ev { display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: center; }
+.ev:first-child { border-top: 0; }
+.ev .ic { width: 30px; height: 30px; border: 1px solid var(--line-2); border-radius: 8px; display: grid; place-items: center; color: var(--ink-2); }
+.ev .t { font-size: 13px; }
+.ev .s { font-size: 11.5px; color: var(--muted); }
+.ev .d { font: 11.5px var(--mono); color: var(--muted); }
+.h-card { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.kv { display: grid; gap: 11px; margin: 18px 0; }
+.kv > div { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); }
+.kv b { font: 500 13px var(--mono); color: var(--ink); text-align: right; }
+.mini { border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; margin: 14px 0 18px; }
+.mini > div { display: flex; justify-content: space-between; gap: 12px; }
+.mini > div span:first-child { color: var(--muted); font-size: 12px; }
+.mini > div span:last-child { text-align: right; font-size: 13px; }
+.ring-wrap { display: grid; place-items: center; padding: 10px 0 0; }
+.banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border: 1px solid #3a3320; background: #15120a; color: #e8d9a8; border-radius: 12px; padding: 11px 16px; }
+.banner.err { border-color: #4a2424; background: #170c0c; color: #f0b9b9; }
+.banner .btn { margin-left: auto; }
+
+/* modal & toasts */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.74); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.modal { width: min(640px, 100%); max-height: 94%; overflow: auto; background: #0e0e0e; border: 1px solid var(--line-2); border-radius: 16px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,.7); }
+.modal.wide { width: min(860px, 100%); }
+.modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.modal .lead { color: var(--muted); margin-bottom: 16px; }
+.modal .foot { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+.modal .form { display: grid; gap: 14px; }
+.mrow { display: grid; grid-template-columns: minmax(110px, 1fr) 84px 20px 84px; gap: 8px; align-items: center; }
+.mrow label { color: var(--ink-2); }
+.mrow span { text-align: center; color: var(--muted); }
+.mgrid { display: grid; gap: 8px; max-height: 300px; overflow: auto; padding-right: 4px; }
+.total-line { font: 500 13px var(--mono); color: var(--ink-2); }
+.toasts { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: grid; gap: 8px; z-index: 80; width: min(460px, calc(100% - 32px)); }
+.toast { background: #181818; border: 1px solid var(--line-2); border-radius: 12px; padding: 11px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+.toast.err { border-color: #5a2a2a; }
+.log { font: 12px/1.7 var(--mono); color: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; max-height: 220px; overflow: auto; background: #080808; }
+.log .ok { color: var(--good); }
+.progress { height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; margin: 12px 0; }
+.progress > i { display: block; height: 100%; background: #f1f1f1; width: 0; transition: width .2s; }
+
+/* questions */
+.qs { display: grid; gap: 10px; }
+.q { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--card); display: grid; gap: 10px; }
+.q.st-e { border-left: 3px solid var(--bad); }
+.q.st-c { border-left: 3px solid var(--warn); }
+.q.st-a { border-left: 3px solid var(--good); }
+.q-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.q-head .n { font: 600 13px var(--mono); min-width: 40px; }
+.q-head select { width: auto; min-height: 30px; padding: 3px 28px 3px 10px; font-size: 12px; border-radius: 8px; }
+.q-head input[type=text] { width: 220px; flex: 1 1 160px; min-height: 30px; padding: 3px 10px; font-size: 12px; border-radius: 8px; }
+.q-st { display: flex; gap: 6px; margin-left: auto; }
+.st { border: 1px solid var(--line-2); background: transparent; border-radius: 8px; padding: 4px 10px; font-size: 12px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.st[aria-pressed="true"] { background: #f1f1f1; color: #000; border-color: #f1f1f1; }
+.q-txt { color: var(--ink-2); white-space: pre-wrap; font-size: 12.5px; line-height: 1.55; max-height: 220px; overflow: auto; border-top: 1px solid var(--line); padding-top: 10px; }
+.q-foot { display: flex; gap: 12px; align-items: center; font-size: 12px; color: var(--muted); }
+
+/* thread / caderno */
+.cad { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.tlist { display: grid; gap: 0; }
+.titem { display: grid; gap: 3px; text-align: left; width: 100%; background: transparent; border: 0; border-top: 1px solid var(--line); padding: 13px 8px; border-radius: 0; color: var(--ink); }
+.titem:first-child { border-top: 0; }
+.titem:hover { background: #101010; }
+.titem[aria-current="true"] { background: #161616; border-radius: 10px; }
+.titem .t { font-weight: 500; font-size: 13px; }
+.titem .s { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.titem .m { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 11px; }
+.thread { display: grid; gap: 0; }
+.msg { padding: 16px 0; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.msg:first-child { border-top: 0; padding-top: 4px; }
+.msg .who { display: flex; gap: 10px; align-items: center; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-2); }
+.msg .who .tm { color: var(--muted); font-family: var(--mono); text-transform: none; letter-spacing: 0; }
+.msg.me .body { white-space: pre-wrap; }
+.composer { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 10px; }
+.composer .acts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.ctx-chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line-2); border-radius: 999px; padding: 2px 10px; font-size: 11px; color: var(--ink-2); }
+
+/* rendered markdown */
+.md { line-height: 1.65; color: #dcdcdc; max-width: 78ch; }
+.md > * + * { margin-top: 10px; }
+.md h4 { font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 18px; letter-spacing: -.005em; }
+.md ul, .md ol { padding-left: 20px; margin-bottom: 0; }
+.md li + li { margin-top: 4px; }
+.md b, .md strong { color: var(--ink); font-weight: 600; }
+.md code { font: 12px var(--mono); background: #181818; border-radius: 4px; padding: 1px 5px; }
+.md table { border-collapse: collapse; font-size: 12.5px; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--line-2); padding: 6px 10px; text-align: left; }
+.md th { background: #141414; font-weight: 500; }
+.stream-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ink); margin-left: 6px; animation: blink 1s infinite; vertical-align: middle; }
+@keyframes blink { 50% { opacity: .15; } }
+@media (prefers-reduced-motion: reduce) { .stream-dot { animation: none; } .nav-g svg { transition: none; } }
+
+/* responsive */
+@media (max-width: 1180px) {
+  .g-top { grid-template-columns: 1fr; }
+  .g-bot { grid-template-columns: 1fr; }
+  .g-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  html, body { overflow: auto; height: auto; }
+  .app { height: auto; min-height: 100%; grid-template-rows: 46px auto; }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto; padding: 0 12px 18px; gap: 12px; }
+  .side { align-self: start; }
+  .side { display: none; }
+  .side.open { display: block; }
+  #menuBtn { display: grid; }
+  .main { overflow: visible; padding: 0; }
+  .card { padding: 18px 16px; }
+  .cad { grid-template-columns: 1fr; }
+  .big { font-size: 30px; }
+  .bar-row { grid-template-columns: minmax(70px, 110px) 1fr 54px; }
+  .bars.wide .bar-row { grid-template-columns: minmax(70px, 110px) 1fr 92px; }
+  .mrow { grid-template-columns: minmax(90px, 1fr) 70px 14px 70px; }
+  .titlebar { padding: 0 12px; }
+}
+
+.model-sel { font: 12px var(--mono); color: var(--ink); background: var(--card); border: 1px solid var(--line-2); border-radius: 999px; padding: 5px 28px 5px 12px; height: auto; width: auto; max-width: 200px; }
+@media (max-width: 900px) { .model-sel { max-width: 120px; } }
+.mod-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+.mod-area { display: grid; grid-template-columns: 1.2fr 70px 2fr 32px; gap: 8px; align-items: center; margin-top: 8px; }
+
+.conf-alert { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--warn, #e0a030); border-radius: 10px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.conf-alert svg { flex: none; margin-top: 3px; color: var(--warn, #e0a030); }
+.conf-alert b { color: var(--ink); font-weight: 500; }
+
+.conf-alert.info { border-color: var(--line); }
+.conf-alert.info svg { color: var(--muted); }
+
+.ass-list { display: grid; gap: 0; }
+.ass-row { display: grid; grid-template-columns: 10px 1fr auto 92px; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.ass-row .dot { width: 8px; height: 8px; border-radius: 50%; }
+.ass-n b { font-weight: 500; color: var(--ink); }
+.ass-t { text-align: right; font-size: 12px; color: var(--muted); }
+.ass-t.up { color: var(--good, #3fb27f); } .ass-t.down { color: var(--bad, #e5484d); }
+.g-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 800px) { .g-3 { grid-template-columns: 1fr; } }
+.pos { color: var(--good, #3fb27f); } .neg { color: var(--bad, #e5484d); }
+.big.good { color: var(--good, #3fb27f); }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="titlebar">
+    <button class="icon-btn" id="menuBtn" data-act="menu" aria-label="Abrir menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" stroke="#f1f1f1" stroke-width="1.6"/><path d="M6.5 18.5 11 13l3.4 3.2 5.1-6.7" stroke="#f1f1f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><b>PAINEL</b> DE ESTUDOS</span>
+    </div>
+    <span class="crumb" id="crumb"></span>
+    <div class="tb-right">
+      <select class="model-sel" id="modelSel" aria-label="Modelo de prova"></select>
+      <span class="chip-info" id="prova" hidden></span>
+      <span class="chip-info" id="today"></span>
+      <button class="icon-btn" data-act="cfg" aria-label="Configurações" title="Configurações"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </header>
+  <div class="shell">
+    <nav class="side" id="side" aria-label="Seções"></nav>
+    <main class="main" id="main" tabindex="-1"></main>
+  </div>
+</div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script>
+const LITE = true;
+'use strict';
+/* ============ helpers ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = (n, d = 0) => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const z2 = n => String(n).padStart(2, '0');
+const isoOf = d => `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`;
+const TODAY = new Date();
+const TODAY_ISO = isoOf(TODAY);
+const fd = (s, y) => { if (!s) return '—'; const [a, m, d] = s.split('-'); return y ? `${d}/${m}/${a.slice(2)}` : `${d}/${m}`; };
+const daysBetween = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const avg = a => { const v = a.filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((x, y) => x + y, 0) / v.length : null; };
+const strip = o => { const { id, ...r } = o; return JSON.parse(JSON.stringify(r)); };
+const clone = o => JSON.parse(JSON.stringify(o));
+const hm = ts => { const d = new Date(ts); return `${z2(d.getDate())}/${z2(d.getMonth() + 1)} ${z2(d.getHours())}:${z2(d.getMinutes())}`; };
+const trunc = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+
+const SER = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
+const NOTAS_RED = [0, 40, 80, 120, 160, 200];
+const COMPS = ['C1', 'C2', 'C3', 'C4', 'C5'];
+const COMP_NOMES = ['Norma culta', 'Compreensão do tema', 'Argumentação', 'Coesão', 'Proposta de intervenção'];
+const MARCAS = ['Acento', 'Crase', 'Vírgula', 'Concordância', 'Regência', 'Paralelismo', 'Maiúsculas', 'Repetição de conectivo', 'Repertório sem retomada', 'Consequência vaga', 'Proposta incompleta', 'Palavra-chave do tema', 'Margens e caligrafia'];
+/* ---------- modelos de prova ---------- */
+const DEF_MODELOS = () => [{ id: 'enem', nome: 'ENEM', metaTotal: 160, metaArea: 40, areas: [
+  { n: 'Linguagens', q: 45, mats: ['Português', 'Literatura', 'Inglês', 'Espanhol', 'Artes'] },
+  { n: 'Ciências Humanas', q: 45, mats: ['História', 'Geografia', 'Filosofia e Sociologia'] },
+  { n: 'Ciências da Natureza', q: 45, mats: ['Física', 'Química', 'Biologia'] },
+  { n: 'Matemática', q: 45, mats: ['Matemática'] }] },
+  { id: 'enem-d1', nome: 'ENEM · Dia 1', metaTotal: 80, metaArea: 40, areas: [
+    { n: 'Linguagens', q: 45, mats: ['Português', 'Literatura', 'Inglês', 'Espanhol', 'Artes'] },
+    { n: 'Ciências Humanas', q: 45, mats: ['História', 'Geografia', 'Filosofia e Sociologia'] }] },
+  { id: 'enem-d2', nome: 'ENEM · Dia 2', metaTotal: 80, metaArea: 40, areas: [
+    { n: 'Ciências da Natureza', q: 45, mats: ['Física', 'Química', 'Biologia'] },
+    { n: 'Matemática', q: 45, mats: ['Matemática'] }] }];
+const modelos = () => Array.isArray(S.cfg.modelos) && S.cfg.modelos.length ? S.cfg.modelos : DEF_MODELOS();
+const legacyModel = b => ({ id: 'old:' + (b || '?'), nome: b || 'Sem modelo', areas: [], legacy: true });
+function modeloOf(s) {
+  const ms = modelos(); let m = s.modelo && ms.find(x => x.id === s.modelo); if (m) return m;
+  if (s.banca) { m = ms.find(x => x.nome.toLowerCase() === String(s.banca).toLowerCase()); return m || legacyModel(s.banca); }
+  return ms[0];
+}
+function modelosAll() {
+  const l = [...modelos()], seen = new Set(l.map(x => x.id));
+  D().sims.forEach(s => { const m = modeloOf(s); if (!seen.has(m.id)) { seen.add(m.id); l.push(m); } });
+  return l;
+}
+function activeModelo() { const all = modelosAll(); return all.find(x => x.id === S.ui.modelo) || all[0]; }
+const modQ = m => (m.areas || []).reduce((a, x) => a + (+x.q || 0), 0);
+function modPct(m, area) {
+  if (!m || m.legacy) return S.cfg.metaAcerto;
+  const sq = modQ(m);
+  if (area != null && m.metaArea) { const a = m.areas.find(x => x.n === area); if (a && a.q) return m.metaArea / a.q * 100; }
+  if (m.metaTotal && sq) return m.metaTotal / sq * 100;
+  if (m.metaArea && sq) return m.metaArea * m.areas.length / sq * 100;
+  return S.cfg.metaAcerto;
+}
+const areaDeMat = (m, mat) => ((m.areas || []).find(a => (a.mats || []).includes(mat)) || {}).n || ((m.areas || []).length === 1 ? m.areas[0].n : mat);
+function metaLbl(m) {
+  if (!m || m.legacy || (!m.metaTotal && !m.metaArea)) return `meta ${S.cfg.metaAcerto}%`;
+  return 'meta ' + [m.metaTotal ? `${m.metaTotal}/${modQ(m)}` : '', m.metaArea ? `${m.metaArea} por área` : ''].filter(Boolean).join(' · ');
+}
+const metaShort = m => m && !m.legacy && m.metaTotal ? `${m.metaTotal}/${modQ(m)}` : `${S.cfg.metaAcerto}%`;
+const metaAtual = () => modPct(activeModelo(), null);
+const hasAreas = m => !!(m && (m.areas || []).length);
+const grainMat = () => S.ui.grain === 'mat' && hasAreas(activeModelo());
+function areaRows(s) {
+  const M = modeloOf(s); if (!hasAreas(M)) return s.mats || [];
+  const g = {}; (s.mats || []).forEach(x => { const k = areaDeMat(M, x.m); g[k] = g[k] || { m: k, a: 0, t: 0 }; g[k].a += +x.a || 0; g[k].t += +x.t || 0; }); return Object.values(g);
+}
+function qByMat(s) {
+  const doc = D().simq[s.id]; if (!doc) return null; const by = {}; let n = 0;
+  (doc.itens || []).forEach(q => { if (!q.st) return; n++; const m = q.mat || 'Outra'; by[m] = by[m] || { m, a: 0, t: 0 }; by[m].t++; if (q.st !== 'e') by[m].a++; });
+  return n ? Object.values(by) : null;
+}
+function matRows(s) { const q = qByMat(s); if (q) return q; const M = modeloOf(s); return (s.mm && s.mm.length) ? s.mm : (s.mats || []).filter(x => !(M.areas || []).some(a => a.n === x.m)); }
+function autoMats(sim, doc) {
+  const M = modeloOf(sim), g = {};
+  (doc.itens || []).forEach(q => { const k = areaDeMat(M, q.mat || 'Outra'); const x = g[k] = g[k] || { m: k, a: 0, t: 0, n: 0 }; x.n++; if (q.st && q.st !== 'e') x.a++; });
+  return Object.values(g).map(x => ({ m: x.m, a: x.a, t: (M.areas || []).find(a => a.n === x.m)?.q || x.n }));
+}
+const gKey = n => String(n || '').toLowerCase().replace(/[º°˚]/g, 'º').replace(/\s+/g, ' ').trim();
+const rowsOf = s => grainMat() ? matRows(s) : areaRows(s);
+const grainName = () => grainMat() ? 'matéria' : hasAreas(activeModelo()) ? 'área' : 'matéria';
+
+const DEF_CFG = {
+  metaAcerto: 75, piso: 50, metaRed: 900, prova: '', provaData: '',
+  materias: ['Português', 'Literatura', 'Inglês', 'Matemática', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Filosofia e Sociologia'],
+  instr: 'Sou o Miguel e me preparo para Medicina (FAMEMA e FAMERP 2027, ampla concorrência). Responda em português, de forma direta e sempre com os números dos meus dados.\n\nRedação: sigo uma estrutura própria (introdução em 3 frases, desenvolvimentos em 4 frases, conclusão com proposta de intervenção completa) e repito repertórios, conectores e fórmulas de propósito. Não aponte essa repetição entre textos como defeito; só repetição dentro do mesmo texto e repertório mal adaptado ao tema. Analise pela Cartilha do Participante ENEM 2026 e pela escala da minha professora (competências em degraus de 40; a nota dela não é a oficial). O limite de 30 linhas da folha é real: cortes saem dos outros parágrafos, não da proposta.\n\nGosto de explicações estruturadas, comparativos e dicas voltadas à prova.'
+};
+
+/* ============ state ============ */
+const S = {
+  route: 'visao', db: null, ai: null, assets: null,
+  sims: [], simq: {}, reds: [], cad: [], ans: [], cfg: { ...DEF_CFG },
+  loaded: false, demo: false, demoOff: false, dbErr: null, slow: false,
+  ui: { modelo: (() => { try { return localStorage.getItem('pe-modelo') || null; } catch (e) { return null; } })(), range: 'all', metric: 'geral', matSel: null, simSel: null, qMat: 'todas', qSt: 'todas', qSearch: '', evSel: null, thread: null, openG: { SIMULADOS: true, 'REDAÇÃO': true, ESTUDO: true }, menu: false },
+  draft: {}, stream: null, modal: null, pending: false, qDirty: {}, qTimers: {}
+};
+const D = () => S.demo ? demoData() : S;
+
+/* ============ icons ============ */
+const ICONS = {
+  home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/>',
+  chart: '<path d="M4 20V4"/><path d="M4 20h16"/><path d="m7 15 4-5 3 3 5-7"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  bars: '<path d="M6 20V10M12 20V4M18 20v-7"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  chev: '<path d="m9 6 6 6-6 6"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/>',
+  spark: '<path d="m12 3 2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>',
+  book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/>',
+  alert: '<path d="M12 3 2 20h20z"/><path d="M12 10v5M12 18h.01"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  brain: '<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>'
+};
+const ic = (n, s = 16) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+const tri = up => `<svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="${up ? 'M5 1 9.5 9h-9z' : 'M5 9 .5 1h9z'}" fill="currentColor"/></svg>`;
+
+/* ============ toast / modal ============ */
+function toast(msg, kind) {
+  const t = document.createElement('div'); t.className = 'toast' + (kind === 'err' ? ' err' : ''); t.textContent = msg;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'err' ? 7000 : 3800);
+}
+function modal(html, opt = {}) {
+  closeModal(true);
+  const sc = document.createElement('div'); sc.className = 'scrim';
+  sc.innerHTML = `<div class="modal ${opt.wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div>`;
+  sc.addEventListener('mousedown', e => { if (e.target === sc && !opt.sticky) closeModal(); });
+  document.body.appendChild(sc);
+  S.modal = { el: sc, onClose: opt.onClose, sticky: opt.sticky };
+  const box = sc.firstElementChild;
+  opt.onMount && opt.onMount(box);
+  const f = $('[autofocus], input:not([type=hidden]), textarea, select', box); if (f && !opt.noFocus) f.focus({ preventScroll: true });
+  return box;
+}
+function closeModal(silent) {
+  if (!S.modal) return;
+  const m = S.modal; S.modal = null; m.el.remove(); m.onClose && m.onClose();
+  if (!silent && S.pending) render(true);
+}
+function confirmBox({ title, text, ok = 'Confirmar', danger }) {
+  return new Promise(res => {
+    modal(`<h2>${esc(title)}</h2><p class="lead">${esc(text || '')}</p><div class="foot"><button class="btn" data-x="no">Cancelar</button><button class="btn ${danger ? 'danger' : 'primary'}" data-x="yes">${esc(ok)}</button></div>`, {
+      onMount: b => { b.addEventListener('click', e => { const x = e.target.closest('[data-x]'); if (!x) return; const v = x.dataset.x === 'yes'; res(v); closeModal(); }); },
+      onClose: () => res(false)
+    });
+  });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.modal && !S.modal.sticky) closeModal(); });
+
+/* ============ db layer ============ */
+const wq = {};
+const enqueue = (key, fn) => { const p = (wq[key] || Promise.resolve()).catch(() => { }).then(fn); wq[key] = p; return p; };
+const LISTS = { sim: 'sims', red: 'reds', cad: 'cad', ans: 'ans' };
+function memSet(col, id, data) {
+  if (col === 'simq') { S.simq[id] = data; return; }
+  if (col === 'config') { S.cfg = { ...DEF_CFG, ...data }; return; }
+  const k = LISTS[col]; const i = S[k].findIndex(x => x.id === id);
+  if (data === null) { if (i >= 0) S[k].splice(i, 1); return; }
+  const row = { id, ...clone(data) }; if (i >= 0) S[k][i] = row; else S[k].push(row);
+}
+async function dbSet(col, id, data) {
+  const body = clone(data);
+  if (!S.db) { memSet(col, id, body); schedule(); return; }
+  try { await enqueue(col + '/' + id, () => S.db.collection(col).doc(id).set(body)); }
+  catch (e) { toast('Não consegui salvar: ' + (e && (e.message || e.code) || 'erro desconhecido'), 'err'); throw e; }
+}
+async function dbDel(col, id) {
+  if (!S.db) { memSet(col, id, null); if (col === 'sim') delete S.simq[id]; schedule(); return; }
+  try { await enqueue(col + '/' + id, () => S.db.collection(col).doc(id).delete()); }
+  catch (e) { toast('Não consegui apagar: ' + (e && (e.message || e.code) || 'erro'), 'err'); throw e; }
+}
+function subscribe() {
+  const pend = new Set(['sim', 'simq', 'red', 'cad', 'ans', 'config']);
+  const done = k => { pend.delete(k); if (!pend.size) { S.loaded = true; S.slow = false; clearTimeout(S.loadTimer); } S.demo = calcDemo(); schedule(); };
+  const fail = e => { S.dbErr = e && (e.message || e.code) || 'erro'; schedule(); };
+  Object.entries(LISTS).forEach(([col, key]) => {
+    S.db.collection(col).onSnapshot(snap => { S[key] = snap.docs.map(d => ({ id: d.id, ...d.data() })); done(col); }, fail);
+  });
+  S.db.collection('simq').onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => { m[d.id] = d.data(); });
+    Object.keys(S.qDirty).forEach(k => { if (S.qDirty[k] && S.simq[k]) m[k] = S.simq[k]; });
+    S.simq = m; done('simq');
+  }, fail);
+  S.db.doc('config/geral').onSnapshot(s => { S.cfg = { ...DEF_CFG, ...(s.exists ? s.data() : {}) }; done('config'); }, fail);
+  S.loadTimer = setTimeout(() => { if (!S.loaded) { S.slow = true; schedule(); } }, 10000);
+}
+const calcDemo = () => S.loaded && !S.demoOff && !S.sims.length && !S.reds.length && !S.cad.length;
+
+/* ============ derived data ============ */
+const simsAllSorted = () => [...D().sims].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
+const simsSorted = () => { const id = activeModelo().id; return simsAllSorted().filter(s => modeloOf(s).id === id); };
+const redsSorted = () => [...D().reds].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
+const simStat = s => { let a = 0, t = 0; (s.mats || []).forEach(m => { a += +m.a || 0; t += +m.t || 0; }); return { a, t, p: t ? a / t * 100 : null }; };
+const mp = (s, m) => { const x = rowsOf(s).find(y => y.m === m); return x && x.t ? x.a / x.t * 100 : null; };
+const redTotal = r => (r.c || []).reduce((x, y) => x + (+y || 0), 0);
+function matNames(sims) {
+  const seen = new Set(); (sims || simsSorted()).forEach(s => rowsOf(s).forEach(m => seen.add(m.m)));
+  const order = !grainMat() && hasAreas(activeModelo()) ? activeModelo().areas.map(a => a.n) : S.cfg.materias;
+  const base = order.filter(m => seen.has(m));
+  seen.forEach(m => { if (!base.includes(m)) base.push(m); });
+  return base;
+}
+const matColor = m => { const A = !grainMat() && hasAreas(activeModelo()) ? activeModelo().areas.map(a => a.n) : S.cfg.materias; const i = A.indexOf(m); return SER[(i < 0 ? A.length + [...m].reduce((a, c) => a + c.charCodeAt(0), 0) : i) % SER.length]; };
+function matStats(sims) {
+  sims = sims || simsSorted();
+  return matNames(sims).map(m => {
+    const series = sims.map(s => mp(s, m)); const pts = series.filter(v => v != null);
+    const last = pts.at(-1), prev = pts.at(-2);
+    const totQ = sims.reduce((x, s) => x + (rowsOf(s).find(y => y.m === m)?.t || 0), 0);
+    const lastS = [...sims].reverse().find(s => mp(s, m) != null);
+    const lastRaw = lastS && rowsOf(lastS).find(y => y.m === m);
+    return { m, series, pts, last, prev, delta: last != null && prev != null ? last - prev : null, recent: avg(pts.slice(-3)), all: avg(pts), totQ, lastRaw };
+  }).filter(x => x.pts.length);
+}
+function compStats(reds) {
+  reds = reds || redsSorted();
+  return COMPS.map((c, i) => { const v = reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null).filter(x => x != null); return { c, nome: COMP_NOMES[i], all: avg(v), recent: avg(v.slice(-4)), last: v.at(-1) }; });
+}
+function errRank(n) {
+  n = n || ({ last: 1, last3: 3 }[S.ui.errScope] || 9999);
+  const U = new Map();
+  simsAllSorted().forEach(s => { const k = s.grupo ? 'g:' + gKey(s.grupo) : 's:' + s.id, u = U.get(k) || { nome: s.grupo || s.nome, data: s.data, sims: [] }; u.sims.push(s); if (s.data > u.data) u.data = s.data; U.set(k, u); });
+  const units = [...U.values()].sort((a, b) => a.data.localeCompare(b.data)).slice(-n);
+  const ar = {}, mt = {}, as = {};
+  units.forEach(u => u.sims.forEach(s => {
+    const M = modeloOf(s);
+    if (hasAreas(M)) (s.mats || []).forEach(m => { if (!m.t) return; const x = ar[m.m] = ar[m.m] || { n: m.m, a: 0, t: 0 }; x.a += +m.a || 0; x.t += +m.t; });
+    const q = D().simq[s.id]; if (q) (q.itens || []).forEach(i => { if (!i.st) return; const x = mt[i.mat || 'Outra'] = mt[i.mat || 'Outra'] || { n: i.mat || 'Outra', e: 0, c: 0, t: 0 }; x.t++; if (i.st === 'e') x.e++; if (i.st === 'c') x.c++;
+      const an = (i.ass || '').trim(); if (an) { const k = (i.mat || 'Outra') + '|' + an.toLowerCase(), y = as[k] = as[k] || { m: i.mat || 'Outra', n: an, t: 0, e: 0, c: 0, h: [] }; y.t++; if (i.st === 'e') y.e++; if (i.st === 'c') y.c++; y.h.push(i.st === 'a' ? 0 : 1); } });
+  }));
+  const areas = Object.values(ar).map(x => ({ ...x, err: x.t - x.a, p: (x.t - x.a) / x.t * 100 })).sort((a, b) => b.p - a.p || b.err - a.err);
+  const mats = Object.values(mt).map(x => ({ ...x, err: x.e + x.c, p: (x.e + x.c) / x.t * 100 })).sort((a, b) => b.p - a.p || b.err - a.err);
+  const ass = Object.values(as).map(x => { const err = x.e + x.c, h = x.h, k = Math.floor(h.length / 2), r = a => a.reduce((u, v) => u + v, 0) / (a.length || 1);
+    const tr = h.length >= 4 ? (r(h.slice(k)) - r(h.slice(0, k))) * 100 : null; return { ...x, err, p: err / x.t * 100, tr }; })
+    .filter(x => x.t >= 2).sort((a, b) => b.p - a.p || b.err - a.err);
+  return { ass, areas, mats, units: units.map(u => u.nome), ids: new Set(units.flatMap(u => u.sims.map(s => s.id))) };
+}
+function errMap(ids) {
+  const d = D(); const out = {};
+  Object.entries(d.simq || {}).filter(([sid]) => !ids || ids.has(sid)).forEach(([sid, doc]) => (doc.itens || []).forEach(q => {
+    if (q.st !== 'e' && q.st !== 'c') return;
+    const m = q.mat || 'Sem matéria'; const a = (q.ass || 'sem assunto').trim() || 'sem assunto';
+    out[m] = out[m] || { e: 0, c: 0, ass: {} }; out[m][q.st]++;
+    const k = a.toLowerCase(); out[m].ass[k] = out[m].ass[k] || { nome: a, e: 0, c: 0 }; out[m].ass[k][q.st]++;
+  }));
+  return out;
+}
+
+/* ============ demo data (fictício, só para ver o layout) ============ */
+let _demo = null;
+function demoData() {
+  if (_demo) return _demo;
+  const mats = ['Linguagens', 'Ciências Humanas', 'Ciências da Natureza', 'Matemática'];
+  const ac = { 'Linguagens': [26, 27, 29, 30, 31, 33, 34, 36], 'Ciências Humanas': [25, 27, 27, 29, 30, 31, 33, 34], 'Ciências da Natureza': [20, 21, 23, 22, 25, 26, 27, 29], 'Matemática': [16, 18, 17, 20, 21, 23, 24, 26] };
+  const day = off => { const d = new Date(TODAY); d.setDate(d.getDate() - off); return isoOf(d); };
+  const sims = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ id: 'demo-s' + i, nome: 'Simulado exemplo ' + (i + 1), data: day(52 - i * 7), modelo: 'enem', banca: 'ENEM', mats: mats.map(m => ({ m, a: ac[m][i], t: 45 })), obs: '', ts: i }));
+  const R = [
+    [120, 160, 120, 160, 200, 'o', null, ['Acento', 'Vírgula']], [160, 200, 160, 160, 200, 'r', 0, ['Vírgula']], [120, 200, 120, 160, 200, 'o', null, ['Crase', 'Consequência vaga']],
+    [160, 200, 160, 200, 200, 'r', 2, ['Repetição de conectivo']], [160, 160, 120, 160, 200, 'o', null, ['Acento', 'Proposta incompleta']], [160, 200, 160, 160, 200, 'o', null, ['Vírgula']],
+    [160, 200, 160, 200, 200, 'r', 5, ['Paralelismo']], [160, 200, 160, 160, 200, 'o', null, ['Crase']], [160, 200, 160, 200, 200, 'o', null, ['Vírgula']], [200, 200, 160, 200, 200, 'r', 8, ['Acento']]
+  ];
+  const reds = R.map((r, i) => ({ id: 'demo-r' + i, tema: 'Tema exemplo ' + (i + 1), data: day(66 - i * 7), tipo: r[5] === 'o' ? 'original' : 'reescrita', de: r[6] != null ? 'demo-r' + r[6] : '', c: r.slice(0, 5), marcas: r[7], obs: '', ts: i }));
+  _demo = { sims, reds, simq: {}, cad: [], ans: [] };
+  return _demo;
+}
+
+/* ============ markdown (subset) ============ */
+function md(src) {
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\w)/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const out = []; let list = null, tbl = null;
+  const flush = () => {
+    if (list) { out.push(`<${list.t}>${list.items.join('')}</${list.t}>`); list = null; }
+    if (tbl) { const [h, ...rows] = tbl; out.push(`<table><thead><tr>${h.map(c => `<th>${inline(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`); tbl = null; }
+  };
+  String(src || '').replace(/\r/g, '').split('\n').forEach(raw => {
+    const l = raw.trimEnd(); let m;
+    if (!l.trim()) { flush(); return; }
+    if ((m = l.match(/^#{1,4}\s+(.*)/))) { flush(); out.push(`<h4>${inline(m[1])}</h4>`); return; }
+    if ((m = l.match(/^\s*[-*•]\s+(.*)/))) { if (!list || list.t !== 'ul') { flush(); list = { t: 'ul', items: [] }; } list.items.push(`<li>${inline(m[1])}</li>`); return; }
+    if ((m = l.match(/^\s*\d+[.)]\s+(.*)/))) { if (!list || list.t !== 'ol') { flush(); list = { t: 'ol', items: [] }; } list.items.push(`<li>${inline(m[1])}</li>`); return; }
+    if (l.trim().startsWith('|')) {
+      if (/^\|?[\s:\-|]+\|?$/.test(l.trim())) return;
+      if (list) flush(); tbl = tbl || []; tbl.push(l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())); return;
+    }
+    flush(); out.push(`<p>${inline(l)}</p>`);
+  });
+  flush(); return out.join('');
+}
+
+/* ============ routing / shell ============ */
+const NAV = [
+  { id: 'visao', label: 'Visão geral', icon: 'home' },
+  { g: 'SIMULADOS', items: [{ id: 'sim-notas', label: 'Notas', icon: 'list' }, { id: 'sim-evolucao', label: 'Evolução', icon: 'chart' }, { id: 'sim-conjuntos', label: 'Simulados completos', icon: 'bars' }] },
+  { g: 'REDAÇÃO', items: [{ id: 'red-textos', label: 'Textos', icon: 'pen' }, { id: 'red-competencias', label: 'Competências', icon: 'bars' }] },
+  { g: 'ESTUDO', items: [{ id: 'caderno', label: 'Caderno com o Claude', icon: 'chat' }, { id: 'plano', label: 'Plano e conclusões', icon: 'target' }] }
+];
+const ROUTES = [...NAV.flatMap(n => n.g ? n.items : [n]), { id: 'sim-questoes', label: 'Notas' }];
+const routeLabel = id => (ROUTES.find(r => r.id === id) || {}).label || '';
+function go(id) {
+  if (!ROUTES.some(r => r.id === id)) id = 'visao';
+  S.route = id; S.ui.menu = false; NAV.forEach(n => { if (n.g && n.items.some(i => i.id === id)) S.ui.openG[n.g] = true; });
+  try { if (location.hash !== '#' + id) location.hash = id; } catch (e) { }
+  render(true); const m = $('#main'); if (m) m.scrollTop = 0;
+}
+window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== S.route && ROUTES.some(r => r.id === id)) { go(id); } });
+function renderSide() {
+  const side = $('#side'); side.classList.toggle('open', S.ui.menu);
+  side.innerHTML = NAV.map(n => {
+    if (!n.g) return `<button class="nav-home" data-act="go" data-id="${n.id}" ${S.route === n.id ? 'aria-current="page"' : ''}>${ic(n.icon, 18)}<span>${n.label}</span></button>`;
+    const open = !!S.ui.openG[n.g];
+    return `<button class="nav-g" data-act="grp" data-g="${n.g}" aria-expanded="${open}"><span>${n.g}</span>${ic('chev', 15)}</button>` +
+      (open ? n.items.map(i => `<button class="nav-i" data-act="go" data-id="${i.id}" ${S.route === i.id || (i.id === 'sim-notas' && S.route === 'sim-questoes') ? 'aria-current="page"' : ''}>${ic(i.icon, 17)}<span>${i.label}</span></button>`).join('') : '');
+  }).join('');
+}
+function renderBar() {
+  $('#crumb').textContent = routeLabel(S.route);
+  const wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][TODAY.getDay()];
+  $('#today').textContent = `${wd}, ${TODAY.getDate()} ${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][TODAY.getMonth()]}`;
+  const ms = $('#modelSel'); if (ms) { const all = modelosAll(), cur = activeModelo().id; ms.hidden = /^red-|^sim-conjuntos$/.test(S.route); ms.innerHTML = all.map(m => `<option value="${esc(m.id)}" ${m.id === cur ? 'selected' : ''}>${esc(m.nome)}</option>`).join('') + '<option value="__manage">Editar modelos…</option>'; }
+  const p = $('#prova'); const dd = S.cfg.provaData ? daysBetween(TODAY_ISO, S.cfg.provaData) : null;
+  if (dd != null && dd >= 0) { p.hidden = false; p.textContent = `${S.cfg.prova ? S.cfg.prova + ' · ' : ''}faltam ${dd} dias`; } else p.hidden = true;
+}
+let _raf = 0;
+function schedule() { if (_raf) return; _raf = requestAnimationFrame(() => { _raf = 0; render(); }); }
+function render(force) {
+  if (!force) { const a = document.activeElement; if (a && a !== document.body && a.matches && a.matches('textarea,input,select') && $('#main').contains(a)) { S.pending = true; return; } }
+  if (S.modal && !force) { S.pending = true; return; }
+  S.pending = false;
+  const main = $('#main'); const top = main.scrollTop;
+  CHARTS.length = 0;
+  if (!S.loaded) { main.innerHTML = '<div class="card"><div class="lbl">Carregando</div><p class="sub" style="margin-top:8px">Buscando seus simulados e redações…</p></div>'; renderSide(); renderBar(); return; }
+  const v = VIEWS[S.route] || VIEWS.visao;
+  main.innerHTML = banners() + `<div class="view">${v()}</div>`;
+  main.scrollTop = top;
+  renderSide(); renderBar(); drawCharts(); afterRender();
+}
+document.addEventListener('focusout', () => { if (S.pending) setTimeout(() => { const a = document.activeElement; if (S.pending && !(a && a.matches && a.matches('textarea,input,select') && $('#main').contains(a))) render(); }, 60); });
+function banners() {
+  let h = '';
+  if (S.dbErr) h += `<div class="banner err" style="margin-bottom:16px">${ic('alert')}<span>O banco de dados respondeu com erro (${esc(S.dbErr)}). Novas alterações podem não ser salvas.</span></div>`;
+  else if (S.slow) h += `<div class="banner err" style="margin-bottom:16px">${ic('alert')}<span>Ainda não consegui alcançar o banco de dados. O que aparece pode estar desatualizado.</span></div>`;
+  if (!S.db && S.loaded) h += `<div class="banner" style="margin-bottom:16px">${ic('alert')}<span>Sem banco de dados nesta visualização: o que você lançar só vale até fechar a página.</span></div>`;
+  if (S.demo) h += `<div class="banner" style="margin-bottom:16px">${ic('spark')}<span><b>Exemplo.</b> Os números abaixo são fictícios, só para você ver como o painel fica. Nada disso foi salvo.</span><button class="btn sm" data-act="demoOff">Começar com meus dados</button></div>`;
+  return h;
+}
+
+/* ============ charts (SVG, drawn to the container width) ============ */
+const CHARTS = [];
+function lineChart(id, cfg) { CHARTS.push({ id, cfg }); return `<div class="chart" id="${id}" style="min-height:${cfg.h || 250}px"></div>`; }
+function drawCharts() { CHARTS.forEach(c => { const el = document.getElementById(c.id); if (el) drawLine(el, c.cfg); }); }
+let _rsT; window.addEventListener('resize', () => { clearTimeout(_rsT); _rsT = setTimeout(() => { if (CHARTS.length) drawCharts(); }, 120); });
+
+function drawLine(el, cfg) {
+  const labels = cfg.labels || []; const n = labels.length;
+  const hasData = cfg.series.some(s => s.values.some(v => v != null));
+  if (!n || !hasData) { el.innerHTML = `<div class="empty"><b>${esc(cfg.emptyT || 'Ainda sem dados')}</b>${esc(cfg.empty || '')}</div>`; el.onpointermove = el.onpointerleave = null; return; }
+  const multi = cfg.series.length > 1;
+  const W = Math.max(300, Math.floor(el.clientWidth || 620)), H = cfg.h || 250;
+  const m = { l: cfg.yw || 44, r: multi ? 46 : 22, t: multi ? 12 : 34, b: 26 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const all = cfg.series.flatMap(s => s.values).filter(v => v != null);
+  let min = cfg.min != null ? cfg.min : Math.min(...all), max = cfg.max != null ? cfg.max : Math.max(...all);
+  if (cfg.goal != null) { min = Math.min(min, cfg.goal); max = Math.max(max, cfg.goal); }
+  if (!(max > min)) { min -= 1; max += 1; }
+  const ticks = cfg.ticks || [min, (min + max) / 2, max];
+  const fmt = cfg.fmt || (v => nf(v, 0));
+  const X = i => m.l + (n === 1 ? iw / 2 : i * iw / (n - 1));
+  const Y = v => m.t + ih - (Math.min(max, Math.max(min, v)) - min) / (max - min) * ih;
+  const seg = vals => { let d = '', pen = false; vals.forEach((v, i) => { if (v == null) { if (!cfg.connect) pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; }); return d; };
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(cfg.aria || 'Gráfico de evolução')}">`;
+  const gid = el.id + '-g';
+  svg += `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f1f1" stop-opacity=".22"/><stop offset="1" stop-color="#f1f1f1" stop-opacity="0"/></linearGradient></defs>`;
+  ticks.forEach(t => { svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="#262626" stroke-dasharray="2 5"/><text x="${m.l - 10}" y="${(Y(t) + 3).toFixed(1)}" text-anchor="end">${esc(fmt(t))}</text>`; });
+  if (cfg.goal != null) svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(cfg.goal).toFixed(1)}" y2="${Y(cfg.goal).toFixed(1)}" stroke="#9a9a9a" stroke-dasharray="6 4"/><text x="${m.l + 6}" y="${(Y(cfg.goal) - 6).toFixed(1)}" text-anchor="start" style="fill:#b4b4b4">${esc(cfg.goalLabel || 'meta ' + fmt(cfg.goal))}</text>`;
+  const step = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 62))));
+  labels.forEach((l, i) => { if (i % step === 0) svg += `<text x="${X(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 && n > 1 ? 'start' : (i === n - 1 ? 'end' : 'middle')}">${esc(l)}</text>`; });
+  cfg.series.forEach((s, si) => {
+    const color = s.color || '#f1f1f1'; const d = seg(s.values);
+    if (!multi && cfg.area !== false && !s.values.includes(null)) { const idx = s.values.map((v, i) => v != null ? i : -1).filter(i => i >= 0); if (idx.length > 1) svg += `<path d="${d} L${X(idx.at(-1)).toFixed(1)} ${m.t + ih} L${X(idx[0]).toFixed(1)} ${m.t + ih} Z" fill="url(#${gid})"/>`; }
+    svg += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="6 4"' : ''}/>`;
+    const lastI = s.values.map((v, i) => v != null ? i : -1).filter(i => i >= 0).at(-1);
+    s.values.forEach((v, i) => { if (v == null) return; if (n <= 30 || i === lastI) svg += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${i === lastI ? 4.5 : 3.2}" fill="${color}" stroke="#0b0b0b" stroke-width="2"/>`; });
+  });
+  if (!multi) {
+    const s = cfg.series[0]; const li = s.values.map((v, i) => v != null ? i : -1).filter(i => i >= 0).at(-1);
+    if (li != null) { const t = fmt(s.values[li]); const w = t.length * 7 + 16; const cx = Math.min(W - w / 2 - 2, Math.max(m.l + w / 2, X(li))); const y = Math.max(2, Y(s.values[li]) - 32);
+      svg += `<rect x="${(cx - w / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="20" rx="6" fill="#0b0b0b" stroke="#3a3a3a"/><text class="lblv" x="${cx.toFixed(1)}" y="${(y + 14).toFixed(1)}" text-anchor="middle">${esc(t)}</text>`; }
+  } else {
+    const ends = []; cfg.series.forEach((s, si) => { const li = s.values.map((v, i) => v != null ? i : -1).filter(i => i >= 0).at(-1); if (li === n - 1) ends.push({ y: Y(s.values[li]) + 3, t: fmt(s.values[li]) }); });
+    ends.sort((a, b) => a.y - b.y); ends.forEach((e, i) => { if (i && e.y < ends[i - 1].y + 11) e.y = ends[i - 1].y + 11; svg += `<text class="lblv" x="${W - m.r + 8}" y="${e.y.toFixed(1)}">${esc(e.t)}</text>`; });
+  }
+  svg += `<g class="xh" style="display:none"><line y1="${m.t}" y2="${m.t + ih}" stroke="#6a6a6a" stroke-dasharray="3 3"/>${cfg.series.map(s => `<circle r="5" fill="${s.color || '#f1f1f1'}" stroke="#0b0b0b" stroke-width="2" style="display:none"/>`).join('')}</g></svg>`;
+  const legend = multi ? `<div class="legend">${cfg.series.map(s => `<span><i style="background:${s.color}${s.dash ? ';opacity:.7' : ''}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+  el.innerHTML = legend + svg + '<div class="tip" style="display:none"></div>';
+  const svgEl = $('svg', el), g = $('.xh', el), tip = $('.tip', el), line = $('line', g), dots = $$('circle', g);
+  el.onpointermove = ev => {
+    const r = svgEl.getBoundingClientRect(); const px = (ev.clientX - r.left) * (W / r.width);
+    if (px < m.l - 12 || px > W - m.r + 12) { g.style.display = tip.style.display = 'none'; return; }
+    const i = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((px - m.l) / iw * (n - 1))));
+    g.style.display = ''; line.setAttribute('x1', X(i)); line.setAttribute('x2', X(i));
+    let rows = '';
+    cfg.series.forEach((s, si) => { const v = s.values[i]; if (v == null) { dots[si].style.display = 'none'; return; } dots[si].style.display = ''; dots[si].setAttribute('cx', X(i)); dots[si].setAttribute('cy', Y(v)); rows += `<div class="tr"><span><i class="sw" style="background:${s.color || '#f1f1f1'}"></i>${esc(s.name || '')}</span><b>${esc(s.fmt ? s.fmt(v) : fmt(v))}</b></div>`; });
+    if (!rows) { tip.style.display = 'none'; return; }
+    tip.innerHTML = `<div class="th">${esc((cfg.full && cfg.full[i]) || labels[i])}</div>${cfg.extra ? cfg.extra(i) : ''}${rows}`;
+    tip.style.display = ''; const tw = tip.offsetWidth; const lyOff = legend ? (el.firstElementChild.offsetHeight + 8) : 0;
+    const sx = X(i) * (r.width / W);
+    tip.style.left = (sx + 14 + tw > r.width ? Math.max(0, sx - tw - 14) : sx + 14) + 'px'; tip.style.top = (lyOff + 6) + 'px';
+  };
+  el.onpointerleave = () => { g.style.display = 'none'; tip.style.display = 'none'; };
+}
+
+function spark(vals, w = 96, h = 26) {
+  const pts = vals.map((v, i) => [i, v]).filter(p => p[1] != null);
+  if (pts.length < 2) return '<span class="muted mono">—</span>';
+  const lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1])), span = hi - lo || 1, n = vals.length;
+  const X = i => 2 + i * (w - 4) / (n - 1), Y = v => h - 3 - (v - lo) / span * (h - 8);
+  const d = pts.map((p, k) => (k ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join('');
+  const l = pts.at(-1);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="#c9c9c9" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${X(l[0]).toFixed(1)}" cy="${Y(l[1]).toFixed(1)}" r="2.6" fill="#f1f1f1"/></svg>`;
+}
+
+function ring(p, goal, size = 178) {
+  const r = 68, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, p || 0)) / 100;
+  let tick = '';
+  if (goal != null) { const a = (goal / 100) * 2 * Math.PI - Math.PI / 2; const x1 = 90 + (r - 11) * Math.cos(a), y1 = 90 + (r - 11) * Math.sin(a), x2 = 90 + (r + 11) * Math.cos(a), y2 = 90 + (r + 11) * Math.sin(a); tick = `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#9a9a9a" stroke-width="2"/>`; }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 180 180" role="img" aria-label="${p == null ? 'Sem dados' : nf(p, 0) + '% de aproveitamento'}"><circle cx="90" cy="90" r="${r}" fill="none" stroke="#1d1d1d" stroke-width="14"/><circle cx="90" cy="90" r="${r}" fill="none" stroke="#f1f1f1" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(c * v).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 90 90)"/>${tick}<text x="90" y="98" text-anchor="middle" style="font:600 26px var(--mono);fill:#f1f1f1">${p == null ? '—' : nf(p, 0) + '%'}</text></svg>`;
+}
+
+function barRows(rows) {
+  if (!rows.length) return '<div class="empty"><b>Nada para mostrar ainda</b></div>';
+  return `<div class="bars${rows.some(r => String(r.v).length > 6) ? " wide" : ""}">${rows.map(r => `<div class="bar-row"><span class="n" title="${esc(r.n)}">${esc(r.n)}</span><span class="tr"><span class="fl" style="width:${Math.max(0, Math.min(100, r.pct)).toFixed(1)}%;background:${r.color || '#e6e6e6'}"></span>${r.mk != null ? `<span class="mk" style="left:${r.mk}%" title="meta"></span>` : ''}</span><span class="v">${esc(r.v)}</span></div>`).join('')}</div>`;
+}
+
+function heat(sims, names) {
+  if (!sims.length || !names.length) return '<div class="empty"><b>Sem simulados ainda</b>Lance um simulado para ver o mapa de calor.</div>';
+  const head = sims.map(s => `<th title="${esc(s.nome)}">${fd(s.data)}</th>`).join('');
+  const body = names.map(m => `<tr><th class="rh">${esc(m)}</th>${sims.map(s => { const p = mp(s, m); return p == null ? '<td style="color:var(--muted)">·</td>' : `<td style="background:rgba(57,135,229,${(0.1 + 0.72 * p / 100).toFixed(2)});color:${p > 55 ? '#fff' : '#d8d8d8'}" title="${esc(s.nome)}: ${nf(p, 0)}%">${nf(p, 0)}</td>`; }).join('')}</tr>`).join('');
+  return `<div class="scroll-x"><table class="heat"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+const deltaHTML = (d, unit = ' pp', dec = 1) => d == null ? '<span class="muted mono">—</span>' : `<span class="delta ${d > 0.04 ? 'up' : d < -0.04 ? 'down' : ''}">${Math.abs(d) < 0.05 ? '' : tri(d > 0)}${d > 0 ? '+' : d < 0 ? '−' : ''}${nf(Math.abs(d), dec)}${unit}</span>`;
+
+/* ============ views, part 1: visão geral, simulados, redação ============ */
+const VIEWS = {};
+const head = (t, d, actions) => `<div class="view-head"><div><h1>${esc(t)}</h1>${d ? `<p>${esc(d)}</p>` : ''}</div><div class="grow"></div>${actions || ''}</div>`;
+const pct0 = v => v == null ? '—' : nf(v, 0) + '%';
+const aiOff = () => !S.ai || S.demo;
+const aiAttr = () => !S.ai ? 'disabled title="O Claude não está disponível nesta visualização"' : '';
+function matSel(ms) {
+  if (S.ui.matSel) return S.ui.matSel.filter(m => ms.some(x => x.m === m));
+  return [...ms].sort((a, b) => b.pts.length - a.pts.length || ms.indexOf(a) - ms.indexOf(b)).slice(0, 4).map(x => x.m);
+}
+const matChips = (ms, sel) => `<div class="chips" style="margin-top:14px">${ms.map(x => `<button class="pill" data-act="matTog" data-m="${esc(x.m)}" aria-pressed="${sel.includes(x.m)}"><span class="dot" style="background:${matColor(x.m)}"></span>${esc(x.m)}</button>`).join('')}</div>`;
+const rangeChips = () => `<div class="chips">${[['3', 'Últ. 3'], ['6', 'Últ. 6'], ['all', 'Tudo']].map(([k, l]) => `<button class="pill" data-act="range" data-k="${k}" aria-pressed="${S.ui.range === k}">${l}</button>`).join('')}</div>`;
+function redAxis(vals, goal) {
+  const v = vals.filter(x => x != null); if (goal != null) v.push(goal);
+  if (!v.length) return { min: 0, max: 1000, ticks: [0, 500, 1000] };
+  const min = Math.max(0, Math.floor((Math.min(...v) - 60) / 100) * 100), max = 1000;
+  return { min, max, ticks: [min, Math.round((min + max) / 200) * 100, max] };
+}
+function simChartCfg(sims, extra) {
+  return Object.assign({
+    labels: sims.map(s => fd(s.data)), full: sims.map(s => `${s.nome} · ${fd(s.data, true)}`),
+    min: 0, max: 100, ticks: [0, 50, 100], fmt: v => nf(v, 0) + '%',
+    emptyT: 'Lance o primeiro simulado', empty: 'A linha de evolução aparece quando houver pelo menos um simulado.'
+  }, extra);
+}
+
+
+/* ---------- unidade do gráfico: % ou acertos ---------- */
+const grainChips = () => !LITE && hasAreas(activeModelo()) ? `<div class="chips" role="group" aria-label="Agrupar por">${[['area', 'Áreas'], ['mat', 'Matérias']].map(([k, l]) => `<button class="pill" data-act="grain" data-k="${k}" aria-pressed="${grainMat() === (k === 'mat')}">${l}</button>`).join('')}</div>` : '';
+const grainNote = sims => grainMat() && !sims.some(s => matRows(s).length) ? `<div class="banner" style="margin-bottom:16px">${ic('spark')}<span>A visão por matéria vem das questões do PDF: envie o PDF do simulado, marque as questões e use “Aplicar às notas do simulado”.</span></div>` : '';
+const unitN = () => S.ui.unit === 'n';
+const unitChips = () => `<div class="chips" role="group" aria-label="Unidade do gráfico">${[['p', '%'], ['n', 'Acertos']].map(([k, l]) => `<button class="pill" data-act="unit" data-k="${k}" aria-pressed="${unitN() === (k === 'n')}">${l}</button>`).join('')}</div>`;
+const accOf = (s, m) => { if (m == null) return (s.mats || []).some(x => x.t) ? simStat(s).a : null; const x = rowsOf(s).find(y => y.m === m); return x && x.t ? x.a : null; };
+function nAxis(vals, goal) {
+  const mx = Math.max(goal || 0, ...vals, 1), step = mx > 100 ? 20 : mx > 20 ? 10 : 4, top = Math.ceil(mx * 1.05 / step) * step;
+  return { max: top, ticks: [0, top / 2, top] };
+}
+function goalN(sims, mats) {
+  const last = sims.at(-1), M = activeModelo(); if (!last) return { goal: null, label: '' };
+  let g;
+  if (mats == null) g = M.legacy || !M.metaTotal ? S.cfg.metaAcerto / 100 * simStat(last).t : M.metaTotal;
+  else { const ts = avg((last.mats || []).filter(x => x.t).map(x => x.t)); g = !M.legacy && M.metaArea ? M.metaArea : ts ? modPct(M, mats[0]) / 100 * ts : null; }
+  return { goal: g, label: g != null ? 'meta ' + nf(g, 0) : '' };
+}
+function simChart(sims, o) {
+  const mats = o.mats, n = unitN();
+  const series = mats ? mats.map(m => ({ name: m, color: matColor(m), values: sims.map(s => n ? accOf(s, m) : mp(s, m)) })) : [{ name: n ? 'Acertos' : 'Aproveitamento', color: '#f1f1f1', values: sims.map(s => n ? accOf(s, null) : simStat(s).p) }];
+  const base = { series, aria: o.aria }; if (o.h) base.h = o.h;
+  if (!mats) base.extra = i => { const t = simStat(sims[i]); return `<div class="th">${n ? nf(t.p, 0) + '% · ' : ''}${t.a}/${t.t} questões</div>`; };
+  if (!n) return simChartCfg(sims, { ...base, goal: metaAtual(), goalLabel: metaLbl(activeModelo()) });
+  const g = goalN(sims, mats), ax = nAxis(series.flatMap(x => x.values).filter(v => v != null), g.goal);
+  return simChartCfg(sims, { ...base, goal: g.goal, goalLabel: g.label, min: 0, max: ax.max, ticks: ax.ticks, fmt: v => nf(v, 0) });
+}
+
+/* ---------- Visão geral ---------- */
+VIEWS.visao = function () {
+  const sims = simsSorted(), reds = redsSorted(), cfg = S.cfg, ms = matStats(sims);
+  const R = S.ui.range, take = a => R === 'all' ? a : a.slice(-(+R));
+  const simsR = take(sims), redsR = take(reds);
+  const lastSim = sims.at(-1), prevSim = sims.at(-2), lastRed = reds.at(-1), prevRed = reds.at(-2);
+  const sp = lastSim ? simStat(lastSim).p : null, spPrev = prevSim ? simStat(prevSim).p : null;
+  const rt = lastRed ? redTotal(lastRed) : null, rtPrev = prevRed ? redTotal(prevRed) : null;
+  const metric = S.ui.metric;
+  let big, unit, subline, lblTop, chart, side, chips = '';
+  if (metric === 'red') {
+    const fr = reds.filter(redOk), redsR = take(fr), tp = { todas: 'NOTA POR TEXTO', original: 'NOTA DAS ESCRITAS', reescrita: 'NOTA DAS REESCRITAS' }[redFilt()];
+    const rt = fr.length ? redTotal(fr.at(-1)) : null, rtPrev = fr.length > 1 ? redTotal(fr.at(-2)) : null;
+    lblTop = 'REDAÇÃO · ' + tp; big = rt == null ? '—' : nf(rt); unit = 'pts';
+    subline = rt == null ? 'sem redações lançadas' : rtPrev == null ? 'primeiro texto registrado' : `${rt - rtPrev >= 0 ? '+' : '−'}${Math.abs(rt - rtPrev)} pts em relação ao texto anterior`;
+    const vals = redsR.map(redTotal), ax = redAxis(vals, cfg.metaRed);
+    chart = lineChart('c-main', { labels: redsR.map(r => fd(r.data)), full: redsR.map(r => `${r.tema} · ${fd(r.data, true)}`), series: [{ name: 'Nota', color: '#f1f1f1', values: vals }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'A evolução da nota aparece quando houver um texto corrigido.', aria: 'Nota total de cada redação' });
+    side = ['SIMULADOS', sp == null ? '—' : nf(sp, 0) + '%'];
+  } else if (metric === 'mat') {
+    lblTop = 'SIMULADOS · POR MATÉRIA'; big = sp == null ? '—' : nf(sp, 1); unit = '%';
+    subline = sp == null ? 'sem simulados lançados' : 'último simulado · linhas das matérias marcadas abaixo';
+    const sel = matSel(ms);
+    chart = lineChart('c-main', simChart(simsR, { mats: ms.filter(x => sel.includes(x.m)).map(x => x.m), aria: 'Acertos ou aproveitamento por matéria em cada simulado' }));
+    chips = matChips(ms, sel); side = ['REDAÇÃO', rt == null ? '—' : nf(rt)];
+  } else {
+    lblTop = 'SIMULADOS · APROVEITAMENTO'; big = sp == null ? '—' : nf(sp, 1); unit = '%';
+    subline = sp == null ? 'sem simulados lançados' : spPrev == null ? 'primeiro simulado registrado' : `${sp - spPrev >= 0 ? '+' : '−'}${nf(Math.abs(sp - spPrev), 1)} pp em relação ao simulado anterior`;
+    chart = lineChart('c-main', simChart(simsR, { mats: null, aria: 'Acertos ou aproveitamento geral em cada simulado' }));
+    side = ['REDAÇÃO', rt == null ? '—' : nf(rt)];
+  }
+  if (unitN() && metric !== 'red' && lastSim) { const t = simStat(lastSim); big = t.t ? String(t.a) : '—'; unit = '/' + t.t + ' acertos'; if (metric === 'geral' && sp != null) subline = nf(sp, 1) + '% de aproveitamento' + (prevSim ? ` · ${sp - spPrev >= 0 ? '+' : '−'}${nf(Math.abs(sp - spPrev), 1)} pp vs anterior` : ''); }
+  const top = `<div class="g-top">
+    <section class="card" aria-label="Evolução">
+      <div class="hero-head"><div><div class="lbl">${lblTop}</div><div class="sub" style="margin-top:3px">${esc(subline)}</div><div class="big" style="margin-top:8px">${big}${big !== '—' ? `<small>${unit}</small>` : ''}</div></div>
+        <div class="hero-side"><div class="lbl">${side[0]}</div><div class="v">${side[1]}</div></div></div>
+      <div class="toolbar">${rangeChips()}${metric !== 'red' ? unitChips() + grainChips() : redTipoChips()}<div class="chips">${[['geral', 'Aproveitamento'], ['mat', grainMat() ? 'Matérias' : hasAreas(activeModelo()) ? 'Áreas' : 'Matérias'], ['red', 'Redação']].map(([k, l]) => `<button class="pill" data-act="metric" data-k="${k}" aria-pressed="${metric === k}">${l}</button>`).join('')}</div></div>
+      ${chart}${chips}
+    </section>
+    ${analysisCard(ms, sims, reds)}</div>`;
+  return grainNote(sims) + top + tableCard(ms, reds) + `<div class="g-bot">${goalCard(sims)}${eventsCard(sims, reds)}${healthCard(sims, reds, ms)}</div>`;
+};
+
+function analysisCard(ms, sims, reds) {
+  if (LITE) return liteCard();
+  const cfg = S.cfg, byRecent = [...ms].sort((a, b) => (b.recent ?? 0) - (a.recent ?? 0));
+  const best = byRecent[0], worst = byRecent.length > 1 ? byRecent.at(-1) : null;
+  const cs = compStats(reds).filter(c => c.all != null).sort((a, b) => (a.recent ?? 0) - (b.recent ?? 0))[0];
+  const lastSim = sims.at(-1), lastRed = reds.at(-1);
+  const er = errMap(errRank().ids); const nErr = Object.values(er).reduce((x, m) => x + m.e + m.c, 0);
+  const lastAn = [...D().ans].sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
+  const snip = lastAn ? trunc(lastAn.texto.replace(/[#*_`|>-]/g, ' '), 150) : '';
+  return `<section class="card" aria-label="Conclusões">
+    <div class="lbl">Conclusões · Claude</div>
+    <div class="sub" style="margin-top:3px;min-height:18px">${lastAn ? 'última análise em ' + fd(isoOf(new Date(lastAn.ts)), true) : 'peça uma análise para direcionar o estudo'}</div>
+    <div class="kv" style="margin:22px 0 0;padding-top:16px;border-top:1px solid var(--line)">
+      <div><span>Matéria mais forte</span><b>${best ? esc(best.m) + ' ' + pct0(best.recent) : '—'}</b></div>
+      <div><span>Matéria mais fraca</span><b>${worst ? esc(worst.m) + ' ' + pct0(worst.recent) : '—'}</b></div>
+      <div><span>Competência mais fraca</span><b>${cs ? cs.c + ' · ' + nf(cs.recent, 0) : '—'}</b></div>
+      <div><span>Meta de aproveitamento</span><b>${metaShort(activeModelo())}</b></div>
+    </div>
+    <div class="mini">
+      <div><span>Simulado</span><span>${lastSim ? esc(trunc(lastSim.nome, 22)) + ' · ' + fd(lastSim.data) : '—'}</span></div>
+      <div><span>Redação</span><span>${lastRed ? esc(trunc(lastRed.tema, 22)) + ' · ' + fd(lastRed.data) : '—'}</span></div>
+      <div><span>Erros a revisar</span><span class="mono">${nErr}</span></div>
+    </div>
+    ${snip ? `<p class="sub" style="margin:-6px 0 16px">${esc(snip)}</p>` : ''}
+    <button class="btn primary block" data-act="analisar" data-k="geral" ${aiAttr()}>${lastAn ? 'Analisar de novo' : 'Analisar agora'}</button>
+  </section>`;
+}
+
+function statusOf(v, meta, piso) {
+  if (v == null) return '<span class="muted">—</span>';
+  if (v >= meta) return `<span class="ink2" style="display:inline-flex;gap:6px;align-items:center"><span style="color:var(--good)">${ic('check', 14)}</span>Na meta</span>`;
+  if (piso != null && v < piso) return `<span class="ink2" style="display:inline-flex;gap:6px;align-items:center"><span style="color:var(--bad)">${ic('alert', 14)}</span>Crítica</span>`;
+  return '<span class="ink2">Em evolução</span>';
+}
+function tableCard(ms, reds) {
+  const cfg = S.cfg; const rows = [...ms].sort((a, b) => (a.recent ?? 999) - (b.recent ?? 999));
+  const body = rows.map(x => `<tr class="click" data-act="verMat" data-m="${esc(x.m)}">
+    <td><div class="cell-name"><span class="ico">${ic('book', 17)}</span><div><div class="t">${esc(x.m)}</div><div class="s">${x.lastRaw ? `último ${x.lastRaw.a}/${x.lastRaw.t}` : ''} · ${x.pts.length} ${x.pts.length === 1 ? 'simulado' : 'simulados'}</div></div></div></td>
+    <td>${spark(x.series)}</td><td class="num">${pct0(x.last)}</td><td class="num">${pct0(x.all)}</td><td>${deltaHTML(x.delta)}</td><td>${statusOf(x.last, modPct(activeModelo(), x.m), cfg.piso)}</td><td class="go">${ic('arrow', 16)}</td></tr>`).join('');
+  let red = '';
+  if (reds.length) {
+    const tot = reds.map(redTotal), last = tot.at(-1), prev = tot.at(-2);
+    red = `<tr class="click" data-act="go" data-id="red-competencias"><td><div class="cell-name"><span class="ico">${ic('pen', 17)}</span><div><div class="t">Redação ENEM</div><div class="s">${esc(trunc(reds.at(-1).tema, 34))} · ${reds.length} ${reds.length === 1 ? 'texto' : 'textos'}</div></div></div></td>
+      <td>${spark(tot)}</td><td class="num">${nf(last)} pts</td><td class="num">${nf(avg(tot))} pts</td><td>${deltaHTML(prev != null ? last - prev : null, ' pts', 0)}</td><td>${statusOf(last, cfg.metaRed, null)}</td><td class="go">${ic('arrow', 16)}</td></tr>`;
+  }
+  return `<section class="card" aria-label="Por matéria"><div class="scroll-x"><table class="tbl"><thead><tr><th>Componente · mais fraca primeiro</th><th>Tendência</th><th>Último</th><th>Média</th><th>Variação</th><th>Situação</th><th></th></tr></thead><tbody>${body || ''}${red}</tbody></table></div>
+    ${!rows.length && !reds.length ? '<div class="empty" style="margin-top:6px"><b>Nada por aqui ainda</b>Lance um simulado ou uma redação e este quadro se monta sozinho.</div>' : ''}</section>`;
+}
+function goalCard(sims) {
+  const cfg = S.cfg, last3 = sims.slice(-3).map(s => simStat(s).p), r = avg(last3);
+  return `<section class="card"><div class="lbl">Meta de acertos</div><div class="big" style="margin-top:10px">${r == null ? '—' : nf(r, 1)}${r == null ? '' : '<small>%</small>'}</div>
+    <div class="sub" style="margin-top:6px">média dos últimos ${Math.min(3, sims.length) || 3} simulados · ${metaLbl(activeModelo())}</div><div class="ring-wrap">${ring(r, metaAtual())}</div></section>`;
+}
+function eventsCard(sims, reds) {
+  const ev = []; const d = D();
+  sims.forEach(s => { const t = simStat(s); ev.push({ d: s.data, ic: 'list', t: s.nome, s: `${nf(t.p, 0)}% · ${t.a}/${t.t} acertos` }); });
+  reds.forEach(r => ev.push({ d: r.data, ic: 'pen', t: r.tema, s: `${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'} · ${redTotal(r)} pts` }));
+  d.cad.forEach(t => ev.push({ d: isoOf(new Date(t.upd || t.ts || Date.now())), ic: 'chat', t: t.titulo, s: `Caderno · ${(t.msgs || []).length} msgs` }));
+  ev.sort((a, b) => b.d.localeCompare(a.d));
+  return `<section class="card"><div class="h-card">Eventos recentes</div>${ev.length ? `<div class="events">${ev.slice(0, 7).map(e => `<div class="ev"><span class="ic">${ic(e.ic, 15)}</span><div><div class="t">${esc(trunc(e.t, 40))}</div><div class="s">${esc(e.s)}</div></div><span class="d">${fd(e.d)}</span></div>`).join('')}</div>` : '<p class="sub" style="margin-top:10px">Nada ainda. Simulados, redações e conversas do caderno aparecem aqui.</p>'}</section>`;
+}
+function healthCard(sims, reds, ms) {
+  const cfg = S.cfg, ls = sims.at(-1), lr = reds.at(-1);
+  const dS = ls ? daysBetween(ls.data, TODAY_ISO) : null, dR = lr ? daysBetween(lr.data, TODAY_ISO) : null;
+  const low = ms.filter(x => x.last != null && x.last < cfg.piso);
+  const rt = lr ? redTotal(lr) : null;
+  const items = [
+    { ok: dS != null && dS <= 14, t: 'Simulado nos últimos 14 dias', s: ls ? `Último em ${fd(ls.data, true)}, há ${dS} ${dS === 1 ? 'dia' : 'dias'}.` : 'Nenhum simulado lançado.' },
+    { ok: dR != null && dR <= 7, t: 'Redação nos últimos 7 dias', s: lr ? `Último texto em ${fd(lr.data, true)}, há ${dR} ${dR === 1 ? 'dia' : 'dias'}.` : 'Nenhuma redação lançada.' },
+    { ok: !!ls && !low.length, t: `Nenhuma matéria abaixo de ${cfg.piso}%`, s: !ls ? 'Sem simulados para avaliar.' : low.length ? 'Abaixo: ' + low.map(x => `${x.m} ${nf(x.last, 0)}%`).join(', ') + '.' : 'Todas acima do piso no último simulado.' },
+    { ok: rt != null && rt >= cfg.metaRed, t: 'Redação na meta', s: rt == null ? 'Sem nota de redação.' : `${nf(rt)} de ${nf(cfg.metaRed)} pontos no último texto.` }
+  ];
+  return `<section class="card"><div class="h-card">Saúde do estudo</div><div class="checks" style="margin-top:16px">${items.map(i => `<div class="check"><span class="chk ${i.ok ? 'on' : 'off'}">${ic(i.ok ? 'check' : 'x', 14)}</span><div><div class="t">${i.t}</div><div class="s">${esc(i.s)}</div></div></div>`).join('')}</div></section>`;
+}
+
+/* ---------- Simulados: notas ---------- */
+VIEWS['sim-notas'] = function () {
+  const asc = simsSorted(), list = [...asc].reverse(), cfg = S.cfg;
+  const body = list.map(s => {
+    const t = simStat(s), i = asc.indexOf(s), prev = i > 0 ? simStat(asc[i - 1]).p : null;
+    const ranked = (s.mats || []).filter(m => m.t).map(m => ({ m: m.m, p: m.a / m.t * 100 })).sort((a, b) => b.p - a.p);
+    const best = ranked[0], worst = ranked.length > 1 ? ranked.at(-1) : null;
+    return `<tr class="click" data-act="simOpen" data-id="${s.id}"><td class="num">${fd(s.data, true)}</td><td><div class="t">${esc(s.nome)}</div>${s.grupo ? `<div class="s sub">${esc(s.grupo)}</div>` : ''}${s.pdfNome ? `<div class="s sub">${ic('file', 12)} ${esc(trunc(s.pdfNome, 30))}</div>` : ''}</td><td class="num">${t.a}/${t.t}</td><td class="num">${pct0(t.p)}</td>
+      <td class="sub">${best ? `+ ${esc(best.m)} ${nf(best.p, 0)}%` : ''}${worst ? `<br>− ${esc(worst.m)} ${nf(worst.p, 0)}%` : ''}</td><td>${deltaHTML(prev != null && t.p != null ? t.p - prev : null)}</td><td class="go">${ic('chev', 16)}</td></tr>`;
+  }).join('');
+  return head('Simulados', 'Notas de cada simulado do modelo escolhido no topo. Clique numa linha para ver os detalhes ou editar.', `<button class="btn primary" data-act="simNew">${ic('plus', 15)} Novo simulado</button>`) +
+    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl"><thead><tr><th>Data</th><th>Simulado</th><th>Acertos</th><th>%</th><th>Melhor e pior</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhum simulado em ${esc(activeModelo().nome)}</b>${simsAllSorted().length ? `Você tem ${simsAllSorted().length} ${simsAllSorted().length === 1 ? 'simulado' : 'simulados'} em outros modelos: troque o modelo no seletor, no topo da tela.` : 'Lance as notas por área ou envie o PDF do simulado na aba "Questões e PDF".'}<div style="margin-top:14px"><button class="btn primary" data-act="simNew">Novo simulado</button></div></div>`}</section>`;
+};
+
+
+function cmpCard(sims, ms) {
+  const cm = S.ui.cmp || 'r3', one = sims.find(x => x.id === cm);
+  const pick = cm === 'all' ? sims : one ? [one] : sims.slice(-3);
+  const cur = cm === 'all' ? 'all' : one ? cm : 'r3';
+  const opts = [['r3', 'Últimos 3 simulados'], ['all', 'Todos os simulados'], ...[...sims].reverse().map(x => [x.id, `${fd(x.data)} · ${trunc(x.nome, 28)}`])];
+  const M = one ? modeloOf(one) : activeModelo();
+  const rows = matNames(sims).map(m => { let a = 0, t = 0; pick.forEach(x => { const y = rowsOf(x).find(z => z.m === m); if (y && y.t) { a += y.a; t += y.t; } }); return t ? { n: m, a, t, pct: a / t * 100 } : null; }).filter(Boolean).sort((x, y) => y.pct - x.pct);
+  const ta = rows.reduce((x, r) => x + r.a, 0), tt = rows.reduce((x, r) => x + r.t, 0);
+  const sub = !pick.length ? '' : one ? `${esc(one.nome)} · ${fd(one.data, true)}` : `${pick.length} ${pick.length === 1 ? 'simulado' : 'simulados'}, questões somadas`;
+  return `<section class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div class="lbl">Acertos por ${grainName()}</div><select data-bind="cmp" aria-label="Período da análise" style="max-width:260px">${selOpts(opts, cur)}</select></div>
+    <div class="sub" style="margin-top:8px">${sub}${tt ? ` · total ${ta}/${tt} (${nf(ta / tt * 100, 0)}%)` : ''}</div>
+    <div style="margin-top:14px">${barRows(rows.map(r => ({ n: r.n, pct: r.pct, v: `${r.a}/${r.t} · ${nf(r.pct, 0)}%`, color: matColor(r.n), mk: modPct(M, r.n) })))}</div>
+    <p class="sub" style="margin-top:12px">A marca vertical é a ${metaLbl(M)}.</p></section>`;
+}
+
+
+/* ---------- Simulados completos (Dia 1 + Dia 2) ---------- */
+function conjuntos() {
+  const G = new Map();
+  simsAllSorted().filter(s => s.grupo).forEach(s => {
+    const k = gKey(s.grupo), g = G.get(k) || { nome: s.grupo, parts: new Map(), data: s.data }; const m = modeloOf(s), old = g.parts.get(m.id);
+    if (!old || (s.ts || 0) >= (old.ts || 0)) g.parts.set(m.id, s);
+    if (s.data < g.data) g.data = s.data; G.set(k, g);
+  });
+  const gs = [...G.values()].sort((a, b) => a.data.localeCompare(b.data) || a.nome.localeCompare(b.nome));
+  const ids = new Set(); gs.forEach(g => g.parts.forEach((_, id) => ids.add(id)));
+  const mods = modelosAll().filter(m => ids.has(m.id));
+  gs.forEach(g => { g.missing = mods.filter(m => !g.parts.has(m.id)); g.complete = !g.missing.length; g.a = 0; g.t = 0; g.parts.forEach(s => { const t = simStat(s); g.a += t.a; g.t += t.t; }); g.p = g.t ? g.a / g.t * 100 : null; });
+  return { gs, mods };
+}
+VIEWS['sim-conjuntos'] = function () {
+  const { gs, mods } = conjuntos(), n = unitN();
+  const actions = `${unitChips()}<button class="btn primary" data-act="simNew">${ic('plus', 15)} Novo simulado</button>`;
+  const h = head('Simulados completos', 'Junte o Dia 1 e o Dia 2 de cada simulado (ex.: 5º Simulado SAS 2026) e compare um simulado com o outro. Dia ainda não feito aparece como não lançado.', actions);
+  if (!gs.length) return h + `<section class="card"><div class="empty"><b>Nenhum simulado completo ainda</b>Ao lançar o Dia 1 e o Dia 2, escreva o mesmo nome no campo “Simulado completo” (por exemplo, 5º Simulado SAS 2026). Eles passam a aparecer juntos aqui.<div style="margin-top:14px"><button class="btn primary" data-act="simNew">Novo simulado</button></div></div></section>`;
+  const val = (s, m) => s ? (n ? simStat(s).a : simStat(s).p) : null;
+  const labels = gs.map(g => trunc(g.nome, 20)), full = gs.map(g => `${g.nome} · ${fd(g.data, true)}`);
+  const sumMeta = mods.every(m => !m.legacy && m.metaTotal) ? mods.reduce((a, m) => a + m.metaTotal, 0) : null, sumQ = mods.reduce((a, m) => a + modQ(m), 0);
+  const base = { labels, full, min: 0 };
+  const totVals = gs.map(g => g.complete ? (n ? g.a : g.p) : null);
+  const allVals = [...totVals, ...gs.flatMap(g => mods.map(m => val(g.parts.get(m.id), m)))].filter(v => v != null);
+  const ax = nAxis(allVals, sumMeta || 0);
+  const scale = n ? { max: ax.max, ticks: ax.ticks, fmt: v => nf(v, 0) } : { max: 100, ticks: [0, 50, 100], fmt: v => nf(v, 0) + '%' };
+  const totalCfg = { ...base, ...scale, series: [{ name: 'Total do simulado', color: '#f1f1f1', values: totVals }], goal: sumMeta ? (n ? sumMeta : sumMeta / sumQ * 100) : null, goalLabel: sumMeta ? 'meta ' + sumMeta : '', emptyT: 'Ainda sem simulado completo', empty: 'O total aparece quando o simulado tem todos os dias lançados.', aria: 'Total de cada simulado completo',
+    extra: i => `<div class="th">${gs[i].complete ? `${gs[i].a}/${gs[i].t} questões` : 'incompleto · falta ' + gs[i].missing.map(m => esc(m.nome)).join(', ')}</div>` };
+  const dayCard = m => {
+    const vals = gs.map(g => val(g.parts.get(m.id), m)), miss = gs.filter(g => !g.parts.has(m.id));
+    const mx = nAxis(vals.filter(v => v != null), m.metaTotal || 0), sc = n ? { max: mx.max, ticks: mx.ticks, fmt: v => nf(v, 0) } : { max: 100, ticks: [0, 50, 100], fmt: v => nf(v, 0) + '%' };
+    const cfg = { ...base, ...sc, series: [{ name: m.nome, color: SER[mods.indexOf(m) % SER.length], values: vals }], goal: !m.legacy && m.metaTotal ? (n ? m.metaTotal : modPct(m, null)) : null, goalLabel: m.metaTotal ? 'meta ' + m.metaTotal : '', emptyT: 'Sem dados', empty: '', aria: 'Evolução de ' + m.nome,
+      extra: i => { const t = vals[i]; return t == null ? '<div class="th">sem informação</div>' : `<div class="th">${simStat(gs[i].parts.get(m.id)).a}/${simStat(gs[i].parts.get(m.id)).t} questões</div>`; } };
+    return `<section class="card"><div class="lbl">Evolução · ${esc(m.nome)}${n ? ' · acertos' : ' · aproveitamento'}</div><div style="margin-top:14px">${lineChart('c-dia-' + mods.indexOf(m), { ...cfg, h: 230 })}</div>${miss.length ? `<p class="sub" style="margin-top:10px">${ic('alert', 13)} Sem informação do ${esc(m.nome)}: ${miss.map(g => esc(g.nome)).join(', ')}.</p>` : ''}</section>`;
+  };
+  const done = gs.filter(g => g.complete), lastC = done.at(-1), prevC = done.at(-2);
+  const head2 = `<th>Simulado</th>${mods.map(m => `<th>${esc(m.nome)}</th>`).join('')}<th>Total</th><th>Variação</th>`;
+  const rows = [...gs].reverse().map(g => {
+    const i = done.indexOf(g), prev = i > 0 ? done[i - 1] : null;
+    const cell = m => { const s = g.parts.get(m.id); if (!s) return `<td><button class="btn sm" data-act="simNewG" data-g="${esc(g.nome)}" data-m="${esc(m.id)}" data-d="${esc(g.data)}">${ic('plus', 12)} não lançado</button></td>`; const t = simStat(s); return `<td class="click" data-act="simOpen" data-id="${s.id}"><span class="mono">${t.a}/${t.t}</span> <span class="sub">· ${pct0(t.p)}</span></td>`; };
+    const dl = prev ? g.a - prev.a : null;
+    return `<tr><td><div class="t">${esc(g.nome)}</div><div class="s sub">${fd(g.data, true)}${g.complete ? '' : ' · incompleto'}</div></td>${mods.map(cell).join('')}<td>${g.complete ? `<span class="mono">${g.a}/${g.t}</span> <span class="sub">· ${pct0(g.p)}</span>` : '<span class="sub">—</span>'}</td><td>${deltaHTML(dl, ' acertos', 0)}</td></tr>`;
+  }).join('');
+  const sum = lastC ? `${lastC.nome}: ${lastC.a}/${lastC.t}${prevC ? ` (${lastC.a - prevC.a >= 0 ? '+' : '−'}${Math.abs(lastC.a - prevC.a)} em relação a ${prevC.nome})` : ''}` : 'nenhum simulado completo ainda';
+  return h + `<section class="card"><div class="lbl">Total do simulado${n ? ' · acertos' : ' · aproveitamento'}</div><div class="sub" style="margin-top:4px">${esc(sum)}</div><div style="margin-top:14px">${lineChart('c-conj', totalCfg)}</div>${gs.some(g => !g.complete) ? `<p class="sub" style="margin-top:10px">${ic('alert', 13)} Sem total para: ${gs.filter(g => !g.complete).map(g => `${esc(g.nome)} (sem informação do ${g.missing.map(m => esc(m.nome)).join(' e do ')})`).join('; ')}.</p>` : ''}</section>
+    ${mods.map(dayCard).join('')}
+    <section class="card"><div class="scroll-x"><table class="tbl"><thead><tr>${head2}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
+};
+
+/* ---------- Simulados: evolução ---------- */
+VIEWS['sim-evolucao'] = function () {
+  const sims = simsSorted(), cfg = S.cfg, ms = matStats(sims), sel = matSel(ms);
+  const rank = [...ms].filter(x => x.recent != null).sort((a, b) => b.recent - a.recent);
+  const deltas = ms.filter(x => x.delta != null).sort((a, b) => a.delta - b.delta);
+  return head('Evolução dos simulados', 'Aproveitamento geral, por matéria e mapa de calor. A linha tracejada é a sua meta.', `${grainChips()}${LITE ? '' : `<button class="btn" data-act="analisar" data-k="simulados" ${aiAttr()}>${ic('spark', 15)} Pedir conclusões ao Claude</button>`}`) + grainNote(sims) +
+    `<section class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div class="lbl">${unitN() ? 'Acertos gerais' : 'Aproveitamento geral'}</div>${unitChips()}</div>
+      <div style="margin-top:14px">${lineChart('c-geral', simChart(sims, { mats: null, aria: 'Acertos ou aproveitamento geral' }))}</div></section>
+    <section class="card"><div class="lbl">${unitN() ? 'Acertos' : 'Evolução'} por ${grainName()}</div><div style="margin-top:14px">${lineChart('c-mat', simChart(sims, { h: 280, mats: ms.filter(x => sel.includes(x.m)).map(x => x.m), aria: 'Acertos ou aproveitamento por matéria' }))}</div>${matChips(ms, sel)}</section>
+    <div class="g-2">
+      ${cmpCard(sims, ms)}
+      <section class="card"><div class="lbl">Variação no último simulado</div><div class="events" style="margin-top:12px">${deltas.length ? deltas.map(x => `<div class="ev" style="grid-template-columns:1fr auto"><div class="t">${esc(x.m)}<div class="s">${pct0(x.prev)} → ${pct0(x.last)}</div></div>${deltaHTML(x.delta)}</div>`).join('') : '<p class="sub">Precisa de pelo menos dois simulados com a mesma matéria.</p>'}</div></section>
+    </div>
+    <section class="card"><div class="lbl">Mapa de calor · % de acertos por ${grainName()} e simulado</div><div style="margin-top:14px">${heat(sims, matNames(sims))}</div></section>`;
+};
+
+/* ---------- Redação: textos ---------- */
+function redDelta(r, asc) {
+  const t = redTotal(r); const i = asc.indexOf(r);
+  if (r.tipo === 'reescrita' && r.de) { const o = asc.find(x => x.id === r.de); return o ? t - redTotal(o) : null; }
+  const prev = asc.slice(0, i).reverse().find(x => x.tipo !== 'reescrita'); return prev ? t - redTotal(prev) : null;
+}
+const redFilt = () => ({ original: 'Só escritas', reescrita: 'Só reescritas' }[S.ui.redTipo] ? S.ui.redTipo : 'todas');
+const redOk = r => redFilt() === 'todas' || (redFilt() === 'reescrita') === (r.tipo === 'reescrita');
+const redTipoChips = () => `<div class="chips">${[['todas', 'Todas'], ['original', 'Escritas'], ['reescrita', 'Reescritas']].map(([k, l]) => `<button class="pill" data-act="redTipo" data-k="${k}" aria-pressed="${redFilt() === k}">${l}</button>`).join('')}</div>`;
+VIEWS['red-textos'] = function () {
+  const asc = redsSorted(), list = [...asc].filter(redOk).reverse();
+  const body = list.map(r => `<tr class="click" data-act="redOpen" data-id="${r.id}"><td class="num">${fd(r.data, true)}</td><td><div class="t">${esc(trunc(r.tema, 54))}</div></td><td><span class="tag ${r.tipo === 'reescrita' ? 'solid' : ''}">${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}</span></td>
+    ${COMPS.map((c, i) => `<td class="num">${r.c && r.c[i] != null ? r.c[i] : '—'}</td>`).join('')}<td class="num"><b>${nf(redTotal(r))}</b></td><td>${deltaHTML(redDelta(r, asc), ' pts', 0)}</td><td class="go">${ic('chev', 16)}</td></tr>`).join('');
+  return head('Redação', 'Cada texto com as cinco competências. A variação da reescrita é contra o texto escrito; a das escritas, contra a escrita anterior.', `${redTipoChips()}<button class="btn primary" data-act="redNew">${ic('plus', 15)} Nova redação</button>`) +
+    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl" style="min-width:760px"><thead><tr><th>Data</th><th>Tema</th><th>Tipo</th>${COMPS.map(c => `<th title="${COMP_NOMES[COMPS.indexOf(c)]}">${c}</th>`).join('')}<th>Nota</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhuma redação ainda</b>Lance a nota de cada competência e o que a professora marcou.<div style="margin-top:14px"><button class="btn primary" data-act="redNew">Nova redação</button></div></div>`}</section>`;
+};
+
+/* ---------- Redação: competências ---------- */
+const compMin = reds => { const v = reds.flatMap(r => (r.c || []).map(Number)); return v.length ? Math.max(0, Math.floor((Math.min(...v) - 40) / 40) * 40) : 0; };
+const compTicks = reds => { const m = compMin(reds), t = []; for (let v = m; v <= 200; v += 40) t.push(v); return t.length > 5 ? t.filter((x, i) => i % 2 === 0 || x === 200) : t; };
+VIEWS['red-competencias'] = function () {
+  const allReds = redsSorted(), reds = allReds.filter(redOk), cfg = S.cfg, cs = compStats(reds).filter(c => c.all != null);
+  const tot = reds.map(redTotal);
+  const orig = reds.map(r => r.tipo !== 'reescrita' ? redTotal(r) : null), resc = reds.map(r => r.tipo === 'reescrita' ? redTotal(r) : null);
+  const ax = redAxis(tot, cfg.metaRed);
+  const pairs = allReds.filter(r => r.tipo === 'reescrita' && r.de).map(r => { const o = allReds.find(x => x.id === r.de); return o ? redTotal(r) - redTotal(o) : null; }).filter(x => x != null);
+  const up = pairs.filter(x => x > 0).length;
+  return head('Competências da redação', 'Nota por texto, evolução de C1 a C5 e efeito da reescrita.', `${redTipoChips()}${LITE ? '' : `<button class="btn" data-act="analisar" data-k="redacao" ${aiAttr()}>${ic('spark', 15)} Pedir análise ao Claude</button>`}`) +
+    `<section class="card"><div class="lbl">Nota por texto</div><div style="margin-top:14px">${lineChart('c-red', { connect: true, labels: reds.map(r => fd(r.data)), full: reds.map(r => `${r.tema} · ${fd(r.data, true)}`), series: [{ name: 'Escritas', color: SER[0], values: orig }, { name: 'Reescritas', color: SER[2], values: resc, dash: true }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, goalLabel: 'meta ' + nf(cfg.metaRed), fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'O gráfico aparece com o primeiro texto corrigido.', aria: 'Nota total das redações originais e reescritas' })}</div></section>
+    <section class="card"><div class="lbl">Competências ao longo dos textos · máximo 200</div><div style="margin-top:14px">${lineChart('c-comp', { h: 270, labels: reds.map(r => fd(r.data)), full: reds.map(r => `${r.tema} · ${fd(r.data, true)}`), series: COMPS.map((c, i) => ({ name: `${c} · ${COMP_NOMES[i]}`, color: SER[i], values: reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null) })), min: compMin(reds), max: 200, ticks: compTicks(reds), fmt: v => nf(v), emptyT: 'Sem textos ainda', empty: '', aria: 'Nota de cada competência por texto' })}</div></section>
+    <div class="g-2">
+      <section class="card"><div class="lbl">Média por competência</div><div style="margin-top:16px">${barRows(cs.map((c, i) => ({ n: `${c.c} · ${c.nome}`, pct: c.all / 200 * 100, v: nf(c.all, 0), color: SER[COMPS.indexOf(c.c)] })))}</div></section>
+      <section class="card"><div class="lbl">Efeito da reescrita</div>${pairs.length ? `<div class="big" style="margin-top:10px">${avg(pairs) >= 0 ? '+' : '−'}${nf(Math.abs(avg(pairs)), 0)}<small>pts</small></div><p class="sub" style="margin-top:8px">média de ${pairs.length} ${pairs.length === 1 ? 'reescrita ligada' : 'reescritas ligadas'} ao texto escrito. ${up} de ${pairs.length} subiram.</p>` : '<p class="sub" style="margin-top:12px">Ao lançar uma reescrita, escolha o texto escrito no campo "Reescrita de" para medir o ganho.</p>'}</section>
+    </div>`;
+};
+
+/* ============ views, part 2: questões, caderno, plano ============ */
+const ST_LABEL = { a: 'Acertei', e: 'Errei', c: 'Chute' };
+function currentSim() {
+  const d = D(), sims = [...simsAllSorted()].reverse(); let sid = S.ui.simSel;
+  if (!sims.some(s => s.id === sid)) { const w = sims.find(s => d.simq[s.id]); sid = (w || sims[0])?.id || null; S.ui.simSel = sid; }
+  return { sims, sid, sim: sims.find(s => s.id === sid), doc: sid ? d.simq[sid] : null };
+}
+function qStats(doc) {
+  const by = {}; let marked = 0, e = 0, c = 0;
+  (doc.itens || []).forEach(q => { if (!q.st) return; marked++; if (q.st === 'e') e++; if (q.st === 'c') c++; const m = q.mat || 'Outra'; by[m] = by[m] || { a: 0, t: 0 }; by[m].t++; if (q.st !== 'e') by[m].a++; });
+  return { by, marked, e, c, total: (doc.itens || []).length };
+}
+function qStatsInner(doc) {
+  const s = qStats(doc), rows = Object.entries(s.by).sort((a, b) => a[1].a / a[1].t - b[1].a / b[1].t);
+  return `<div class="lbl">Resultado das questões marcadas</div>
+    <div class="sub" style="margin:4px 0 14px">${s.marked} de ${s.total} marcadas · ${s.e} erradas · ${s.c} chutes. Chute conta como acerto, mas entra na lista de revisão.</div>
+    ${rows.length ? barRows(rows.map(([m, v]) => ({ n: m, pct: v.a / v.t * 100, v: `${v.a}/${v.t}`, color: matColor(m), mk: (() => { const M = modeloOf(S.sims.find(x => x.id === S.ui.simSel) || {}); return modPct(M, areaDeMat(M, m)); })() }))) : '<p class="sub">Marque "Acertei", "Errei" ou "Chute" em cada questão, ou cole o gabarito e as suas respostas.</p>'}`;
+}
+function qCardHTML(q, mats) {
+  const opts = [...new Set([...mats, q.mat || 'Outra', 'Outra'])];
+  return `<article class="q ${q.st ? 'st-' + q.st : ''}" data-n="${q.n}" id="q-${q.n}">
+    <div class="q-head"><span class="n">Q${q.n}</span>
+      <select data-bind="qMat" data-n="${q.n}" aria-label="Matéria da questão ${q.n}">${opts.map(m => `<option ${m === (q.mat || 'Outra') ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
+      <input type="text" data-bind="qAss" data-n="${q.n}" value="${esc(q.ass || '')}" placeholder="assunto" aria-label="Assunto da questão ${q.n}">
+      <div class="q-st">${['a', 'e', 'c'].map(k => `<button class="st" data-act="qSt" data-n="${q.n}" data-v="${k}" aria-pressed="${q.st === k}">${ST_LABEL[k]}</button>`).join('')}</div></div>
+    ${q.txt ? `<details><summary class="sub" style="cursor:pointer">Ver enunciado</summary><div class="q-txt" style="margin-top:10px">${esc(q.txt)}</div></details>` : ''}
+    <div class="q-foot">${q.gab || q.resp ? `<span class="mono">gabarito ${esc(q.gab || '?')} · você ${esc(q.resp || '?')}</span>` : ''}<button class="link" data-act="qComent" data-n="${q.n}">Comentar com o Claude</button></div></article>`;
+}
+function confHTML(doc) {
+  const sim = S.sims.find(x => x.id === S.ui.simSel); if (!sim) return '';
+  const M = modeloOf(sim), L = sim.mats || [], g = {};
+  (doc.itens || []).forEach(q => { const k = areaDeMat(M, q.mat || 'Outra'); const x = g[k] = g[k] || { tot: 0, m: 0, a: 0 }; x.tot++; if (q.st) { x.m++; if (q.st !== 'e') x.a++; } });
+  if (sim.auto) { const st = qStats(doc); return `<div class="conf-alert info">${ic('alert', 14)}<span>Os acertos por área deste simulado vêm das questões que você marca (${st.marked} de ${st.total} marcadas). Se quiser fixar o número pelo que você lançou, edite o simulado e preencha os acertos.</span></div>`; }
+  if (!Object.values(g).some(x => x.m)) return '';
+  if (!L.length) return `<div class="conf-alert">${ic('alert', 14)}<span>Este simulado não tem acertos lançados em Notas. <button class="btn sm" data-act="qApply">Usar o que marquei aqui como notas</button></span></div>`;
+  const msgs = [];
+  L.forEach(l => {
+    const q = g[l.m]; if (!q) return;
+    if (q.a < l.a) msgs.push(`<b>${esc(l.m)}</b>: você tinha cadastrado ${l.a} acertos, mas marcou ${q.a} nas questões. Falta ${l.a - q.a}, não está batendo.`);
+    else if (q.a > l.a) msgs.push(`<b>${esc(l.m)}</b>: você tinha cadastrado ${l.a} acertos, mas marcou ${q.a} nas questões. ${q.a - l.a} a mais, não está batendo.`);
+  });
+  return msgs.length ? `<div class="conf-alert">${ic('alert', 14)}<span>${msgs.join('<br>')}</span></div>` : '';
+}
+function qStatsHTML(doc) { return confHTML(doc) + qStatsInner(doc); }
+function qListHTML(doc) {
+  const mats = S.cfg.materias; const f = S.ui.qSt, mm = S.ui.qMat, s = S.ui.qSearch.trim().toLowerCase();
+  const items = (doc.itens || []).filter(q => (mm === 'todas' || (q.mat || 'Outra') === mm) && (f === 'todas' || (f === 'n' ? !q.st : q.st === f)) && (!s || `${q.n} ${q.ass || ''} ${q.txt || ''}`.toLowerCase().includes(s)));
+  return items.length ? items.map(q => qCardHTML(q, mats)).join('') : '<div class="empty"><b>Nenhuma questão com esses filtros</b></div>';
+}
+VIEWS['sim-questoes'] = function () {
+  const { sid, sim, doc } = currentSim();
+  if (!sim) return head('Notas', 'Esse simulado não existe mais.', `<button class="btn" data-act="go" data-id="sim-notas">${ic('chev', 14)} Voltar às notas</button>`);
+  const M = modeloOf(sim), t = simStat(sim);
+  const acts = `<button class="btn" data-act="go" data-id="sim-notas">← Notas</button><button class="btn" data-act="simEdit" data-id="${sid}">Editar</button><button class="btn" data-act="simAsk" data-id="${sid}">Comentar</button><button class="btn danger" data-act="simDel" data-id="${sid}">${ic('trash', 14)}</button>`;
+  const h = head(sim.nome, `${fd(sim.data, true)} · ${esc(M.nome)}${sim.grupo ? ' · ' + esc(sim.grupo) : ''}`, acts);
+  const rows = (sim.mats || []).filter(m => m.t).map(m => ({ n: m.m, pct: m.a / m.t * 100, v: `${m.a}/${m.t}`, color: matColor(m.m), mk: modPct(M, areaDeMat(M, m.m)) })).sort((a, b) => b.pct - a.pct);
+  const resumo = `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Acertos por ${hasAreas(M) ? 'área' : 'matéria'}</span>${t.t ? `<span class="mono" style="margin-left:auto">${t.a}/${t.t}${t.p != null ? ' · ' + nf(t.p, 1) + '%' : ''}</span>` : ''}</div>
+    <div style="margin-top:14px">${rows.length ? barRows(rows) : `<p class="sub">Ainda sem acertos. Adicione o PDF abaixo e marque as questões: o painel calcula os acertos por área sozinho. Ou edite o simulado e preencha os números.</p>`}</div></section>`;
+  if (!doc) return h + resumo + `<section class="card"><div class="empty"><b>Análise por matéria</b>Adicione o PDF da prova: o Claude separa as questões por matéria e assunto, e você marca o que acertou, errou ou chutou.<div style="margin-top:14px"><button class="btn primary" data-act="pdfNew" data-sim="${sid}">${ic('upload', 15)} Adicionar PDF da prova para análise</button></div></div></section>`;
+  const itens = doc.itens || [], cnt = {}; itens.forEach(q => { const m = q.mat || 'Outra'; cnt[m] = (cnt[m] || 0) + 1; });
+  const unclass = itens.filter(q => !q.mat || q.mat === 'Outra').length;
+  const pills = `<div class="chips"><button class="pill" data-act="qMatF" data-k="todas" aria-pressed="${S.ui.qMat === 'todas'}">Todas<span class="n">${itens.length}</span></button>${Object.keys(cnt).sort((a, b) => S.cfg.materias.indexOf(a) - S.cfg.materias.indexOf(b)).map(m => `<button class="pill" data-act="qMatF" data-k="${esc(m)}" aria-pressed="${S.ui.qMat === m}"><span class="dot" style="background:${matColor(m)}"></span>${esc(m)}<span class="n">${cnt[m]}</span></button>`).join('')}</div>`;
+  const stf = `<div class="chips">${[['todas', 'Todas'], ['e', 'Erradas'], ['c', 'Chutes'], ['a', 'Acertos'], ['n', 'Sem marcação']].map(([k, l]) => `<button class="pill" data-act="qStF" data-k="${k}" aria-pressed="${S.ui.qSt === k}">${l}</button>`).join('')}</div>`;
+  return h + resumo + `<section class="card">
+      <div class="row" style="align-items:center"><span class="sub">${itens.length} questões${sim.pdfNome ? ' · ' + esc(sim.pdfNome) : ''}</span><div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" data-act="pdfNew" data-sim="${sid}">Trocar PDF</button>
+        <button class="btn sm" data-act="keyNew">Gabarito e respostas</button>
+        ${unclass && S.ai ? `<button class="btn sm" data-act="qReclass">Classificar ${unclass} sem matéria</button>` : ''}
+        <button class="btn sm" data-act="go" data-id="plano">Ver mapa de erros</button></div></div></section>
+    <section class="card" id="qstats">${qStatsHTML(doc)}</section>
+    <section class="card"><div style="display:grid;gap:12px">${pills}${stf}<input type="text" data-bind="qSearch" value="${esc(S.ui.qSearch)}" placeholder="Buscar por número, assunto ou trecho do enunciado" aria-label="Buscar questão"></div></section>
+    <div class="qs" id="qlist">${qListHTML(doc)}</div>`;
+};
+
+/* ---------- Caderno ---------- */
+function msgHTML(m) {
+  return m.r === 'c' ? `<div class="msg"><div class="who">Claude <span class="tm">${hm(m.ts)}</span></div><div class="md">${md(m.t)}</div></div>`
+    : `<div class="msg me"><div class="who">Você <span class="tm">${hm(m.ts)}</span></div><div class="body">${esc(m.t)}</div></div>`;
+}
+function liveHTML(text) { return `<div class="msg" id="live"><div class="who">Claude <span class="stream-dot"></span></div><div class="md" id="live-body">${text ? md(text) : '<span class="sub">Pensando…</span>'}</div></div>`; }
+VIEWS.caderno = function () {
+  const d = D(), threads = [...d.cad].sort((a, b) => (a.aberto === false) - (b.aberto === false) || (b.upd || 0) - (a.upd || 0));
+  let tid = S.ui.thread; if (!threads.some(t => t.id === tid)) tid = threads[0]?.id || null; S.ui.thread = tid;
+  const th = threads.find(t => t.id === tid);
+  const streaming = S.stream && S.stream.tid === tid;
+  const list = threads.length ? `<div class="tlist">${threads.map(t => { const last = (t.msgs || []).at(-1); return `<button class="titem" data-act="cadOpen" data-id="${t.id}" ${t.id === tid ? 'aria-current="true"' : ''}><span class="t">${esc(trunc(t.titulo, 44))}</span><span class="s">${esc(trunc(last ? last.t : '', 60))}</span><span class="m">${t.aberto === false ? '<span class="tag">resolvida</span>' : ''}<span>${hm(t.upd || t.ts)}</span></span></button>`; }).join('')}</div>` : '<p class="sub">Nenhuma conversa ainda.</p>';
+  const left = `<section class="card tight"><div class="hero-head" style="align-items:center"><div class="lbl">Conversas</div><button class="btn sm" data-act="cadNew">${ic('plus', 13)} Nova</button></div><div style="margin-top:10px">${list}</div></section>`;
+  let right;
+  if (!th) right = `<section class="card"><div class="empty"><b>O caderno funciona como os comentários de um documento</b>Abra uma conversa sobre um simulado, uma redação, uma matéria ou uma questão. Você escreve, o Claude responde ali mesmo e a conversa fica guardada.<div style="margin-top:14px"><button class="btn primary" data-act="cadNew">Nova conversa</button></div></div></section>`;
+  else right = `<section class="card"><div class="hero-head" style="align-items:flex-start;gap:12px"><div><h2 class="h-card" style="font-size:17px">${esc(th.titulo)}</h2>${th.ctx && th.ctx.label ? `<div style="margin-top:6px"><span class="ctx-chip">${ic('file', 12)} ${esc(th.ctx.label)}</span></div>` : ''}</div>
+      <div style="display:flex;gap:8px"><button class="btn sm" data-act="cadResolve" data-id="${th.id}">${th.aberto === false ? 'Reabrir' : 'Resolver'}</button><button class="btn sm danger" data-act="cadDel" data-id="${th.id}" aria-label="Apagar conversa">${ic('trash', 14)}</button></div></div>
+      <div class="thread" style="margin-top:14px">${(th.msgs || []).map(msgHTML).join('')}${streaming ? liveHTML(S.stream.text) : ''}</div>
+      <div class="composer"><textarea data-draft="${th.id}" id="cmp" rows="3" placeholder="Escreva sua dúvida ou comentário…" aria-label="Mensagem">${esc(S.draft[th.id] || '')}</textarea>
+        <div class="acts">${streaming ? `<button class="btn" data-act="cadStop">Parar resposta</button>` : `<button class="btn" data-act="cadNote" data-id="${th.id}">Só anotar</button><button class="btn primary" data-act="cadSend" data-id="${th.id}" ${aiAttr()}>Enviar ao Claude</button>`}</div></div></section>`;
+  return head('Caderno com o Claude', 'Conversas guardadas, ligadas a um simulado, redação, matéria ou questão. O Claude responde com base nos seus números.', '') + `<div class="cad">${left}${right}</div>`;
+};
+
+/* ---------- Plano e conclusões ---------- */
+const AN_NOME = { geral: 'Análise geral', plano: 'Plano de 7 dias', simulados: 'Simulados', redacao: 'Redação' };
+VIEWS.plano = function () {
+  const d = D(), er = errMap(errRank().ids), mats = Object.entries(er).sort((a, b) => (b[1].e + b[1].c) - (a[1].e + a[1].c));
+  const map = mats.length ? `<div class="g-2">${mats.map(([m, v]) => { const top = Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 6); return `<div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:500"><span class="pill" style="padding:0;border:0;pointer-events:none"><span class="dot" style="background:${matColor(m)}"></span></span>${esc(m)}</b><span class="mono ink2">${v.e} ${v.e === 1 ? 'erro' : 'erros'}${v.c ? ` · ${v.c} ${v.c === 1 ? 'chute' : 'chutes'}` : ''}</span></div><div class="chips" style="margin-top:10px">${top.map(a => `<span class="tag">${esc(a.nome)} <span class="mono">${a.e + a.c}</span></span>`).join('')}</div></div>`; }).join('')}</div>` : '<p class="sub">Ainda não há erros marcados. Abra um simulado em Notas, adicione o PDF e marque "Errei" ou "Chute" e este mapa mostra os assuntos que mais pesam.</p>';
+  const live = S.stream && S.stream.an ? `<section class="card"><div class="lbl">${AN_NOME[S.stream.tipo]} · gerando<span class="stream-dot"></span></div><div class="md" id="live-body" style="margin-top:12px">${S.stream.text ? md(S.stream.text) : '<span class="sub">Lendo seus dados…</span>'}</div><div style="margin-top:14px"><button class="btn sm" data-act="cadStop">Parar</button></div></section>` : '';
+  const list = [...d.ans].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const hist = list.map((a, i) => `<section class="card"><div class="hero-head" style="align-items:center"><div><div class="lbl">${AN_NOME[a.tipo] || 'Análise'}</div><div class="sub">${hm(a.ts)}${a.ref ? ` · ${a.ref.sims} simulados, ${a.ref.reds} redações` : ''}</div></div><div style="display:flex;gap:8px"><button class="btn sm" data-act="anComent" data-id="${a.id}">Comentar</button><button class="btn sm danger" data-act="anDel" data-id="${a.id}" aria-label="Apagar análise">${ic('trash', 14)}</button></div></div>${i === 0 && !live ? `<div class="md" style="margin-top:14px">${md(a.texto)}</div>` : `<details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Abrir análise</summary><div class="md" style="margin-top:12px">${md(a.texto)}</div></details>`}</section>`).join('');
+  const busy = !!S.stream;
+  const rk = errRank(), sc = ['last', 'last3'].includes(S.ui.errScope) ? S.ui.errScope : 'all';
+  const rkCard = `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Onde mais erro</span><div class="chips" style="margin-left:auto">${[['all', 'Todos os simulados'], ['last3', 'Últimos 3'], ['last', 'Último']].map(([k, l]) => `<button class="pill" data-act="errScope" data-k="${k}" aria-pressed="${sc === k}">${l}</button>`).join('')}</div></div>
+    ${rk.units.length ? `<p class="sub" style="margin-top:6px">Base: ${rk.units.map(esc).join(' · ')}</p>` : ''}
+    ${(rk.areas.length || rk.mats.length) ? `<div class="g-2" style="margin-top:16px">
+      <div><div class="sub" style="margin-bottom:10px">Por área · % de erro</div>${rk.areas.length ? barRows(rk.areas.map(x => ({ n: x.n, pct: x.p, v: `${x.err} erros · ${nf(x.p, 0)}%`, color: matColor(x.n) }))) : '<p class="sub">Sem acertos por área nesse período.</p>'}</div>
+      <div><div class="sub" style="margin-bottom:10px">Por matéria · erros e chutes das questões marcadas</div>${rk.mats.length ? barRows(rk.mats.map(x => ({ n: x.n, pct: x.p, v: `${x.err} de ${x.t} · ${nf(x.p, 0)}%`, color: matColor(x.n) }))) : '<p class="sub">Adicione o PDF do simulado em Notas e marque as questões para ver por matéria.</p>'}</div></div>
+      ${rk.ass.length ? `<div style="margin-top:22px"><div class="sub" style="margin-bottom:10px">Assuntos para priorizar · % de erro (mínimo de 2 questões marcadas)</div><div class="ass-list">${rk.ass.slice(0, 12).map(x => `<div class="ass-row"><span class="dot" style="background:${matColor(x.m)}"></span><span class="ass-n"><b>${esc(x.n)}</b> <span class="sub">${esc(x.m)}</span></span><span class="mono ink2">${x.err} de ${x.t} · ${nf(x.p, 0)}%</span><span class="ass-t ${x.tr == null ? '' : x.tr <= -15 ? 'up' : x.tr >= 15 ? 'down' : ''}">${x.tr == null ? 'poucos dados' : x.tr <= -15 ? 'melhorando' : x.tr >= 15 ? 'piorando' : 'estável'}</span></div>`).join('')}</div></div>` : ''}` : '<p class="sub" style="margin-top:10px">Lance um simulado para ver onde você mais erra.</p>'}</section>`;
+  return head('Plano e conclusões', 'O Claude lê os seus simulados, redações e questões marcadas e devolve o que está evoluindo, o que está travando e o que estudar agora.', '') +
+    `<section class="card"><div class="lbl">Pedir ao Claude</div><div class="chips" style="margin-top:14px">${['geral', 'plano', 'simulados', 'redacao'].map(k => `<button class="btn" data-act="analisar" data-k="${k}" ${busy || !S.ai ? 'disabled' : ''}>${ic(k === 'plano' ? 'target' : 'spark', 15)} ${AN_NOME[k]}</button>`).join('')}</div>${!S.ai ? '<p class="sub" style="margin-top:10px">O Claude não está disponível nesta visualização.</p>' : ''}</section>
+    ${rkCard}${live}${hist}
+    <section class="card"><div class="lbl">Mapa de erros · onde estudar · ${errRank().units.length ? (S.ui.errScope === 'last3' ? 'últimos 3 simulados' : S.ui.errScope === 'last' ? 'último simulado' : 'todos os simulados') : ''}</div><div style="margin-top:14px">${map}</div></section>`;
+};
+
+/* ============ Claude: contexto, respostas, análises, PDF ============ */
+const AIERR = {
+  not_granted: 'Você não permitiu que o painel use o Claude. Tente de novo e aceite o aviso.',
+  rate_limited: 'Muitas chamadas seguidas ou limite de uso atingido. Espere um pouco e tente de novo.',
+  prompt_too_large: 'Os dados ficaram grandes demais para uma única consulta.',
+  session_expired: 'Sua sessão expirou. Recarregue a página.',
+  refused: 'O Claude não respondeu a esse pedido. Reescreva a pergunta.',
+  empty_completion: 'O Claude não devolveu texto. Tente de novo.',
+  invalid_json: 'A resposta veio fora do formato esperado. Tente de novo.',
+  sampling_disabled: 'O Claude não está disponível para a sua conta.',
+  images_unavailable: 'Esta visualização não consegue enviar imagens ao Claude.',
+  upstream_error: 'Falha de conexão com o Claude. Tente de novo.'
+};
+const aiMsg = e => (e && AIERR[e.code]) || (e && e.message) || 'Algo deu errado.';
+
+const RULES = () => `Você é o tutor de estudos dentro do painel de acompanhamento do aluno. Responda em português do Brasil, direto, usando apenas os dados abaixo. Cite números (datas, acertos, notas). Se uma série tiver menos de 3 pontos, diga que ainda não dá para falar de tendência. Nunca invente notas, questões ou resultados que não estejam nos dados; se faltar informação, diga o que falta. Formato: parágrafos curtos, listas só quando ajudam, **negrito** nos pontos principais, sem tabelas grandes.\n\nINSTRUÇÕES DO ALUNO\n${S.cfg.instr || ''}`;
+
+function pack() {
+  const d = D(), cfg = S.cfg, L = [];
+  const M = activeModelo(); L.push(`Hoje: ${TODAY_ISO}. Modelo de prova em análise: ${M.nome}${M.legacy ? '' : ' — áreas: ' + M.areas.map(a => `${a.n} (${a.q} questões)`).join(', ') + '; ' + metaLbl(M)}. Só os simulados deste modelo estão na lista; modelos diferentes são analisados separadamente. Piso por matéria ${cfg.piso}%, meta de redação ${cfg.metaRed} pontos.${cfg.prova ? ` Prova: ${cfg.prova}${cfg.provaData ? ' em ' + cfg.provaData : ''}.` : ''}`);
+  const sims = simsSorted().slice(-24);
+  L.push(`\nSIMULADOS (antigo → novo; acertos/total por matéria):`);
+  if (!sims.length) L.push('(nenhum lançado)');
+  sims.forEach(s => { const t = simStat(s); L.push(`- ${s.data} | ${s.grupo ? '[' + s.grupo + '] ' : ''}${s.nome} | ${modeloOf(s).nome} | ${t.a}/${t.t} (${nf(t.p, 0)}%) | ${(s.mats || []).map(m => `${m.m} ${m.a}/${m.t}`).join(', ')}${s.obs ? ' | obs: ' + trunc(s.obs, 160) : ''}`); });
+  const all = redsSorted(), reds = all.slice(-30);
+  L.push(`\nREDAÇÕES (antigo → novo; notas da professora por competência):`);
+  if (!reds.length) L.push('(nenhuma lançada)');
+  reds.forEach(r => { const o = r.de && all.find(x => x.id === r.de); L.push(`- ${r.data} | ${r.tema} | ${r.tipo}${o ? ` (do texto de ${o.data}, ${redTotal(o)} pts)` : ''} | ${(r.c || []).map((v, i) => `C${i + 1} ${v}`).join(', ')} | total ${redTotal(r)}${r.linhas ? ` | ${r.linhas} linhas` : ''}${(r.marcas || []).length ? ' | marcas: ' + r.marcas.join(', ') : ''}${r.obs ? ' | obs: ' + trunc(r.obs, 200) : ''}`); });
+  [[1, 'DO ÚLTIMO SIMULADO'], [3, 'DOS ÚLTIMOS 3 SIMULADOS'], [9999, 'DE TODOS OS SIMULADOS (análise completa)']].forEach(([n, tt]) => {
+    const rk = errRank(n);
+    L.push(`\nÁREAS COM MAIS ERROS ${tt} (${rk.units.join(' · ') || 'nenhum'}; ordenadas por % de erro):`);
+    if (!rk.areas.length) L.push('(sem acertos por área)'); rk.areas.forEach(x => L.push(`- ${x.n}: ${x.err} erros em ${x.t} questões (${nf(x.p, 0)}% de erro)`));
+    if (n === 9999) { L.push('ASSUNTOS COM MAIOR % DE ERRO (todos os simulados, mínimo 2 questões marcadas; tendência compara a 1ª metade das questões com a 2ª):'); if (!rk.ass.length) L.push('(sem dados)'); rk.ass.slice(0, 15).forEach(x => L.push(`- ${x.n} (${x.m}): ${x.err} erros/chutes em ${x.t} (${nf(x.p, 0)}%)${x.tr == null ? '' : x.tr <= -15 ? ' — melhorando' : x.tr >= 15 ? ' — piorando' : ' — estável'}`)); }
+    L.push(`MATÉRIAS COM MAIS ERROS ${tt} (só questões marcadas; erros + chutes):`);
+    if (!rk.mats.length) L.push('(nenhuma questão marcada)'); rk.mats.forEach(x => L.push(`- ${x.n}: ${x.e} erros e ${x.c} chutes em ${x.t} marcadas (${nf(x.p, 0)}%)`));
+  });
+  const er = Object.entries(errMap()).sort((a, b) => (b[1].e + b[1].c) - (a[1].e + a[1].c)).slice(0, 12);
+  L.push(`\nQUESTÕES ERRADAS E CHUTES DE TODOS OS SIMULADOS (por matéria e assunto):`);
+  if (!er.length) L.push('(nenhuma marcada)');
+  er.forEach(([m, v]) => L.push(`- ${m}: ${v.e} erros, ${v.c} chutes; assuntos: ${Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 8).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}`));
+  return L.join('\n');
+}
+function ctxDetail(ctx) {
+  if (!ctx || !ctx.k || ctx.k === 'geral') return '';
+  const d = D(); let t = '';
+  if (ctx.k === 'sim') {
+    const s = d.sims.find(x => x.id === ctx.id); if (!s) return '';
+    const st = simStat(s); t = `SIMULADO EM FOCO: ${s.nome} (${s.data}, ${modeloOf(s).nome}) — ${st.a}/${st.t}. Por matéria: ${(s.mats || []).map(m => `${m.m} ${m.a}/${m.t}`).join(', ')}.${s.obs ? ' Obs: ' + s.obs : ''}`;
+    const doc = d.simq[s.id]; if (doc) { const bad = (doc.itens || []).filter(q => q.st === 'e' || q.st === 'c').slice(0, 25); if (bad.length) t += `\nQuestões erradas/chutes: ` + bad.map(q => `Q${q.n} [${q.mat}] ${q.ass || ''} (${q.st === 'e' ? 'errei' : 'chute'})${q.txt ? ': ' + trunc(q.txt, 260) : ''}`).join(' || '); }
+  } else if (ctx.k === 'red') {
+    const r = d.reds.find(x => x.id === ctx.id); if (!r) return '';
+    t = `REDAÇÃO EM FOCO: "${r.tema}" (${r.data}, ${r.tipo}) — ${(r.c || []).map((v, i) => `C${i + 1} ${v}`).join(', ')}, total ${redTotal(r)}.${(r.marcas || []).length ? ' Marcas: ' + r.marcas.join(', ') + '.' : ''}${r.obs ? '\nComentários da correção/anotações: ' + r.obs : ''}${r.texto ? '\nTEXTO DO ALUNO:\n' + r.texto.slice(0, 6000) : ''}`;
+  } else if (ctx.k === 'mat') {
+    const x = matStats().find(y => y.m === ctx.id); const e = errMap()[ctx.id];
+    t = `MATÉRIA EM FOCO: ${ctx.id}.${x ? ` Série (% por simulado, antigo → novo): ${x.series.map(v => v == null ? '–' : nf(v, 0)).join(', ')}.` : ''}${e ? ` Assuntos com erro: ${Object.values(e.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}.` : ''}`;
+  } else if (ctx.k === 'q') {
+    const [sid, n] = String(ctx.id).split(':'); const doc = d.simq[sid]; const q = doc && (doc.itens || []).find(x => String(x.n) === n); const s = d.sims.find(x => x.id === sid);
+    if (q) t = `QUESTÃO EM FOCO: Q${q.n} do simulado "${s ? s.nome : ''}" — matéria ${q.mat}, assunto ${q.ass || '?'}, situação: ${q.st ? ST_LABEL[q.st] : 'sem marcação'}${q.gab || q.resp ? `, gabarito ${q.gab || '?'}, minha resposta ${q.resp || '?'}` : ''}.\nENUNCIADO (extraído do PDF, pode ter falhas de formatação):\n${q.txt || '(sem texto)'}`;
+  } else if (ctx.k === 'an') {
+    const a = d.ans.find(x => x.id === ctx.id); if (a) t = `ANÁLISE ANTERIOR EM FOCO (${AN_NOME[a.tipo]}, ${hm(a.ts)}):\n${a.texto.slice(0, 6000)}`;
+  }
+  return t ? '\n\nASSUNTO DA CONVERSA\n' + t : '';
+}
+function threadTurns(th) {
+  const turns = [{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + ctxDetail(th.ctx) }];
+  (th.msgs || []).forEach(m => turns.push({ role: m.r === 'c' ? 'assistant' : 'user', content: m.t }));
+  return turns;
+}
+function liveUpdate() {
+  const el = document.getElementById('live-body'); if (!el || !S.stream) return;
+  el.innerHTML = S.stream.text ? md(S.stream.text) : '<span class="sub">Pensando…</span>';
+}
+function stopStream() { if (S.stream && S.stream.ctl) S.stream.ctl.abort(); }
+
+async function askThread(tid) {
+  const th = S.cad.find(t => t.id === tid); if (!th || !S.ai) return;
+  const ctl = new AbortController(); S.stream = { tid, text: '', ctl }; render(true);
+  const done = async (text, note) => {
+    const cur = S.cad.find(t => t.id === tid); if (!cur || !text) return;
+    await dbSet('cad', tid, { ...strip(cur), msgs: [...(cur.msgs || []), { r: 'c', t: text + (note || ''), ts: Date.now() }], upd: Date.now() });
+  };
+  try {
+    const res = await S.ai(threadTurns(th), { cache: false, signal: ctl.signal, onText: ({ text }) => { if (S.stream) { S.stream.text = text; liveUpdate(); } } });
+    await done(res.text, res.truncated ? '\n\n_(resposta cortada pelo limite de tamanho; peça para continuar)_' : '');
+  } catch (e) {
+    if (e && e.text) await done(e.text, '\n\n_(resposta interrompida)_').catch(() => { });
+    if (!e || e.code !== 'cancelled') toast(aiMsg(e), 'err');
+  } finally { S.stream = null; render(true); }
+}
+
+const AN_PROMPT = {
+  geral: 'Faça a análise geral dos meus dados. Estrutura em seções com "## ": Panorama (3 a 4 linhas com números), Onde mais erro (diga explicitamente a ÁREA e a MATÉRIA em que mais erro, com números, com base no último simulado e comparando com os últimos 3; use a análise completa para dizer os assuntos que mais erro e quais já estão melhorando, e o último simulado e os últimos 3 para a tendência recente), O que está evoluindo, Pontos críticos (matérias ou competências abaixo do piso ou da meta, quedas; avise se há poucos dados para tendência), Redação (competências, efeito da reescrita), Direcionamento para os próximos 7 dias (priorize por impacto: o que estudar, quantas questões, de quais assuntos), O que registrar no próximo simulado.',
+  plano: 'Monte o meu plano de estudo dos próximos 7 dias, dia a dia (cada dia: foco principal, o que fazer, quantas questões). Priorize onde perco mais pontos pelos números (matérias abaixo da meta e assuntos que mais erro), reserve tempo para redação e para refazer os erros, e termine dizendo como vou saber, no próximo simulado, se o plano funcionou.',
+  simulados: 'Analise só os simulados: diga a área e a matéria em que mais erro no último simulado e nos últimos 3 (com números), tendência geral, matérias que sobem e que caem, matérias abaixo do piso, onde está a maior perda de pontos e o que o mapa de erros mostra. Termine com 3 prioridades.',
+  redacao: 'Analise só a redação: evolução da nota, a competência que mais limita, o efeito da reescrita e 3 prioridades para o próximo texto. Respeite as instruções sobre a minha estrutura e o meu repertório.'
+};
+async function runAnalysis(tipo) {
+  if (S.demo) { toast('Isto é só um exemplo. Lance um simulado ou uma redação seus para usar o Claude.'); return; }
+  if (!S.ai) { toast('O Claude não está disponível nesta visualização.', 'err'); return; }
+  if (S.stream) return;
+  if (S.route !== 'plano') go('plano');
+  const ctl = new AbortController(); S.stream = { an: true, tipo, text: '', ctl }; render(true);
+  const refs = { sims: S.sims.length, reds: S.reds.length };
+  const save = text => dbSet('ans', uid(), { tipo, texto: text, ts: Date.now(), ref: refs });
+  try {
+    const res = await S.ai([{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\nPEDIDO\n' + AN_PROMPT[tipo] + '\nSem tabelas. Seja específico e curto.' }], { cache: false, signal: ctl.signal, onText: ({ text }) => { if (S.stream) { S.stream.text = text; liveUpdate(); } } });
+    await save(res.text + (res.truncated ? '\n\n_(cortada pelo limite de tamanho)_' : ''));
+  } catch (e) {
+    if (e && e.text) await save(e.text + '\n\n_(interrompida)_').catch(() => { });
+    if (!e || e.code !== 'cancelled') toast(aiMsg(e), 'err');
+  } finally { S.stream = null; render(true); }
+}
+
+/* ---------- PDF ---------- */
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let _pdfP = null;
+function loadPdfJs() {
+  if (_pdfP) return _pdfP;
+  _pdfP = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = PDFJS;
+    s.onload = () => { const l = window.pdfjsLib || window['pdfjs-dist/build/pdf']; if (!l) return rej(new Error('Leitor de PDF indisponível.')); l.GlobalWorkerOptions.workerSrc = PDFJS_WORKER; res(l); };
+    s.onerror = () => { _pdfP = null; rej(new Error('Não consegui carregar o leitor de PDF. Verifique a conexão.')); };
+    document.head.appendChild(s);
+  });
+  return _pdfP;
+}
+async function readPdf(file, onPage) {
+  const lib = await loadPdfJs(); const buf = await file.arrayBuffer();
+  const doc = await lib.getDocument({ data: new Uint8Array(buf) }).promise; const pages = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const pg = await doc.getPage(p), tc = await pg.getTextContent(); let line = '', lastY = null; const lines = [];
+    for (const it of tc.items) {
+      if (!('str' in it)) continue; const y = it.transform ? it.transform[5] : 0;
+      if (lastY !== null && Math.abs(y - lastY) > 3) { lines.push(line); line = ''; }
+      line += it.str; lastY = y; if (it.hasEOL) { lines.push(line); line = ''; lastY = null; }
+    }
+    if (line) lines.push(line); pages.push(lines.join('\n')); onPage && onPage(p, doc.numPages);
+  }
+  return { pages, doc, lib };
+}
+function splitQuestions(text) {
+  const lines = text.split('\n');
+  const reA = /^\s*(?:QUEST[ÃA]O|Quest[ãa]o)\s*[:\-–]?\s*(\d{1,3})\b/;
+  let marks = []; lines.forEach((l, i) => { const m = l.match(reA); if (m) marks.push({ i, n: +m[1] }); });
+  if (marks.length < 5) {
+    marks = []; const reB = /^\s*(\d{1,3})\s*[\).\-–]\s+\S/; let exp = null;
+    lines.forEach((l, i) => { const m = l.match(reB); if (!m) return; const n = +m[1]; if (exp === null ? (n === 1 || n === 91 || n === 46 || n === 136) : n === exp) { marks.push({ i, n }); exp = n + 1; } });
+  }
+  if (marks.length < 3) return [];
+  const seen = new Set(), out = [];
+  marks.forEach((mk, k) => { if (seen.has(mk.n)) return; seen.add(mk.n); const end = k + 1 < marks.length ? marks[k + 1].i : lines.length; out.push({ n: mk.n, raw: lines.slice(mk.i, end).join('\n') }); });
+  return out;
+}
+const cleanTxt = s => s.replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+async function splitByAI(full, ui) {
+  ui.log('Não achei a numeração das questões. Pedindo ao Claude para separar…');
+  const flat = full.replace(/\s+/g, ' ');
+  const out = await S.ai.json('Este é o texto extraído de um PDF de simulado. Liste todas as questões na ordem em que aparecem. Responda só com um array JSON de objetos {"n": número da questão, "ini": primeiras 8 palavras do enunciado, copiadas exatamente}.\n\nTEXTO:\n' + flat.slice(0, 200000), { modelTier: 'default', signal: ui.ctl.signal });
+  const pos = []; let cur = 0;
+  (Array.isArray(out) ? out : []).forEach(o => { const ini = String(o.ini || '').replace(/\s+/g, ' ').trim(); if (!ini) return; const i = flat.indexOf(ini, cur); if (i >= 0) { pos.push({ n: +o.n, i }); cur = i + ini.length; } });
+  return pos.map((p, k) => ({ n: p.n, raw: flat.slice(p.i, k + 1 < pos.length ? pos[k + 1].i : flat.length) }));
+}
+async function classify(items, ui) {
+  const mats = [...S.cfg.materias, 'Outra'], res = new Map(), size = 20;
+  for (let i = 0; i < items.length; i += size) {
+    const batch = items.slice(i, i + size);
+    ui.log(`Classificando questões ${batch[0].n} a ${batch.at(-1).n}…`); ui.prog(0.35 + 0.55 * (i / items.length));
+    const prompt = `Classifique cada questão de um simulado de vestibular de Medicina/ENEM.\nMatérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}.\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "ass": assunto}, um por questão, na mesma ordem.\n\nQUESTÕES:\n` + batch.map(q => `[${q.n}] ${trunc(q.raw, 650)}`).join('\n\n');
+    try {
+      const out = await S.ai.json(prompt, { modelTier: 'default', signal: ui.ctl.signal });
+      (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n != null) res.set(n, { mat: mats.includes(o.mat) ? o.mat : 'Outra', ass: String(o.ass || '').slice(0, 80) }); });
+    } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn'); }
+  }
+  return res;
+}
+async function scanPages(doc, lib, ui) {
+  const lim = await S.ai.limits().catch(() => null);
+  if (!lim || !lim.images) throw new Error('Este PDF parece ser digitalizado (sem texto) e esta visualização não envia imagens ao Claude.');
+  const per = Math.min(4, lim.images.maxCount || 4), mats = [...S.cfg.materias, 'Outra'], found = new Map();
+  for (let p = 1; p <= doc.numPages; p += per) {
+    const blobs = [];
+    for (let k = p; k < p + per && k <= doc.numPages; k++) {
+      const pg = await doc.getPage(k), vp = pg.getViewport({ scale: 1.5 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise; blobs.push(await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82)));
+    }
+    ui.log(`Lendo páginas ${p} a ${Math.min(p + per - 1, doc.numPages)} como imagem…`); ui.prog(0.1 + 0.8 * (p / doc.numPages));
+    try {
+      const out = await S.ai.json(`As imagens são páginas consecutivas de um simulado de vestibular. Liste as questões que COMEÇAM nestas páginas. Matérias permitidas: ${mats.join('; ')}. Responda só com um array JSON de objetos {"n": número, "mat": matéria, "ass": assunto em 2 a 5 palavras, "txt": enunciado resumido em até 300 caracteres}.`, { images: blobs, modelTier: 'default', signal: ui.ctl.signal });
+      (Array.isArray(out) ? out : []).forEach(o => { if (o && o.n != null && !found.has(+o.n)) found.set(+o.n, { n: +o.n, mat: mats.includes(o.mat) ? o.mat : 'Outra', ass: String(o.ass || '').slice(0, 80), raw: String(o.txt || '') }); });
+    } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn'); }
+  }
+  return [...found.values()].sort((a, b) => a.n - b.n);
+}
+async function runImport(o, ui) {
+  if (!S.ai) throw new Error('O Claude não está disponível nesta visualização.');
+  ui.log('Lendo o PDF…'); ui.prog(0.03);
+  const { pages, doc, lib } = await readPdf(o.file, (p, n) => ui.prog(0.03 + 0.25 * p / n));
+  const chars = pages.join('').replace(/\s/g, '').length; let items = [], cls = new Map();
+  if (chars < 120 * pages.length) {
+    ui.log('O PDF não tem texto selecionável; vou ler as páginas como imagem.');
+    items = await scanPages(doc, lib, ui); items.forEach(q => cls.set(q.n, { mat: q.mat, ass: q.ass }));
+  } else {
+    const full = pages.join('\n'); items = splitQuestions(full);
+    if (items.length < 3) items = await splitByAI(full, ui);
+    ui.log(`${items.length} questões encontradas.`);
+    if (items.length) cls = await classify(items, ui);
+  }
+  if (!items.length) throw new Error('Não consegui identificar questões nesse PDF.');
+  ui.prog(0.92);
+  let pdfId = null;
+  if (S.assets) { try { pdfId = (await S.assets.upload(o.file, { type: 'application/pdf' })).id; ui.log('PDF guardado no painel.'); } catch (e) { ui.log('Não guardei o arquivo do PDF (' + (e && (e.code || e.message)) + '), mas as questões foram lidas.', 'warn'); } }
+  const itens = items.map(q => { const c = cls.get(q.n) || {}; return { n: q.n, mat: c.mat || 'Outra', ass: c.ass || '', txt: cleanTxt(q.raw).slice(0, 1400), st: '', gab: '', resp: '' }; });
+  let size = JSON.stringify({ itens }).length; for (let lim = 1400; size > 235000 && lim > 100; lim = Math.floor(lim / 2)) { itens.forEach(q => { q.txt = q.txt.slice(0, lim); }); size = JSON.stringify({ itens }).length; }
+  let sid = o.simId, sim = sid ? S.sims.find(s => s.id === sid) : null;
+  if (!sim) { sid = uid(); sim = { nome: o.nome || trunc(o.file.name.replace(/\.pdf$/i, ''), 60), data: o.data || TODAY_ISO, modelo: o.modelo || activeModelo().id, banca: (modelosAll().find(m => m.id === (o.modelo || activeModelo().id)) || activeModelo()).nome, mats: [], obs: '', ts: Date.now() }; }
+  else sim = strip(sim);
+  sim.pdfNome = o.file.name; if (pdfId) sim.pdfId = pdfId; sim.qn = itens.length;
+  await dbSet('simq', sid, { itens, ts: Date.now() }); await dbSet('sim', sid, sim);
+  S.ui.modelo = modeloOf(sim).id; S.ui.matSel = null;
+  ui.prog(1); ui.log(`Pronto: ${itens.length} questões organizadas.`, 'ok');
+  return sid;
+}
+
+/* ============ formulários e janelas ============ */
+function leaveDemo() { if (S.demo) { S.demoOff = true; S.demo = false; render(true); } }
+const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
+const selOpts = (arr, cur) => arr.map(x => { const [v, l] = Array.isArray(x) ? x : [x, x]; return `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`; }).join('');
+
+/* ---------- simulado ---------- */
+const allM0 = id => modelosAll().find(m => m.id === id);
+function simForm(id, pre) {
+  leaveDemo();
+  const cur = id ? S.sims.find(s => s.id === id) : null;
+  const allM = modelosAll(), M0 = cur ? modeloOf(cur) : (pre && allM0(pre.modelo)) || activeModelo();
+  const grupos = [...new Set(D().sims.map(x => x.grupo).filter(Boolean))];
+  const listFor = M => (M.areas && M.areas.length ? M.areas.map(a => a.n) : S.cfg.materias);
+  const qOf = (M, n) => ((M.areas || []).find(a => a.n === n) || {}).q;
+  const names = [...new Set([...listFor(M0), ...(cur ? (cur.mats || []).map(m => m.m) : [])])];
+  const val = m => (cur && (cur.mats || []).find(x => x.m === m)) || {};
+  const row = m => `<div class="mrow" data-m="${esc(m)}"><label>${esc(m)}</label><input type="number" min="0" inputmode="numeric" data-k="a" value="${val(m).a ?? ''}" aria-label="Acertos em ${esc(m)}"><span>de</span><input type="number" min="1" inputmode="numeric" data-k="t" value="${val(m).t ?? ''}" aria-label="Total de questões de ${esc(m)}"></div>`;
+  const box = modal(`<h2>${cur ? 'Editar simulado' : 'Novo simulado'}</h2><p class="lead">Preencha só o que apareceu. ${LITE ? '' : 'Se preferir, deixe os acertos em branco: depois de adicionar o PDF e marcar as questões, o painel calcula os acertos por área sozinho. '}Cada modelo traz as suas áreas e o número de questões (edite em “Editar modelos…”, no topo).</p>
+    <form class="form" id="f">
+      <div class="row"><label class="field" style="flex:2 1 220px"><span>Nome (opcional se tiver simulado completo)</span><input type="text" id="f-nome" value="${esc(cur ? cur.nome : '')}" placeholder="Ex.: Dia 1"></label>
+        <label class="field" style="flex:1 1 150px"><span>Data</span><input type="date" id="f-data" required value="${cur ? cur.data : (pre && pre.data) || TODAY_ISO}"></label>
+        <label class="field" style="flex:1 1 150px"><span>Modelo de prova</span><select id="f-banca">${selOpts(allM.map(m => [m.id, m.nome]), M0.id)}</select></label></div>
+      <label class="field"><span>Simulado completo · junta o Dia 1 e o Dia 2 (mesmo nome nos dois)</span><input type="text" id="f-grupo" list="f-grupos" value="${esc(cur ? cur.grupo || '' : (pre && pre.grupo) || '')}" placeholder="Ex.: 5º Simulado SAS 2026"><datalist id="f-grupos">${grupos.map(g => `<option value="${esc(g)}">`).join('')}</datalist></label>
+      <div><div class="row" style="align-items:center;margin-bottom:10px"><span class="lbl" id="f-lbl">Acertos por matéria</span><div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex:none"><span class="sub" id="f-qlbl">questões por matéria</span><input type="number" id="f-qpm" min="1" style="width:76px" aria-label="Questões por matéria"><button type="button" class="btn sm" id="f-apply">Aplicar a todas</button></div></div>
+        <div class="mgrid" id="f-grid">${names.map(row).join('')}</div>
+        <div class="row" style="margin-top:12px"><label class="field"><span>Outra matéria</span><input type="text" id="f-extra" placeholder="Ex.: Geral, Atualidades"></label><button type="button" class="btn sm" id="f-add" style="flex:none">Adicionar</button></div></div>
+      <div class="total-line" id="f-tot"></div>
+      <label class="field"><span>Observações</span><textarea id="f-obs" rows="3" placeholder="Como foi o tempo, o que errou por distração, o que quer rever…">${esc(cur ? cur.obs : '')}</textarea></label>
+      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar simulado</button></div></form>`, { wide: true });
+  const grid = $('#f-grid', box);
+  const tot = () => { let a = 0, t = 0; $$('.mrow', grid).forEach(r => { const A = num($('[data-k=a]', r).value), T = num($('[data-k=t]', r).value); if (T) { a += A || 0; t += T; } }); $('#f-tot', box).textContent = t ? `Total: ${a}/${t} · ${nf(a / t * 100, 1)}%` : 'Total: preencha acertos e total das matérias.'; };
+  grid.addEventListener('input', tot); tot();
+  const curM = () => allM.find(m => m.id === $('#f-banca', box).value) || M0;
+  const eStatic = () => { const e = !!(curM().areas || []).length; $('#f-lbl', box).textContent = e ? 'Acertos por área' : 'Acertos por matéria'; $('#f-qlbl', box).textContent = e ? 'questões por área' : 'questões por matéria'; };
+  const fillBanca = () => {
+    const M = curM(), keep = new Map();
+    $$('.mrow', grid).forEach(r => keep.set(r.dataset.m, { a: $('[data-k=a]', r).value, t: $('[data-k=t]', r).value }));
+    const list = [...listFor(M)]; keep.forEach((v, k) => { if (!list.includes(k) && v.a !== '') list.push(k); });
+    grid.innerHTML = list.map(row).join('');
+    $$('.mrow', grid).forEach(r => { const v = keep.get(r.dataset.m), q = qOf(M, r.dataset.m); if (v && v.a !== '') { $('[data-k=a]', r).value = v.a; $('[data-k=t]', r).value = q || v.t; } else if (q) $('[data-k=t]', r).value = q; });
+    eStatic(); tot();
+  };
+  $('#f-banca', box).addEventListener('change', fillBanca);
+  if (!cur) fillBanca(); else eStatic();
+  $('#f-apply', box).onclick = () => { const q = num($('#f-qpm', box).value); if (!q) return; $$('.mrow', grid).forEach(r => { $('[data-k=t]', r).value = q; }); tot(); };
+  $('#f-add', box).onclick = () => { const n = $('#f-extra', box).value.trim(); if (!n || $$('.mrow', grid).some(r => r.dataset.m === n)) return; grid.insertAdjacentHTML('beforeend', row(n)); $('#f-extra', box).value = ''; tot(); };
+  $('#f-extra', box).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#f-add', box).click(); } });
+  box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) closeModal(); });
+  $('#f', box).onsubmit = async e => {
+    e.preventDefault(); const mats = [];
+    for (const r of $$('.mrow', grid)) { const A = num($('[data-k=a]', r).value), T = num($('[data-k=t]', r).value); if (A == null) continue; if (!T) { toast(`Em ${r.dataset.m}, preencha acertos e total.`, 'err'); return; } if (A > T || A < 0) { toast(`Em ${r.dataset.m}, os acertos não podem passar do total.`, 'err'); return; } mats.push({ m: r.dataset.m, a: A, t: T }); }
+    let grupo = $('#f-grupo', box).value.trim(); const ex = grupos.find(g => gKey(g) === gKey(grupo)); if (ex) grupo = ex; const nome = $('#f-nome', box).value.trim() || (grupo ? grupo + ' · ' + curM().nome : '');
+    if (!nome) { toast('Dê um nome ao simulado ou preencha o simulado completo.', 'err'); return; }
+    const sid = cur ? cur.id : uid();
+    const doc = { ...(cur ? strip(cur) : { ts: Date.now() }), nome, grupo, data: $('#f-data', box).value, modelo: curM().id, banca: curM().nome, mats, obs: $('#f-obs', box).value.trim() };
+    if (LITE && !mats.length) { toast('Preencha os acertos de pelo menos uma área.', 'err'); return; }
+    if (!mats.length) doc.auto = true; else if (!(cur && cur.auto && JSON.stringify(mats) === JSON.stringify(cur.mats || []))) delete doc.auto;
+    try { await dbSet('sim', sid, doc); S.ui.modelo = doc.modelo; S.ui.matSel = null; try { localStorage.setItem('pe-modelo', doc.modelo); } catch (x) { } closeModal(); toast('Simulado salvo em ' + doc.banca + '.'); render(true); } catch (e2) { }
+  };
+}
+async function simDel(id) {
+  const s = S.sims.find(x => x.id === id); if (!s) return;
+  const ok = await confirmBox({ title: 'Excluir este simulado?', text: 'As notas e as questões marcadas desse simulado serão apagadas. Não dá para desfazer.', ok: 'Excluir', danger: true }); if (!ok) return;
+  try { await dbDel('simq', id).catch(() => { }); await dbDel('sim', id); if (s.pdfId && S.assets) S.assets.delete(s.pdfId).catch(() => { }); toast('Simulado excluído.'); if (S.route === 'sim-questoes') go('sim-notas'); } catch (e2) { }
+}
+function simDetail(id) {
+  if (String(id).startsWith('demo-')) { toast('Este é um simulado de exemplo. Lance o seu para editar e comentar.'); return; }
+  const s = S.sims.find(x => x.id === id); if (!s) return;
+  const M = modeloOf(s);
+  const asc = simsSorted(), i = asc.findIndex(x => x.id === id), t = simStat(s), prev = i > 0 ? simStat(asc[i - 1]).p : null;
+  const rows = (s.mats || []).filter(m => m.t).map(m => ({ n: m.m, pct: m.a / m.t * 100, v: `${m.a}/${m.t}`, color: matColor(m.m), mk: modPct(M, areaDeMat(M, m.m)) })).sort((a, b) => b.pct - a.pct);
+  const hasQ = !!S.simq[id];
+  const box = modal(`<h2>${esc(s.nome)}</h2><p class="lead">${fd(s.data, true)} · ${esc(M.nome)}${s.grupo ? ' · ' + esc(s.grupo) : ''}${s.pdfNome ? ' · ' + esc(s.pdfNome) : ''}</p>
+    <div class="cols" style="margin-bottom:18px"><div class="mini" style="margin:0"><div><span>Acertos</span><span class="mono">${t.a}/${t.t}</span></div></div>${!M.legacy && M.metaTotal ? `<div class="mini" style="margin:0"><div><span>Meta</span><span class="mono">${t.a}/${M.metaTotal}</span></div></div>` : ''}<div class="mini" style="margin:0"><div><span>Aproveitamento</span><span class="mono">${pct0(t.p)}</span></div></div><div class="mini" style="margin:0"><div><span>Variação</span><span>${deltaHTML(prev != null && t.p != null ? t.p - prev : null)}</span></div></div></div>
+    ${barRows(rows)}${(s.mm || []).length ? `<div class="lbl" style="margin:20px 0 10px">Por matéria · das questões marcadas</div>${barRows(s.mm.filter(m => m.t).map(m => ({ n: m.m, pct: m.a / m.t * 100, v: `${m.a}/${m.t}`, color: matColor(m.m), mk: modPct(M, areaDeMat(M, m.m)) })).sort((a, b) => b.pct - a.pct))}` : ''}${s.obs ? `<p class="md" style="margin-top:16px;color:var(--ink-2)">${esc(s.obs)}</p>` : ''}
+    <div class="foot" style="justify-content:space-between"><button class="btn danger" data-x="del">${ic('trash', 14)} Excluir</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ${LITE ? 'primary' : ''}" data-x="edit">Editar</button>${LITE ? '' : `<button class="btn" data-x="q">${hasQ ? 'Ver questões e conferência' : 'Adicionar PDF da prova para análise'}</button><button class="btn primary" data-x="ask">Comentar com o Claude</button>`}</div></div>`, { wide: true });
+  box.addEventListener('click', async e => {
+    const x = e.target.closest('[data-x]'); if (!x) return; const k = x.dataset.x;
+    if (k === 'edit') { closeModal(); simForm(id); }
+    else if (k === 'ask') { closeModal(); threadModal({ k: 'sim', id }, '', false); }
+    else if (k === 'q') { closeModal(); if (hasQ) { S.ui.simSel = id; go('sim-questoes'); } else pdfModal(id); }
+    else if (k === 'del') { closeModal(); simDel(id); }
+    else if (false) { const ok = await confirmBox({ title: 'Excluir este simulado?', text: 'As notas e as questões marcadas desse simulado serão apagadas. Não dá para desfazer.', ok: 'Excluir', danger: true }); if (!ok) return; try { await dbDel('simq', id).catch(() => { }); await dbDel('sim', id); if (s.pdfId && S.assets) S.assets.delete(s.pdfId).catch(() => { }); toast('Simulado excluído.'); } catch (e2) { } }
+  });
+}
+
+/* ---------- redação ---------- */
+function redForm(id) {
+  leaveDemo();
+  const cur = id ? S.reds.find(r => r.id === id) : null; 
+  const originals = redsSorted().filter(r => r.tipo !== 'reescrita' && (!cur || r.id !== cur.id));
+  const compSel = i => `<label class="field"><span>${COMPS[i]} · ${COMP_NOMES[i]}</span><select data-c="${i}">${NOTAS_RED.map(v => `<option ${cur && cur.c && +cur.c[i] === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
+  const box = modal(`<h2>${cur ? 'Editar redação' : 'Nova redação'}</h2><p class="lead">Notas por competência, no degrau de 40 da correção.</p>
+    <form class="form" id="f">
+      <div class="row"><label class="field" style="flex:3 1 260px"><span>Tema</span><input type="text" id="f-tema" required value="${esc(cur ? cur.tema : '')}" placeholder="Ex.: Festas populares no Brasil"></label>
+        <label class="field" style="flex:1 1 150px"><span>Data</span><input type="date" id="f-data" required value="${cur ? cur.data : TODAY_ISO}"></label></div>
+      <div class="row"><label class="field"><span>Tipo</span><select id="f-tipo"><option value="original" ${cur && cur.tipo === 'reescrita' ? '' : 'selected'}>Escrita</option><option value="reescrita" ${cur && cur.tipo === 'reescrita' ? 'selected' : ''}>Reescrita</option></select></label>
+        <label class="field" id="f-de-w" style="flex:2 1 240px" ${cur && cur.tipo === 'reescrita' ? '' : 'hidden'}><span>Reescrita de</span><select id="f-de"><option value="">Escolha o texto escrito</option>${originals.map(r => `<option value="${r.id}" ${cur && cur.de === r.id ? 'selected' : ''}>${fd(r.data)} · ${esc(trunc(r.tema, 40))} · ${redTotal(r)}</option>`).join('')}</select></label>
+        <label class="field" style="flex:0 1 120px"><span>Linhas usadas</span><input type="number" id="f-lin" min="0" max="40" value="${cur && cur.linhas ? cur.linhas : ''}" placeholder="30"></label></div>
+      <div class="cols">${COMPS.map((c, i) => compSel(i)).join('')}</div>
+      <div class="total-line" id="f-tot"></div>
+      <label class="field"><span>Comentários da correção e anotações</span><textarea id="f-obs" rows="3" placeholder="Anotações livres (opcional)">${esc(cur ? cur.obs : '')}</textarea></label>
+      <details ${LITE ? 'hidden' : ''} ${cur && cur.texto ? 'open' : ''}><summary class="sub" style="cursor:pointer">Colar o texto da redação (opcional, o Claude lê quando você pedir análise)</summary><textarea id="f-texto" rows="8" style="margin-top:10px" placeholder="Cole o texto aqui">${esc(cur ? cur.texto : '')}</textarea></details>
+      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar redação</button></div></form>`, { wide: true });
+  const tot = () => { const v = $$('[data-c]', box).map(s => +s.value); $('#f-tot', box).textContent = `Nota total: ${v.reduce((a, b) => a + b, 0)} de 1000`; };
+  box.addEventListener('change', e => { if (e.target.matches('[data-c]')) tot(); if (e.target.id === 'f-tipo') $('#f-de-w', box).hidden = e.target.value !== 'reescrita'; }); tot();
+  box.addEventListener('click', e => {
+    if (e.target.closest('[data-x=cancel]')) { closeModal(); return; }
+  });
+  $('#f', box).onsubmit = async e => {
+    e.preventDefault(); const tipo = $('#f-tipo', box).value;
+    const doc = { ...(cur ? strip(cur) : { ts: Date.now() }), tema: $('#f-tema', box).value.trim(), data: $('#f-data', box).value, tipo, de: tipo === 'reescrita' ? $('#f-de', box).value : '', c: $$('[data-c]', box).map(s => +s.value), linhas: num($('#f-lin', box).value) || 0, obs: $('#f-obs', box).value.trim(), texto: $('#f-texto', box).value.trim() };
+    try { await dbSet('red', cur ? cur.id : uid(), doc); closeModal(); toast('Redação salva.'); } catch (e2) { }
+  };
+}
+function redDetail(id) {
+  if (String(id).startsWith('demo-')) { toast('Esta é uma redação de exemplo. Lance a sua para editar e comentar.'); return; }
+  const r = S.reds.find(x => x.id === id); if (!r) return; const asc = redsSorted();
+  const box = modal(`<h2>${esc(r.tema)}</h2><p class="lead">${fd(r.data, true)} · ${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}${r.linhas ? ` · ${r.linhas} linhas` : ''}</p>
+    <div class="cols" style="margin-bottom:18px"><div class="mini" style="margin:0"><div><span>Nota</span><span class="mono">${nf(redTotal(r))}</span></div></div><div class="mini" style="margin:0"><div><span>Variação</span><span>${deltaHTML(redDelta(r, asc), ' pts', 0)}</span></div></div></div>
+    ${barRows(COMPS.map((c, i) => ({ n: `${c} · ${COMP_NOMES[i]}`, pct: (+r.c[i] || 0) / 200 * 100, v: String(r.c[i]), color: SER[i] })))}
+    ${(r.marcas || []).length ? `<div class="chips" style="margin-top:16px">${r.marcas.map(m => `<span class="tag">${esc(m)}</span>`).join('')}</div>` : ''}
+    ${r.obs ? `<p style="margin-top:16px;color:var(--ink-2);white-space:pre-wrap">${esc(r.obs)}</p>` : ''}
+    ${r.texto ? `<details style="margin-top:14px"><summary class="sub" style="cursor:pointer">Ver texto</summary><div class="q-txt" style="margin-top:10px">${esc(r.texto)}</div></details>` : ''}
+    <div class="foot" style="justify-content:space-between"><button class="btn danger" data-x="del">${ic('trash', 14)} Excluir</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-x="edit">Editar</button><button class="btn" data-x="ask">Comentar</button><button class="btn primary" data-x="an" ${aiAttr()}>Pedir análise deste texto</button></div></div>`, { wide: true });
+  box.addEventListener('click', async e => {
+    const x = e.target.closest('[data-x]'); if (!x) return; const k = x.dataset.x;
+    if (k === 'edit') { closeModal(); redForm(id); }
+    else if (k === 'ask') { closeModal(); threadModal({ k: 'red', id }, '', false); }
+    else if (k === 'an') { closeModal(); createThread({ ctx: { k: 'red', id }, text: 'Analise esta redação pela Cartilha do Participante ENEM 2026 e pela minha estrutura. O que mais pesou na nota de cada competência e o que eu mudo no próximo texto?', ask: true }); }
+    else if (k === 'del') { closeModal(); const ok = await confirmBox({ title: 'Excluir esta redação?', text: 'Não dá para desfazer.', ok: 'Excluir', danger: true }); if (ok) { try { await dbDel('red', id); toast('Redação excluída.'); } catch (e2) { } } }
+  });
+}
+
+/* ---------- caderno ---------- */
+function ctxLabel(ctx) {
+  if (!ctx || ctx.k === 'geral') return 'Geral';
+  const d = D();
+  if (ctx.k === 'sim') { const s = d.sims.find(x => x.id === ctx.id); return 'Simulado: ' + (s ? s.nome : '?'); }
+  if (ctx.k === 'red') { const r = d.reds.find(x => x.id === ctx.id); return 'Redação: ' + (r ? trunc(r.tema, 40) : '?'); }
+  if (ctx.k === 'mat') return 'Matéria: ' + ctx.id;
+  if (ctx.k === 'q') { const [sid, n] = String(ctx.id).split(':'); const s = d.sims.find(x => x.id === sid); return `Q${n} · ${s ? s.nome : ''}`; }
+  if (ctx.k === 'an') { const a = d.ans.find(x => x.id === ctx.id); return 'Análise: ' + (a ? AN_NOME[a.tipo] + ' ' + fd(isoOf(new Date(a.ts))) : ''); }
+  return '';
+}
+async function createThread({ titulo, ctx, text, ask }) {
+  leaveDemo(); const id = uid();
+  const doc = { titulo: titulo || trunc(text, 48) || ctxLabel(ctx), ctx: { ...ctx, label: ctxLabel(ctx) }, msgs: text ? [{ r: 'u', t: text, ts: Date.now() }] : [], aberto: true, ts: Date.now(), upd: Date.now() };
+  try { await dbSet('cad', id, doc); } catch (e) { return; }
+  S.ui.thread = id; go('caderno'); if (ask && text) askThread(id);
+}
+function threadModal(ctx, msg, send) {
+  leaveDemo(); ctx = ctx || { k: 'geral' };
+  const d = D(); const key = c => c.k === 'geral' ? 'geral' : `${c.k}|${c.id}`;
+  const opts = [['geral', 'Geral (todos os meus dados)']];
+  [...simsSorted()].reverse().forEach(s => opts.push([`sim|${s.id}`, 'Simulado: ' + s.nome]));
+  [...redsSorted()].reverse().forEach(r => opts.push([`red|${r.id}`, 'Redação: ' + trunc(r.tema, 40)]));
+  matNames().forEach(m => opts.push([`mat|${m}`, 'Matéria: ' + m]));
+  if (!opts.some(o => o[0] === key(ctx))) opts.push([key(ctx), ctxLabel(ctx)]);
+  const box = modal(`<h2>Nova conversa</h2><p class="lead">Escolha o assunto para o Claude olhar os dados certos.</p>
+    <form class="form" id="f"><label class="field"><span>Assunto</span><select id="f-ctx">${selOpts(opts, key(ctx))}</select></label>
+      <label class="field"><span>Título (opcional)</span><input type="text" id="f-tit" placeholder="Ex.: Dúvida sobre ligação gênica"></label>
+      <label class="field"><span>Mensagem</span><textarea id="f-msg" rows="5" placeholder="Escreva sua dúvida ou comentário…">${esc(msg || '')}</textarea></label>
+      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button type="button" class="btn" data-x="note">Só anotar</button><button class="btn primary" type="submit" ${aiAttr()}>Enviar ao Claude</button></div></form>`);
+  const read = () => { const v = $('#f-ctx', box).value; const [k, ...r] = v.split('|'); return { ctx: k === 'geral' ? { k: 'geral' } : { k, id: r.join('|') }, titulo: $('#f-tit', box).value.trim(), text: $('#f-msg', box).value.trim() }; };
+  box.addEventListener('click', e => {
+    if (e.target.closest('[data-x=cancel]')) closeModal();
+    if (e.target.closest('[data-x=note]')) { const v = read(); if (!v.text) { toast('Escreva uma mensagem.', 'err'); return; } closeModal(); createThread({ ...v, ask: false }); }
+  });
+  $('#f', box).onsubmit = e => { e.preventDefault(); const v = read(); if (!v.text) { toast('Escreva uma mensagem.', 'err'); return; } closeModal(); createThread({ ...v, ask: true }); };
+}
+
+/* ---------- gabarito ---------- */
+function parseKey(str) {
+  const out = {}; const s = String(str || '').toUpperCase(); const re = /(\d{1,3})\s*[-–:.)]?\s*([A-E])(?![A-Z])/g; let m;
+  while ((m = re.exec(s))) out[+m[1]] = m[2];
+  return out;
+}
+function keyModal(sid) {
+  const doc = S.simq[sid]; if (!doc) return;
+  const first = (doc.itens[0] || {}).n || 1;
+  const box = modal(`<h2>Gabarito e respostas</h2><p class="lead">Cole o gabarito oficial e as suas respostas. Aceito "1-A 2-C 3-B" ou só as letras em sequência, a partir da questão ${first}. O painel marca acertos e erros sozinho.</p>
+    <form class="form" id="f"><label class="field"><span>Gabarito oficial</span><textarea id="f-gab" rows="3" placeholder="1-A 2-C 3-B…"></textarea></label>
+      <label class="field"><span>Minhas respostas</span><textarea id="f-res" rows="3" placeholder="1-A 2-D 3-B…"></textarea></label>
+      <div class="total-line" id="f-prev"></div>
+      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Marcar questões</button></div></form>`);
+  const parse = txt => { const t = String(txt).trim(); let k = parseKey(t); if (!Object.keys(k).length) { const l = t.toUpperCase().replace(/[^A-E]/g, ''); l.split('').forEach((c, i) => { k[first + i] = c; }); } return k; };
+  const prev = () => { const g = parse($('#f-gab', box).value), r = parse($('#f-res', box).value); const n = doc.itens.filter(q => g[q.n] && r[q.n]).length; $('#f-prev', box).textContent = `${n} questões casadas entre gabarito e respostas.`; return { g, r }; };
+  box.addEventListener('input', prev); prev();
+  box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) closeModal(); });
+  $('#f', box).onsubmit = async e => {
+    e.preventDefault(); const { g, r } = prev(); const nd = clone(doc); let n = 0;
+    nd.itens.forEach(q => { if (g[q.n]) q.gab = g[q.n]; if (r[q.n]) q.resp = r[q.n]; if (g[q.n] && r[q.n]) { const was = q.st; q.st = g[q.n] === r[q.n] ? (was === 'c' ? 'c' : 'a') : 'e'; n++; } });
+    if (!n) { toast('Nenhuma questão casou. Confira o formato.', 'err'); return; }
+    try { await dbSet('simq', sid, nd); closeModal(); toast(`${n} questões marcadas.`); } catch (e2) { }
+  };
+}
+
+/* ---------- PDF ---------- */
+function pdfModal(simId) {
+  leaveDemo();
+  const sims = [...simsAllSorted()].reverse();
+  if (!sims.length) { modal(`<h2>Lance o simulado primeiro</h2><p class="lead">O PDF só pode ser enviado para um simulado que já está lançado em Notas, com os acertos por área. Depois você volta aqui e adiciona o PDF para análise por matéria.</p><div class="foot"><button type="button" class="btn" data-x="cancel">Fechar</button><button class="btn primary" type="button" data-x="novo">Lançar simulado</button></div>`).addEventListener('click', e => { if (e.target.closest('[data-x=novo]')) { closeModal(); simForm(); } else if (e.target.closest('[data-x=cancel]')) closeModal(); }); return; }
+  const cs = !simId ? currentSim() : null, pre = simId && sims.some(s => s.id === simId) ? simId : (cs && sims.some(s => s.id === cs.sid) ? cs.sid : sims[0].id);
+  const one = S.sims.find(x => x.id === simId);
+  const box = modal(`<h2>Adicionar PDF da prova para análise</h2><p class="lead">O painel lê o texto do PDF, separa as questões e pede ao Claude a matéria e o assunto de cada uma. Os acertos por área que você lançou em Notas continuam valendo; o PDF serve para analisar por matéria.</p>
+    <form class="form" id="f"><label class="field"><span>Arquivo PDF</span><input type="file" id="f-file" accept="application/pdf,.pdf" required></label>
+      ${one ? `<p class="sub">Simulado: <b>${esc(one.nome)}</b> · ${fd(one.data, true)}</p><input type="hidden" id="f-sim" value="${one.id}">` : `<label class="field"><span>Simulado já lançado em Notas</span><select id="f-sim">${sims.map(s => `<option value="${s.id}" ${s.id === pre ? 'selected' : ''}>${esc(s.nome)} · ${fd(s.data, true)}</option>`).join('')}</select></label>`}
+      <p class="sub" id="f-warn" style="color:var(--warn)" hidden>Este simulado já tem questões marcadas. Ao analisar o PDF, elas serão substituídas e as marcações se perdem.</p>
+      <p class="sub">Usa o seu limite de uso do Claude: um simulado de 60 a 90 questões leva de 3 a 5 chamadas.</p>
+      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit" ${aiAttr()}>Analisar PDF</button></div></form>`);
+  const sync = () => { const v = $('#f-sim', box).value; $('#f-warn', box).hidden = !(S.simq[v] && (S.simq[v].itens || []).some(q => q.st)); }; $('#f-sim', box).onchange = sync; sync();
+  box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) closeModal(); });
+  $('#f', box).onsubmit = async e => {
+    e.preventDefault(); const file = $('#f-file', box).files[0]; if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { toast('O PDF passa de 20 MB. Envie uma versão menor.', 'err'); return; }
+    const o = { file, simId: $('#f-sim', box).value };
+    const ctl = new AbortController(); let running = true;
+    box.innerHTML = `<h2>Analisando o PDF</h2><p class="lead">Pode levar alguns minutos. Deixe esta janela aberta.</p><div class="progress"><i id="pg"></i></div><div class="log" id="lg" aria-live="polite"></div><div class="foot"><button class="btn" id="stop">Cancelar</button></div>`;
+    S.modal.sticky = true; S.modal.onClose = () => { if (running) ctl.abort(); };
+    const lg = $('#lg', box), pg = $('#pg', box);
+    const ui = { ctl, prog: p => { pg.style.width = Math.round(Math.min(1, p) * 100) + '%'; }, log: (m, k) => { const d = document.createElement('div'); if (k === 'ok') d.className = 'ok'; if (k === 'warn') d.style.color = 'var(--warn)'; if (k === 'err') d.style.color = 'var(--bad)'; d.textContent = m; lg.appendChild(d); lg.scrollTop = lg.scrollHeight; } };
+    $('#stop', box).onclick = () => { running = false; ctl.abort(); S.modal.sticky = false; closeModal(); };
+    try {
+      const sid = await runImport(o, ui); running = false; S.modal.sticky = false; closeModal(true);
+      S.ui.simSel = sid; S.ui.qMat = 'todas'; S.ui.qSt = 'todas'; S.ui.qSearch = ''; go('sim-questoes'); toast('Questões organizadas. Marque o que acertou, errou ou chutou.');
+    } catch (err) {
+      running = false; S.modal.sticky = false;
+      if (err && err.code === 'cancelled') return;
+      ui.log(err && err.code ? aiMsg(err) : (err && err.message) || 'Não consegui ler esse PDF.', 'err');
+      $('.foot', box).innerHTML = '<button class="btn" data-x="close">Fechar</button>'; box.addEventListener('click', e => { if (e.target.closest('[data-x=close]')) closeModal(); });
+    }
+  };
+}
+
+/* ---------- configurações ---------- */
+function cfgForm() {
+  const c = S.cfg;
+  const box = modal(`<h2>Configurações</h2><p class="lead">Metas${LITE ? '' : ', matérias e o que o Claude precisa saber sobre você'}. <button type="button" class="link" id="c-mod">Editar modelos de prova</button></p>
+    <form class="form" id="f"><div class="cols"><label class="field"><span>Meta padrão (%), se o modelo não tiver meta</span><input type="number" id="c-meta" min="1" max="100" value="${c.metaAcerto}"></label><label class="field"><span>Piso por matéria (%)</span><input type="number" id="c-piso" min="0" max="100" value="${c.piso}"></label><label class="field"><span>Meta de redação (pts)</span><input type="number" id="c-red" min="0" max="1000" step="20" value="${c.metaRed}"></label></div>
+      <div class="row"><label class="field" style="flex:2 1 200px"><span>Prova</span><input type="text" id="c-prova" value="${esc(c.prova)}" placeholder="Ex.: ENEM 2026"></label><label class="field" style="flex:1 1 160px"><span>Data da prova</span><input type="date" id="c-pdata" value="${esc(c.provaData)}"></label></div>
+      <label class="field"><span>Matérias (uma por linha)</span><textarea id="c-mats" rows="6">${esc(c.materias.join('\n'))}</textarea></label>
+      <label class="field" ${LITE ? 'hidden' : ''}><span>O que o Claude deve saber sobre você e como responder</span><textarea id="c-instr" rows="9">${esc(c.instr)}</textarea></label>
+      <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<button type="button" class="link" id="c-reset">Restaurar texto padrão</button>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true });
+  $('#c-mod', box).onclick = () => modelosForm();
+  if ($('#c-reset', box)) $('#c-reset', box).onclick = () => { $('#c-instr', box).value = DEF_CFG.instr; };
+  if (LITE) { $('#c-exp', box).onclick = liteExport; $('#c-imp', box).onclick = liteImport; }
+  box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) closeModal(); });
+  $('#f', box).onsubmit = async e => {
+    e.preventDefault(); const mats = [...new Set($('#c-mats', box).value.split('\n').map(s => s.trim()).filter(Boolean))];
+    if (!mats.length) { toast('Mantenha pelo menos uma matéria.', 'err'); return; }
+    const nc = { ...S.cfg, metaAcerto: num($('#c-meta', box).value) || 75, piso: num($('#c-piso', box).value) || 0, metaRed: num($('#c-red', box).value) || 900, prova: $('#c-prova', box).value.trim(), provaData: $('#c-pdata', box).value, materias: mats, instr: $('#c-instr', box).value.trim() };
+    try { await dbSet('config', 'geral', nc); if (!S.db) S.cfg = { ...DEF_CFG, ...nc }; closeModal(); toast('Configurações salvas.'); render(true); } catch (e2) { }
+  };
+}
+
+
+/* ---------- modelos de prova ---------- */
+function modelosForm() {
+  const D0 = clone(modelos());
+  const areaHTML = a => `<div class="mod-area"><input type="text" data-f="an" value="${esc(a.n)}" aria-label="Nome da área"><input type="number" min="1" data-f="aq" value="${a.q || ''}" aria-label="Número de questões"><input type="text" data-f="am" value="${esc((a.mats || []).join(', '))}" placeholder="Ex.: Física, Química" aria-label="Matérias da área"><button type="button" class="icon-btn" data-x="delarea" aria-label="Remover área" title="Remover área">${ic('trash', 14)}</button></div>`;
+  const modHTML = m => `<div class="mod-card" data-id="${esc(m.id || '')}">
+    <div class="row"><label class="field" style="flex:2 1 200px"><span>Nome do modelo</span><input type="text" data-f="nome" value="${esc(m.nome)}" placeholder="Ex.: ENEM, FAMEMA, Simulado do cursinho"></label>
+      <label class="field" style="flex:1 1 130px"><span>Meta · acertos no total</span><input type="number" min="0" data-f="metaTotal" value="${m.metaTotal || ''}" placeholder="Ex.: 160"></label>
+      <label class="field" style="flex:1 1 130px"><span>Meta · acertos por área</span><input type="number" min="0" data-f="metaArea" value="${m.metaArea || ''}" placeholder="Ex.: 40"></label></div>
+    <div class="lbl" style="margin-top:14px">Áreas · nome, nº de questões e matérias que entram nela (separe por vírgula)</div>
+    <div class="mod-areas">${(m.areas || []).map(areaHTML).join('')}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button type="button" class="btn sm" data-x="addarea">${ic('plus', 13)} Área</button><button type="button" class="btn sm danger" data-x="delmod">Remover modelo</button></div></div>`;
+  const box = modal(`<h2>Modelos de prova</h2><p class="lead">Cada modelo tem as suas áreas, o número de questões e a meta. Os gráficos e análises de simulados mostram um modelo por vez, escolhido no topo.</p>
+    <form class="form" id="f"><div><button type="button" class="btn" data-x="addmod">${ic('plus', 14)} Novo modelo</button></div>
+      <div id="mods">${D0.map(modHTML).join('')}</div>
+      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar modelos</button></div></form>`, { wide: true });
+  const collect = () => $$('.mod-card', box).map(c => ({ id: c.dataset.id || null, nome: $('[data-f=nome]', c).value.trim(), metaTotal: num($('[data-f=metaTotal]', c).value) || 0, metaArea: num($('[data-f=metaArea]', c).value) || 0,
+    areas: $$('.mod-area', c).map(r => ({ n: $('[data-f=an]', r).value.trim(), q: num($('[data-f=aq]', r).value) || 0, mats: $('[data-f=am]', r).value.split(',').map(x => x.trim()).filter(Boolean) })) }));
+  box.addEventListener('click', e => {
+    const x = e.target.closest('[data-x]'); if (!x) return; const k = x.dataset.x, card = x.closest('.mod-card');
+    if (k === 'cancel') { closeModal(); return; }
+    if (k === 'addarea') { $('.mod-areas', card).insertAdjacentHTML('beforeend', areaHTML({ n: '', q: 45, mats: [] })); const r = $$('.mod-area', card).at(-1); $('[data-f=an]', r).focus({ preventScroll: true }); r.scrollIntoView({ block: 'nearest' }); }
+    else if (k === 'delarea') x.closest('.mod-area').remove();
+    else if (k === 'addmod') { $('#mods', box).insertAdjacentHTML('afterbegin', modHTML({ id: null, nome: '', metaTotal: 0, metaArea: 0, areas: [{ n: 'Geral', q: 60, mats: [] }] })); const c = $('.mod-card', box); $('[data-f=nome]', c).focus({ preventScroll: true }); c.scrollIntoView({ block: 'nearest' }); }
+    else if (k === 'delmod') { if ($$('.mod-card', box).length < 2) { toast('Mantenha pelo menos um modelo.', 'err'); return; } card.remove(); }
+  });
+  $('#f', box).onsubmit = async e => {
+    e.preventDefault(); const d = collect();
+    if (!d.length) { toast('Mantenha pelo menos um modelo.', 'err'); return; }
+    const names = new Set();
+    for (const m of d) {
+      if (!m.nome) { toast('Dê um nome a cada modelo.', 'err'); return; }
+      if (names.has(m.nome.toLowerCase())) { toast('Dois modelos com o mesmo nome: ' + m.nome, 'err'); return; }
+      names.add(m.nome.toLowerCase());
+      if (!m.areas.length || m.areas.some(a => !a.n || !a.q)) { toast(`Em ${m.nome}, toda área precisa de nome e número de questões.`, 'err'); return; }
+      if (new Set(m.areas.map(a => a.n.toLowerCase())).size !== m.areas.length) { toast(`Em ${m.nome}, há áreas com o mesmo nome.`, 'err'); return; }
+    }
+    const used = new Set(modelos().map(m => m.id));
+    d.forEach(m => { if (!m.id) { let id = m.nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || uid(); while (used.has(id)) id += '-' + uid().slice(0, 3); m.id = id; used.add(id); } });
+    try { await dbSet('config', 'geral', { ...S.cfg, modelos: d }); if (!S.db) S.cfg = { ...S.cfg, modelos: d }; if (!d.some(m => m.id === S.ui.modelo)) S.ui.modelo = d[0].id; closeModal(); toast('Modelos salvos.'); render(true); } catch (e2) { }
+  };
+}
+
+/* ============ ações, eventos e início ============ */
+function setQDoc(sid, doc) {
+  S.simq[sid] = doc; S.qDirty[sid] = true; clearTimeout(S.qTimers[sid]);
+  S.qTimers[sid] = setTimeout(async () => { const snap = S.simq[sid]; try { await dbSet('simq', sid, snap); const sim = S.sims.find(x => x.id === sid); if (sim && sim.auto && (snap.itens || []).some(q => q.st)) await dbSet('sim', sid, { ...strip(sim), mats: autoMats(sim, snap) }); } catch (e) { } if (S.simq[sid] === snap) S.qDirty[sid] = false; }, 700);
+}
+function refreshQ(n) {
+  const doc = D().simq[S.ui.simSel]; if (!doc) return;
+  const st = $('#qstats'); if (st) st.innerHTML = qStatsHTML(doc);
+  const q = doc.itens.find(x => String(x.n) === String(n)), el = document.getElementById('q-' + n);
+  if (q && el) el.outerHTML = qCardHTML(q, S.cfg.materias);
+}
+async function cadPost(id, ask) {
+  const ta = $('#cmp'), text = (ta && ta.value || '').trim();
+  if (!text) { toast('Escreva uma mensagem.', 'err'); return; }
+  const th = S.cad.find(t => t.id === id); if (!th) return;
+  delete S.draft[id]; ta.value = '';
+  try { await dbSet('cad', id, { ...strip(th), msgs: [...(th.msgs || []), { r: 'u', t: text, ts: Date.now() }], upd: Date.now(), aberto: true }); }
+  catch (e) { S.draft[id] = text; ta.value = text; return; }
+  if (ask) askThread(id); else render(true);
+}
+async function applyScores() {
+  const sid = S.ui.simSel, doc = S.simq[sid], sim = S.sims.find(s => s.id === sid); if (!doc || !sim) return;
+  const st = qStats(doc); if (!st.marked) { toast('Marque algumas questões primeiro.', 'err'); return; }
+  const ok = await confirmBox({ title: 'Substituir as notas do simulado?', text: `As notas lançadas deste simulado serão trocadas pelo resultado das ${st.marked} questões marcadas, agrupadas nas áreas do modelo. As ${st.total - st.marked} sem marcação ficam de fora da conta.`, ok: 'Substituir' });
+  if (!ok) return;
+  try {
+    const M = modeloOf(sim), g = {};
+    Object.entries(st.by).forEach(([m, v]) => { const k = areaDeMat(M, m); g[k] = g[k] || { m: k, a: 0, t: 0 }; g[k].a += v.a; g[k].t += v.t; });
+    const nd = { ...strip(sim), mats: Object.values(g) }; delete nd.mm;
+    await dbSet('sim', sid, nd); toast('Notas do simulado atualizadas.');
+  } catch (e) { }
+}
+async function reclassify() {
+  const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc || !S.ai) return;
+  const todo = doc.itens.filter(q => !q.mat || q.mat === 'Outra'); if (!todo.length) return;
+  toast(`Classificando ${todo.length} questões…`); const ctl = new AbortController();
+  try {
+    const res = await classify(todo.map(q => ({ n: q.n, raw: q.txt || '' })), { ctl, log: () => { }, prog: () => { } });
+    const nd = clone(doc); nd.itens.forEach(q => { const r = res.get(q.n); if (r && (!q.mat || q.mat === 'Outra')) { q.mat = r.mat; if (!q.ass) q.ass = r.ass; } });
+    await dbSet('simq', sid, nd); toast('Questões classificadas.');
+  } catch (e) { toast(aiMsg(e), 'err'); }
+}
+
+const ACT = {
+  go: el => go(el.dataset.id),
+  grp: el => { const g = el.dataset.g; S.ui.openG[g] = !S.ui.openG[g]; renderSide(); },
+  menu: () => { S.ui.menu = !S.ui.menu; renderSide(); },
+  cfg: () => cfgForm(),
+  demoOff: () => { S.demoOff = true; S.demo = false; render(true); },
+  range: el => { S.ui.range = el.dataset.k; render(true); },
+  grain: el => { S.ui.grain = el.dataset.k; S.ui.matSel = null; render(true); },
+  unit: el => { S.ui.unit = el.dataset.k; render(true); },
+  metric: el => { S.ui.metric = el.dataset.k; render(true); },
+  matTog: el => { const ms = matStats(); let sel = matSel(ms); const m = el.dataset.m; sel = sel.includes(m) ? sel.filter(x => x !== m) : [...sel, m].slice(-6); S.ui.matSel = sel.length ? sel : [m]; render(true); },
+  verMat: el => { S.ui.matSel = [el.dataset.m]; go('sim-evolucao'); },
+  simQ: el => { const id = el.dataset.id; if (S.simq[id] || D().simq[id]) { S.ui.simSel = id; go('sim-questoes'); } else pdfModal(id); },
+  simNew: () => simForm(), simNewG: el => simForm(null, { grupo: el.dataset.g, modelo: el.dataset.m, data: el.dataset.d }), simOpen: el => { const id = el.dataset.id; if (String(id).startsWith('demo-')) { simDetail(id); return; } S.ui.simSel = id; S.ui.qMat = 'todas'; S.ui.qSt = 'todas'; S.ui.qSearch = ''; go('sim-questoes'); },
+  redTipo: el => { S.ui.redTipo = el.dataset.k; render(true); },
+  errScope: el => { S.ui.errScope = el.dataset.k; render(true); },
+  simEdit: el => simForm(el.dataset.id), simAsk: el => threadModal({ k: 'sim', id: el.dataset.id }, '', false), simDel: el => simDel(el.dataset.id),
+  redNew: () => redForm(), redOpen: el => redDetail(el.dataset.id),
+  analisar: el => runAnalysis(el.dataset.k),
+  pdfNew: el => pdfModal(el.dataset.sim || null),
+  qSt: el => {
+    const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return; const nd = clone(doc), q = nd.itens.find(x => String(x.n) === el.dataset.n); if (!q) return;
+    q.st = q.st === el.dataset.v ? '' : el.dataset.v; setQDoc(sid, nd); refreshQ(el.dataset.n);
+  },
+  qComent: el => threadModal({ k: 'q', id: `${S.ui.simSel}:${el.dataset.n}` }, '', false),
+  qApply: () => applyScores(), qReclass: () => reclassify(), keyNew: () => keyModal(S.ui.simSel),
+  qMatF: el => { S.ui.qMat = el.dataset.k; render(true); },
+  qStF: el => { S.ui.qSt = el.dataset.k; render(true); },
+  cadNew: () => threadModal({ k: 'geral' }, '', false),
+  cadOpen: el => { S.ui.thread = el.dataset.id; render(true); },
+  cadSend: el => cadPost(el.dataset.id, true), cadNote: el => cadPost(el.dataset.id, false),
+  cadStop: () => stopStream(),
+  cadResolve: async el => { const th = S.cad.find(t => t.id === el.dataset.id); if (th) await dbSet('cad', th.id, { ...strip(th), aberto: th.aberto === false }).catch(() => { }); },
+  cadDel: async el => { if (!await confirmBox({ title: 'Apagar esta conversa?', text: 'As mensagens dela serão apagadas. Não dá para desfazer.', ok: 'Apagar', danger: true })) return; S.ui.thread = null; await dbDel('cad', el.dataset.id).catch(() => { }); },
+  anDel: async el => { if (!await confirmBox({ title: 'Apagar esta análise?', text: 'Não dá para desfazer.', ok: 'Apagar', danger: true })) return; await dbDel('ans', el.dataset.id).catch(() => { }); },
+  anComent: el => threadModal({ k: 'an', id: el.dataset.id }, '', false)
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const fn = ACT[el.dataset.act]; if (fn) { e.preventDefault(); fn(el, e); }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t && t.id === 'modelSel') { if (t.value === '__manage') { renderBar(); modelosForm(); return; } S.ui.modelo = t.value; S.ui.matSel = null; S.ui.simSel = null; S.ui.cmp = 'r3'; try { localStorage.setItem('pe-modelo', t.value); } catch (x) { } render(true); return; }
+  const b = t.dataset && t.dataset.bind; if (!b) return;
+  if (b === 'cmp') { S.ui.cmp = t.value; render(true); return; }
+  if (b === 'simSel') { S.ui.simSel = t.value; S.ui.qMat = 'todas'; S.ui.qSt = 'todas'; S.ui.qSearch = ''; render(true); return; }
+  const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return;
+  if (b === 'qMat' || b === 'qAss') {
+    const nd = clone(doc), q = nd.itens.find(x => String(x.n) === t.dataset.n); if (!q) return;
+    if (b === 'qMat') q.mat = t.value; else q.ass = t.value.trim().slice(0, 80);
+    setQDoc(sid, nd); if (b === 'qMat') render(true);
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.bind === 'qSearch') { S.ui.qSearch = t.value; const doc = D().simq[S.ui.simSel], l = $('#qlist'); if (doc && l) l.innerHTML = qListHTML(doc); }
+  if (t.dataset && t.dataset.draft) S.draft[t.dataset.draft] = t.value;
+});
+function afterRender() { if (S.route === 'caderno' && S.stream) { const l = $('#live'); if (l && l.scrollIntoView) l.scrollIntoView({ block: 'nearest' }); } }
+
+async function init() {
+  const h = location.hash.slice(1); if (ROUTES.some(r => r.id === h)) go(h); else render(true);
+  const has = typeof claude !== 'undefined' && claude && typeof claude.use === 'function';
+  if (has) {
+    const get = async n => { try { return await claude.use(n); } catch (e) { return null; } };
+    [S.ai, S.assets, S.db] = await Promise.all([get('sample'), get('assets'), get('db')]);
+  }
+  if (LITE) S.db = liteDb();
+  if (S.db) subscribe(); else { S.loaded = true; S.demo = calcDemo(); render(true); }
+}
+
+
+/* ============ versão LITE (site estático, sem Claude) ============ */
+const LITE_KEY = 'pe-lite-v1';
+function liteLoad() { try { return JSON.parse(localStorage.getItem(LITE_KEY)) || {}; } catch (e) { return {}; } }
+function liteSave(st) { try { localStorage.setItem(LITE_KEY, JSON.stringify(st)); } catch (e) { toast('Não consegui salvar no navegador (armazenamento cheio ou bloqueado).', 'err'); throw e; } }
+function liteDb() {
+  const L = {}; // col -> [listeners]
+  const snap = col => { const st = liteLoad(), c = st[col] || {}; return { docs: Object.keys(c).map(id => ({ id, data: () => clone(c[id]) })) }; };
+  const notify = col => (L[col] || []).forEach(f => setTimeout(() => f(), 0));
+  const mk = (col, id) => ({
+    set: async data => { const st = liteLoad(); (st[col] = st[col] || {})[id] = clone(data); liteSave(st); notify(col); },
+    delete: async () => { const st = liteLoad(); if (st[col]) delete st[col][id]; liteSave(st); notify(col); },
+    onSnapshot: cb => { const f = () => { const st = liteLoad(), d = (st[col] || {})[id]; cb({ exists: d !== undefined, data: () => clone(d) }); }; (L[col] = L[col] || []).push(f); setTimeout(f, 0); return () => { L[col] = L[col].filter(x => x !== f); }; }
+  });
+  return {
+    collection: col => ({ ...{ doc: id => mk(col, id) }, onSnapshot: cb => { const f = () => cb(snap(col)); (L[col] = L[col] || []).push(f); setTimeout(f, 0); return () => { L[col] = L[col].filter(x => x !== f); }; } }),
+    doc: path => { const [col, id] = path.split('/'); return mk(col, id); }
+  };
+}
+function liteExport() {
+  const blob = new Blob([JSON.stringify({ app: 'painel-de-estudos', v: 1, data: liteLoad() })], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'painel-de-estudos-' + isoOf(new Date()) + '.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Backup baixado.');
+}
+function liteImport() {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text()); const d = j && j.data; if (!d || typeof d !== 'object' || !(d.sim || d.red || d.config)) throw new Error('arquivo inválido');
+      const ok = await confirmBox({ title: 'Importar dados?', text: 'Os dados deste navegador serão substituídos pelos do arquivo.', ok: 'Importar' }); if (!ok) return;
+      liteSave(d); location.reload();
+    } catch (e) { toast('Esse arquivo não parece um backup do painel.', 'err'); }
+  };
+  inp.click();
+}
+
+/* ---- conclusões calculadas ---- */
+const meanOf = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+function trendOf(v) { const n = v.length; if (n < 2) return null; const k = Math.min(3, Math.floor(n / 2)); return { before: meanOf(v.slice(-2 * k, -k)), now: meanOf(v.slice(-k)) }; }
+function liteAreas() {
+  const by = {};
+  simsAllSorted().forEach(s => { if (!hasAreas(modeloOf(s))) return; (s.mats || []).forEach(m => { if (m.t) (by[m.m] = by[m.m] || []).push((+m.a || 0) / m.t * 100); }); });
+  const er = errRank(); const ep = Object.fromEntries(er.areas.map(a => [a.n, a]));
+  return Object.entries(by).map(([n, v]) => { const t = trendOf(v); return { n, v, t, d: t ? t.now - t.before : null, e: ep[n] || null }; });
+}
+function liteComps() {
+  const reds = redsSorted().filter(redOk); const rows = [];
+  for (let i = 0; i < 5; i++) { const v = reds.map(r => (r.c || [])[i]).filter(x => x != null); if (!v.length) continue; const t = trendOf(v); rows.push({ n: 'C' + (i + 1), v, t, d: t ? t.now - t.before : null, avg: meanOf(v), last: v.at(-1) }); }
+  return rows;
+}
+const sgn = (d, u) => d == null ? '—' : (d >= 0 ? '+' : '−') + nf(Math.abs(d), u === 'pts' ? 0 : 1) + (u === 'pts' ? ' pts' : ' p.p.');
+function liteHighlights(A) {
+  const w = A.filter(x => x.d != null), up = [...w].sort((a, b) => b.d - a.d)[0], dn = [...w].sort((a, b) => a.d - b.d)[0];
+  const er = A.filter(x => x.e).sort((a, b) => b.e.p - a.e.p)[0];
+  return { up: up && up.d > 0 ? up : null, dn: dn && dn.d < 0 ? dn : null, er };
+}
+function liteCard() {
+  const A = liteAreas(), H = liteHighlights(A);
+  return `<section class="card" aria-label="Conclusões"><div class="lbl">Conclusões</div>
+    <div class="sub" style="margin-top:3px">calculadas com os seus simulados</div>
+    <div class="kv" style="margin:22px 0 0;padding-top:16px;border-top:1px solid var(--line)">
+      <div><span>Mais melhorou</span><b>${H.up ? esc(H.up.n) + ' ' + sgn(H.up.d) : '—'}</b></div>
+      <div><span>Mais caiu</span><b>${H.dn ? esc(H.dn.n) + ' ' + sgn(H.dn.d) : '—'}</b></div>
+      <div><span>Mais erro</span><b>${H.er ? esc(H.er.n) + ' · ' + nf(H.er.e.p, 0) + '%' : '—'}</b></div>
+      <div><span>Meta</span><b>${metaShort(activeModelo())}</b></div>
+    </div><button class="btn primary block" style="margin-top:18px" data-act="go" data-id="conclusoes">Ver conclusões</button></section>`;
+}
+VIEWS.conclusoes = function () {
+  const A = liteAreas(), H = liteHighlights(A), C = liteComps(), sc = ['last', 'last3'].includes(S.ui.errScope) ? S.ui.errScope : 'all', rk = errRank();
+  const tile = (t, x, v, sub, cls) => `<div class="card" style="padding:16px"><div class="lbl">${t}</div><div class="big ${cls || ''}" style="margin-top:10px;font-size:22px">${x ? esc(x.n) : '—'}</div><div class="sub" style="margin-top:4px">${x ? v : sub}</div></div>`;
+  const scope = `<div class="chips">${[['all', 'Todos os simulados'], ['last3', 'Últimos 3'], ['last', 'Último']].map(([k, l]) => `<button class="pill" data-act="errScope" data-k="${k}" aria-pressed="${sc === k}">${l}</button>`).join('')}</div>`;
+  const rows = [...A].sort((a, b) => (b.e ? b.e.p : -1) - (a.e ? a.e.p : -1)).map(a => `<tr><td>${esc(a.n)}</td><td class="mono">${a.t ? nf(a.t.before, 0) + '%' : '—'}</td><td class="mono">${a.t ? nf(a.t.now, 0) + '%' : nf(a.v.at(-1), 0) + '%'}</td><td class="mono">${a.d == null ? '—' : `<span class="${a.d >= 0 ? 'pos' : 'neg'}">${sgn(a.d)}</span>`}</td><td class="mono">${a.e ? a.e.err + ' de ' + a.e.t + ' · ' + nf(a.e.p, 0) + '%' : '—'}</td></tr>`).join('');
+  const crows = C.map(c => `<tr><td>${c.n}</td><td class="mono">${c.t ? nf(c.t.before, 0) : '—'}</td><td class="mono">${c.t ? nf(c.t.now, 0) : nf(c.last, 0)}</td><td class="mono">${c.d == null ? '—' : `<span class="${c.d >= 0 ? 'pos' : 'neg'}">${sgn(c.d, 'pts')}</span>`}</td><td class="mono">${nf(200 - c.avg, 0)} pts</td></tr>`).join('');
+  const cw = C.filter(x => x.d != null), cup = [...cw].sort((a, b) => b.d - a.d)[0], cdn = [...cw].sort((a, b) => a.d - b.d)[0], cweak = [...C].sort((a, b) => a.avg - b.avg)[0];
+  return head('Conclusões', 'Calculadas com os seus simulados e redações: o que melhorou, o que caiu e onde você mais erra.', scope) +
+    `<div class="g-3">${tile('Área que mais melhorou', H.up, H.up ? `${nf(H.up.t.before, 0)}% → ${nf(H.up.t.now, 0)}% (${sgn(H.up.d)})` : '', 'Precisa de pelo menos 2 simulados', 'good')}
+      ${tile('Área que mais caiu', H.dn, H.dn ? `${nf(H.dn.t.before, 0)}% → ${nf(H.dn.t.now, 0)}% (${sgn(H.dn.d)})` : '', A.some(x => x.d != null) ? 'Nenhuma área caiu' : 'Precisa de pelo menos 2 simulados')}
+      ${tile('Área em que mais erra', H.er, H.er ? `${H.er.e.err} erros em ${H.er.e.t} questões · ${nf(H.er.e.p, 0)}% de erro` : '', 'Lance um simulado')}</div>
+    <section class="card"><div class="lbl">Por área · ${rk.units.length ? 'base: ' + rk.units.map(esc).join(' · ') : 'sem simulados'}</div>
+      ${A.length ? `<div class="scroll-x" style="margin-top:12px"><table class="tbl"><thead><tr><th>Área</th><th>Antes</th><th>Agora</th><th>Variação</th><th>Erros (${sc === 'all' ? 'todos' : sc === 'last3' ? 'últimos 3' : 'último'})</th></tr></thead><tbody>${rows}</tbody></table></div><p class="sub" style="margin-top:10px">“Antes” e “Agora” comparam a média dos simulados mais recentes com a dos anteriores, na mesma quantidade (até 3 de cada).</p>` : '<div class="empty"><b>Nada para comparar ainda</b>Lance dois ou mais simulados com acertos por área.</div>'}</section>
+    <section class="card"><div class="row" style="align-items:center"><span class="lbl">Redação · por competência</span><span style="margin-left:auto">${redTipoChips()}</span></div>
+      ${C.length ? `<div class="g-3" style="margin-top:14px"><div><div class="sub">Mais melhorou</div><b>${cup && cup.d > 0 ? cup.n + ' ' + sgn(cup.d, 'pts') : '—'}</b></div><div><div class="sub">Mais caiu</div><b>${cdn && cdn.d < 0 ? cdn.n + ' ' + sgn(cdn.d, 'pts') : '—'}</b></div><div><div class="sub">Onde mais perde pontos</div><b>${cweak ? cweak.n + ' · média ' + nf(cweak.avg, 0) : '—'}</b></div></div>
+      <div class="scroll-x" style="margin-top:14px"><table class="tbl"><thead><tr><th>Competência</th><th>Antes</th><th>Agora</th><th>Variação</th><th>Perde em média</th></tr></thead><tbody>${crows}</tbody></table></div>` : '<div class="empty"><b>Sem redações</b>Lance uma redação para ver as competências.</div>'}</section>`;
+};
+if (LITE) {
+  const grp = NAV.findIndex(n => n.g === 'ESTUDO'); NAV.splice(grp, 1, { id: 'conclusoes', label: 'Conclusões', icon: 'target' });
+  ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n]));
+  ACT.simOpen = el => simDetail(el.dataset.id);
+  ACT.cfg = ACT.cfg;
+}
+
+init();
+
+</script>
+</body>
+</html>
