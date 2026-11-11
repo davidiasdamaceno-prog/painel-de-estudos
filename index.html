@@ -672,6 +672,7 @@ const calcDemo = () => S.loaded && (S.demoForce || (!S.demoOff && !S.sims.length
 /* ============ derived data ============ */
 const simsAllSorted = () => [...D().sims].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
 const simsSorted = () => { const id = activeModelo().id; return simsAllSorted().filter(s => modeloOf(s).id === id); };
+const redNo = r => redsSorted().findIndex(x => x.id === r.id) + 1;
 const redsSorted = () => [...D().reds].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
 const simStat = s => { let a = 0, t = 0; (s.mats || []).forEach(m => { a += +m.a || 0; t += +m.t || 0; }); return { a, t, p: t ? a / t * 100 : null }; };
 const mp = (s, m) => { const x = rowsOf(s).find(y => y.m === m); return x && x.t ? x.a / x.t * 100 : null; };
@@ -1036,7 +1037,7 @@ VIEWS.visao = function () {
     lblTop = 'REDAÇÃO · ' + tp; big = rt == null ? '—' : nf(rt); unit = 'pts';
     subline = rt == null ? 'sem redações lançadas' : rtPrev == null ? 'primeiro texto registrado' : `${rt - rtPrev >= 0 ? '+' : '−'}${Math.abs(rt - rtPrev)} pts em relação ao texto anterior`;
     const vals = redsR.map(redTotal), ax = redAxis(vals, cfg.metaRed);
-    chart = lineChart('c-main', { labels: redsR.map(r => fd(r.data)), full: redsR.map(r => `${r.tema} · ${fd(r.data, true)}`), series: [{ name: 'Nota', color: 'var(--ink)', values: vals }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'A evolução da nota aparece quando houver um texto corrigido.', aria: 'Nota total de cada redação' });
+    chart = lineChart('c-main', { labels: redsR.map(r => '#' + redNo(r)), full: redsR.map(r => `#${redNo(r)} · ${r.tema}`), series: [{ name: 'Nota', color: 'var(--ink)', values: vals }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'A evolução da nota aparece quando houver um texto corrigido.', aria: 'Nota total de cada redação' });
     side = ['SIMULADOS', sp == null ? '—' : nf(sp, 0) + '%'];
   } else if (metric === 'mat') {
     lblTop = 'SIMULADOS · POR MATÉRIA'; big = sp == null ? '—' : nf(sp, 1); unit = '%';
@@ -1082,7 +1083,7 @@ function analysisCard(ms, sims, reds) {
     </div>
     <div class="mini">
       <div><span>Simulado</span><span>${lastSim ? esc(trunc(lastSim.nome, 22)) + ' · ' + fd(lastSim.data) : '—'}</span></div>
-      <div><span>Redação</span><span>${lastRed ? esc(trunc(lastRed.tema, 22)) + ' · ' + fd(lastRed.data) : '—'}</span></div>
+      <div><span>Redação</span><span>${lastRed ? esc(trunc(lastRed.tema, 26)) : '—'}</span></div>
       <div><span>Erros a revisar</span><span class="mono">${nErr}</span></div>
     </div>
     ${snip ? `<p class="sub" style="margin:-6px 0 16px">${esc(snip)}</p>` : ''}
@@ -1130,7 +1131,7 @@ function healthCard(sims, reds, ms) {
   const rt = lr ? redTotal(lr) : null;
   const items = [
     { ok: dS != null && dS <= 14, t: 'Simulado nos últimos 14 dias', s: ls ? `Último em ${fd(ls.data, true)}, há ${dS} ${dS === 1 ? 'dia' : 'dias'}.` : 'Nenhum simulado lançado.' },
-    { ok: dR != null && dR <= 7, t: 'Redação nos últimos 7 dias', s: lr ? `Último texto em ${fd(lr.data, true)}, há ${dR} ${dR === 1 ? 'dia' : 'dias'}.` : 'Nenhuma redação lançada.' },
+    { ok: dR != null && dR <= 7, t: 'Redação nos últimos 7 dias', s: lr ? `Último texto lançado em ${fd(lr.data, true)}, há ${dR} ${dR === 1 ? 'dia' : 'dias'}.` : 'Nenhuma redação lançada.' },
     { ok: !!ls && !low.length, t: `Nenhuma matéria abaixo de ${cfg.piso}%`, s: !ls ? 'Sem simulados para avaliar.' : low.length ? 'Abaixo: ' + low.map(x => `${x.m} ${nf(x.last, 0)}%`).join(', ') + '.' : 'Todas acima do piso no último simulado.' },
     { ok: rt != null && rt >= cfg.metaRed, t: 'Redação na meta', s: rt == null ? 'Sem nota de redação.' : `${nf(rt)} de ${nf(cfg.metaRed)} pontos no último texto.` }
   ];
@@ -1245,10 +1246,10 @@ const redOk = r => redFilt() === 'todas' || (redFilt() === 'reescrita') === (r.t
 const redTipoChips = () => `<div class="chips">${[['todas', 'Todas'], ['original', 'Escritas'], ['reescrita', 'Reescritas']].map(([k, l]) => `<button class="pill" data-act="redTipo" data-k="${k}" aria-pressed="${redFilt() === k}">${l}</button>`).join('')}</div>`;
 VIEWS['red-textos'] = function () {
   const asc = redsSorted(), list = [...asc].filter(redOk).reverse();
-  const body = list.map(r => `<tr class="click" data-act="redOpen" data-id="${r.id}"><td class="num">${fd(r.data, true)}</td><td><div class="t">${esc(trunc(r.tema, 54))}</div></td><td><span class="tag ${r.tipo === 'reescrita' ? 'solid' : ''}">${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}</span></td>
+  const body = list.map(r => `<tr class="click" data-act="redOpen" data-id="${r.id}"><td class="num">#${redNo(r)}</td><td><div class="t">${esc(trunc(r.tema, 54))}</div></td><td><span class="tag ${r.tipo === 'reescrita' ? 'solid' : ''}">${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}</span></td>
     ${COMPS.map((c, i) => `<td class="num">${r.c && r.c[i] != null ? r.c[i] : '—'}</td>`).join('')}<td class="num"><b>${nf(redTotal(r))}</b></td><td>${deltaHTML(redDelta(r, asc), ' pts', 0)}</td><td class="go">${ic('chev', 16)}</td></tr>`).join('');
   return head('Redação', 'Cada texto com as cinco competências. A variação da reescrita é contra o texto escrito; a das escritas, contra a escrita anterior.', `${redTipoChips()}<button class="btn primary" data-act="redNew">${ic('plus', 15)} Nova redação</button>`) +
-    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl" style="min-width:760px"><thead><tr><th>Data</th><th>Tema</th><th>Tipo</th>${COMPS.map(c => `<th title="${COMP_NOMES[COMPS.indexOf(c)]}">${c}</th>`).join('')}<th>Nota</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhuma redação ainda</b>Lance a nota de cada competência e o que a professora marcou.<div style="margin-top:14px"><button class="btn primary" data-act="redNew">Nova redação</button></div></div>`}</section>`;
+    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl" style="min-width:760px"><thead><tr><th>Nº</th><th>Tema</th><th>Tipo</th>${COMPS.map(c => `<th title="${COMP_NOMES[COMPS.indexOf(c)]}">${c}</th>`).join('')}<th>Nota</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhuma redação ainda</b>Lance a nota de cada competência e o que a professora marcou.<div style="margin-top:14px"><button class="btn primary" data-act="redNew">Nova redação</button></div></div>`}</section>`;
 };
 
 /* ---------- Redação: competências ---------- */
@@ -1262,8 +1263,8 @@ VIEWS['red-competencias'] = function () {
   const pairs = allReds.filter(r => r.tipo === 'reescrita' && r.de).map(r => { const o = allReds.find(x => x.id === r.de); return o ? redTotal(r) - redTotal(o) : null; }).filter(x => x != null);
   const up = pairs.filter(x => x > 0).length;
   return head('Competências da redação', 'Nota por texto, evolução de C1 a C5 e efeito da reescrita.', `${redTipoChips()}${LITE ? '' : `<button class="btn" data-act="analisar" data-k="redacao" ${aiAttr()}>${ic('spark', 15)} Pedir análise ao Claude</button>`}`) +
-    `<section class="card"><div class="lbl">Nota por texto</div><div style="margin-top:14px">${lineChart('c-red', { connect: true, labels: reds.map(r => fd(r.data)), full: reds.map(r => `${r.tema} · ${fd(r.data, true)}`), series: [{ name: 'Escritas', color: SER[0], values: orig }, { name: 'Reescritas', color: SER[2], values: resc, dash: true }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, goalLabel: 'meta ' + nf(cfg.metaRed), fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'O gráfico aparece com o primeiro texto corrigido.', aria: 'Nota total das redações originais e reescritas' })}</div></section>
-    <section class="card"><div class="lbl">Competências ao longo dos textos · máximo 200</div><div style="margin-top:14px">${lineChart('c-comp', { h: 270, labels: reds.map(r => fd(r.data)), full: reds.map(r => `${r.tema} · ${fd(r.data, true)}`), series: COMPS.map((c, i) => ({ name: `${c} · ${COMP_NOMES[i]}`, color: SER[i], values: reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null) })), min: compMin(reds), max: 200, ticks: compTicks(reds), fmt: v => nf(v), emptyT: 'Sem textos ainda', empty: '', aria: 'Nota de cada competência por texto' })}</div></section>
+    `<section class="card"><div class="lbl">Nota por texto</div><div style="margin-top:14px">${lineChart('c-red', { connect: true, labels: reds.map(r => '#' + redNo(r)), full: reds.map(r => `#${redNo(r)} · ${r.tema}`), series: [{ name: 'Escritas', color: SER[0], values: orig }, { name: 'Reescritas', color: SER[2], values: resc, dash: true }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, goalLabel: 'meta ' + nf(cfg.metaRed), fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'O gráfico aparece com o primeiro texto corrigido.', aria: 'Nota total das redações originais e reescritas' })}</div></section>
+    <section class="card"><div class="lbl">Competências ao longo dos textos · máximo 200</div><div style="margin-top:14px">${lineChart('c-comp', { h: 270, labels: reds.map(r => '#' + redNo(r)), full: reds.map(r => `#${redNo(r)} · ${r.tema}`), series: COMPS.map((c, i) => ({ name: `${c} · ${COMP_NOMES[i]}`, color: SER[i], values: reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null) })), min: compMin(reds), max: 200, ticks: compTicks(reds), fmt: v => nf(v), emptyT: 'Sem textos ainda', empty: '', aria: 'Nota de cada competência por texto' })}</div></section>
     <div class="g-2">
       <section class="card"><div class="lbl">Média por competência</div><div style="margin-top:16px">${barRows(cs.map((c, i) => ({ n: `${c.c} · ${c.nome}`, pct: c.all / 200 * 100, v: nf(c.all, 0), color: SER[COMPS.indexOf(c.c)] })))}</div></section>
       <section class="card"><div class="lbl">Efeito da reescrita${helpBtn('reescrita')}</div>${pairs.length ? `<div class="big" style="margin-top:10px">${avg(pairs) >= 0 ? '+' : '−'}${nf(Math.abs(avg(pairs)), 0)}<small>pts</small></div><p class="sub" style="margin-top:8px">média de ${pairs.length} ${pairs.length === 1 ? 'reescrita ligada' : 'reescritas ligadas'} ao texto escrito. ${up} de ${pairs.length} subiram.</p>` : '<p class="sub" style="margin-top:12px">Ao lançar uma reescrita, escolha o texto escrito no campo "Reescrita de" para medir o ganho.</p>'}</section>
@@ -1707,10 +1708,9 @@ function redForm(id) {
   const compSel = i => `<label class="field"><span>${COMPS[i]} · ${COMP_NOMES[i]}</span><select data-c="${i}">${NOTAS_RED.map(v => `<option ${cur && cur.c && +cur.c[i] === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
   const box = modal(`<h2>${cur ? 'Editar redação' : 'Nova redação'}</h2><p class="lead">Notas por competência, no degrau de 40 da correção.</p>
     <form class="form" id="f">
-      <div class="row"><label class="field" style="flex:3 1 260px"><span>Tema</span><input type="text" id="f-tema" required value="${esc(cur ? cur.tema : '')}" placeholder="Ex.: Festas populares no Brasil"></label>
-        <label class="field" style="flex:1 1 150px"><span>Data</span><input type="date" id="f-data" required value="${cur ? cur.data : TODAY_ISO}"></label></div>
+      <div class="row"><label class="field" style="flex:3 1 260px"><span>Tema</span><input type="text" id="f-tema" required value="${esc(cur ? cur.tema : '')}" placeholder="Ex.: Festas populares no Brasil"></label></div>
       <div class="row"><label class="field"><span>Tipo</span><select id="f-tipo"><option value="original" ${cur && cur.tipo === 'reescrita' ? '' : 'selected'}>Escrita</option><option value="reescrita" ${cur && cur.tipo === 'reescrita' ? 'selected' : ''}>Reescrita</option></select></label>
-        <label class="field" id="f-de-w" style="flex:2 1 240px" ${cur && cur.tipo === 'reescrita' ? '' : 'hidden'}><span>Reescrita de</span><select id="f-de"><option value="">Escolha o texto escrito</option>${originals.map(r => `<option value="${r.id}" ${cur && cur.de === r.id ? 'selected' : ''}>${fd(r.data)} · ${esc(trunc(r.tema, 40))} · ${redTotal(r)}</option>`).join('')}</select></label>
+        <label class="field" id="f-de-w" style="flex:2 1 240px" ${cur && cur.tipo === 'reescrita' ? '' : 'hidden'}><span>Reescrita de</span><select id="f-de"><option value="">Escolha o texto escrito</option>${originals.map(r => `<option value="${r.id}" ${cur && cur.de === r.id ? 'selected' : ''}>#${redNo(r)} · ${esc(trunc(r.tema, 40))} · ${redTotal(r)}</option>`).join('')}</select></label>
         <label class="field" style="flex:0 1 120px"><span>Linhas usadas</span><input type="number" id="f-lin" min="0" max="40" value="${cur && cur.linhas ? cur.linhas : ''}" placeholder="30"></label></div>
       <div class="cols">${COMPS.map((c, i) => compSel(i)).join('')}</div>
       <div class="total-line" id="f-tot"></div>
@@ -1724,14 +1724,14 @@ function redForm(id) {
   });
   $('#f', box).onsubmit = async e => {
     e.preventDefault(); const tipo = $('#f-tipo', box).value;
-    const doc = { ...(cur ? strip(cur) : { ts: Date.now() }), tema: $('#f-tema', box).value.trim(), data: $('#f-data', box).value, tipo, de: tipo === 'reescrita' ? $('#f-de', box).value : '', c: $$('[data-c]', box).map(s => +s.value), linhas: num($('#f-lin', box).value) || 0, obs: $('#f-obs', box).value.trim(), texto: $('#f-texto', box).value.trim() };
+    const doc = { ...(cur ? strip(cur) : { ts: Date.now() }), tema: $('#f-tema', box).value.trim(), data: cur ? cur.data : TODAY_ISO, tipo, de: tipo === 'reescrita' ? $('#f-de', box).value : '', c: $$('[data-c]', box).map(s => +s.value), linhas: num($('#f-lin', box).value) || 0, obs: $('#f-obs', box).value.trim(), texto: $('#f-texto', box).value.trim() };
     try { await dbSet('red', cur ? cur.id : uid(), doc); closeModal(); toast('Redação salva.'); } catch (e2) { }
   };
 }
 function redDetail(id) {
   if (String(id).startsWith('demo-')) { toast('Esta é uma redação de exemplo. Lance a sua para editar e comentar.'); return; }
   const r = S.reds.find(x => x.id === id); if (!r) return; const asc = redsSorted();
-  const box = modal(`<h2>${esc(r.tema)}</h2><p class="lead">${fd(r.data, true)} · ${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}${r.linhas ? ` · ${r.linhas} linhas` : ''}</p>
+  const box = modal(`<h2>${esc(r.tema)}</h2><p class="lead">Texto #${redNo(r)} · ${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}${r.linhas ? ` · ${r.linhas} linhas` : ''}</p>
     <div class="cols" style="margin-bottom:18px"><div class="mini" style="margin:0"><div><span>Nota</span><span class="mono">${nf(redTotal(r))}</span></div></div><div class="mini" style="margin:0"><div><span>Variação</span><span>${deltaHTML(redDelta(r, asc), ' pts', 0)}</span></div></div></div>
     ${barRows(COMPS.map((c, i) => ({ n: `${c} · ${COMP_NOMES[i]}`, pct: (+r.c[i] || 0) / 200 * 100, v: String(r.c[i]), color: SER[i] })))}
     ${(r.marcas || []).length ? `<div class="chips" style="margin-top:16px">${r.marcas.map(m => `<span class="tag">${esc(m)}</span>`).join('')}</div>` : ''}
@@ -1978,7 +1978,7 @@ function tutorialForm() {
     ['Simulados completos', `<p>Junta o Dia 1 e o Dia 2 de cada grupo e mostra o total. Se faltar um dos dias, o painel avisa qual falta.</p>`],
     ['Evolução', `<p>Mostra cada área ao longo dos simulados, a variação no último simulado e o <b>mapa de calor</b>, em que o azul mais forte indica acerto maior.</p>`],
     ['Conclusões', LITE ? `<p>A aba <b>Conclusões</b> mostra a área que mais melhorou, a que mais caiu e a em que você mais erra. É tudo cálculo sobre os seus simulados.</p><p>Melhorou e caiu comparam a média dos simulados mais recentes (até 3) com a dos anteriores. Os botões Todos, Últimos 3 e Último mudam só a contagem de erros. Embaixo você vê a redação por competência.</p>` : `<p>Em <b>Plano e conclusões</b> você vê onde mais erra por área, matéria e assunto, e pode pedir análises ao Claude. Conforme você acerta mais de um assunto, ele desce no ranking.</p>`],
-    ['Redação', `<p>Em <b>Textos</b>, lance o tema, a data, se é escrita ou reescrita e a nota de cada uma das 5 competências (0 a 200, em degraus de 40). O total vai até 1000.</p><p>O filtro <b>Todas / Escritas / Reescritas</b> vale para a lista e para os gráficos. Em <b>Competências</b> você vê a evolução de cada competência, a média e o <b>efeito da reescrita</b>, que compara a reescrita com o texto original.</p>`],
+    ['Redação', `<p>Em <b>Textos</b>, lance o tema, se é escrita ou reescrita e a nota de cada uma das 5 competências (0 a 200, em degraus de 40). O total vai até 1000.</p><p>O filtro <b>Todas / Escritas / Reescritas</b> vale para a lista e para os gráficos. Em <b>Competências</b> você vê a evolução de cada competência, a média e o <b>efeito da reescrita</b>, que compara a reescrita com o texto original.</p>`],
     ['Metas, provas e contagem regressiva', `<p>Em <b>Configurações</b> você define a meta padrão, o <b>piso</b> (abaixo dele uma área aparece como crítica) e a meta de redação.</p><p>Em <b>Provas e datas</b>, cadastre quantas provas quiser, com nome, data, horário opcional e a cor do quadrado. Cada prova ganha um quadrado colorido na Visão geral (você escolhe a cor), com dias, horas, minutos e segundos.</p>`],
     ['Aparência e dados de exemplo', `<p>Em Configurações, <b>Aparência</b> troca entre escuro e claro. <b>Ver dados de exemplo</b> mostra o painel com números fictícios; eles não são salvos e os seus dados reais ficam guardados. Para sair, use o botão do aviso no topo ou lance um simulado.</p>`],
     LITE ? ['Seus dados e backup', FB_CFG ? `<p>Ao entrar com a sua conta Google, os seus simulados, redações e configurações ficam salvos na nuvem e aparecem em qualquer aparelho em que você entrar. Em <b>Configurações > Conta</b> você vê com qual conta está conectado e pode sair.</p><p>Se você usou o painel antes sem entrar, o painel oferece enviar esses dados para a conta na primeira vez. <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta.</p>` : `<p>Nesta versão, os dados ficam só no navegador que você está usando. Se limpar os dados do navegador, eles somem.</p><p>Em Configurações, <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta. É assim que você leva tudo para outro aparelho.</p>`]
@@ -2025,7 +2025,7 @@ function tourSteps() {
     { r: 'sim-evolucao', s: '#main .view > section.card', t: 'Evolução geral', x: 'A linha do aproveitamento ao longo dos simulados. Troque entre % e acertos nos botões do canto.' },
     { r: 'sim-evolucao', s: cardWith('Mapa de calor'), t: 'Mapa de calor', x: 'As linhas são áreas e as colunas são simulados: quanto mais forte o azul, maior o acerto. Dá para ver de relance onde você melhorou.' },
     { r: 'sim-conjuntos', s: '#main .view > section.card', t: 'Simulados completos', x: 'Junta o Dia 1 e o Dia 2 de cada grupo e mostra o total. Se faltar um dos dias, o painel avisa qual.' },
-    { r: 'red-textos', s: '[data-act=redNew]', t: 'Lançar uma redação', x: 'Cadastre o tema, a data, se é escrita ou reescrita e a nota de cada competência (de 0 a 200, em degraus de 40).' },
+    { r: 'red-textos', s: '[data-act=redNew]', t: 'Lançar uma redação', x: 'Cadastre o tema, se é escrita ou reescrita e a nota de cada competência (de 0 a 200, em degraus de 40). Anotações e datas entram nos comentários.' },
     { r: 'red-competencias', s: cardWith('Média por competência'), t: 'Competências e reescrita', x: 'A média de cada competência e o efeito da reescrita: quantos pontos, em média, a reescrita ganha em relação ao texto original.' },
     L ? { r: 'conclusoes', s: '#main .view > .g-3', t: 'Conclusões', x: 'A área que mais melhorou, a que mais caiu e a em que você mais erra, comparando os simulados recentes (até 3) com os anteriores. Embaixo, a redação por competência.' }
       : { r: 'plano', s: cardWith('Onde mais erro'), t: 'Onde mais erro', x: 'O ranking do que você mais erra, por área, matéria e assunto. Conforme você acerta mais, o assunto desce na lista.' },
