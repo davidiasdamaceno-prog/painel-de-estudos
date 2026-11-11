@@ -1836,7 +1836,6 @@ function cfgForm() {
   if (!provaRows.length) provaRows.push({ nome: '', data: '', hora: '', cor: SER[0] });
   const box = modal(`<h2>Configurações</h2><p class="lead">Metas, provas${LITE ? '' : ', o que o Claude precisa saber sobre você'} e aparência. <button type="button" class="link" id="c-mod">Editar modelos de prova</button></p>
     <form class="form cfg" id="f">
-      ${LITE && FB_CFG ? `<section class="cfg-sec"><h3>Conta</h3><div class="cfg-line"><div><b>${S.cloud ? 'Conectado com o Google' : 'Dados só neste navegador'}</b><small>${S.cloud ? esc(S.cloud.email || S.cloud.nome || '') + ' · seus dados ficam salvos na nuvem' : 'Entre para salvar na nuvem e usar em outros aparelhos'}</small></div><button type="button" class="btn" id="c-acc">${S.cloud ? 'Sair' : 'Entrar com Google'}</button></div></section>` : ''}
       <section class="cfg-sec"><h3>Metas</h3>
         <div class="cfg-3">
           <label class="field"><span>Meta de acertos (%)</span><input type="number" id="c-meta" min="1" max="100" value="${c.metaAcerto}"><small>Usada quando o modelo não tem meta</small></label>
@@ -1852,6 +1851,7 @@ function cfgForm() {
       <section class="cfg-sec"><h3>Aparência</h3>
         <div class="cfg-line"><div><b>Tema</b><small>Alterna entre o modo claro e o escuro</small></div><div class="theme-tg" role="group" aria-label="Aparência"><input type="hidden" id="c-tema" value="${c.tema === 'claro' ? 'claro' : 'escuro'}"><button type="button" class="tg" data-t="claro" aria-pressed="${c.tema === 'claro'}" aria-label="Modo claro" title="Modo claro">${ic('sun', 17)}</button><button type="button" class="tg" data-t="escuro" aria-pressed="${c.tema !== 'claro'}" aria-label="Modo escuro" title="Modo escuro">${ic('moon', 17)}</button></div></div>
       </section>
+      ${LITE && FB_CFG ? `<section class="cfg-sec"><h3>Conta</h3><div class="cfg-line"><div><b>${S.cloud ? 'Conectado com o Google' : 'Dados só neste navegador'}</b><small>${S.cloud ? esc(S.cloud.email || S.cloud.nome || '') + ' · seus dados ficam salvos na nuvem' : 'Entre para salvar na nuvem e usar em outros aparelhos'}</small></div><button type="button" class="btn" id="c-acc">${S.cloud ? 'Sair' : 'Entrar com Google'}</button></div></section>` : ''}
       <section class="cfg-sec"><h3>Ajuda</h3>
         <div class="cfg-list">
           <button type="button" class="cfg-item" id="c-tour"><span class="ci-i">${ic('target', 18)}</span><span class="ci-t"><b>Tour guiado</b><small>Um passeio pelo painel, parte por parte</small></span>${ic('chev', 16)}</button>
