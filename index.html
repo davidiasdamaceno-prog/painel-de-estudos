@@ -354,16 +354,26 @@ h1 .help { width: 20px; height: 20px; font-size: 11px; margin-left: 10px; positi
 .tut details:last-child { border-bottom: 1px solid var(--line); }
 .tut summary { cursor: pointer; padding: 13px 2px; font-weight: 500; list-style: none; display: flex; justify-content: space-between; align-items: center; }
 .tut summary::-webkit-details-marker { display: none; }
-.tut summary::after { content: "+"; color: var(--muted); font: 400 18px/1 var(--mono); }
-.tut details[open] summary::after { content: "–"; }
-.tut-b { padding: 0 2px 14px; color: var(--ink-2); line-height: 1.6; }
-.tut-b p { margin: 0 0 9px; } .tut-b ol { margin: 0 0 9px; padding-left: 20px; } .tut-b li { margin-bottom: 4px; } .tut-b b { color: var(--ink); font-weight: 500; }
+.tut summary::after { content: "+"; color: var(--muted); font: 400 20px/1 var(--mono); transition: transform .25s cubic-bezier(.2,.7,.2,1), color .2s; }
+.tut details[open]:not(.closing) summary::after { transform: rotate(45deg); color: var(--ink); }
+.tut-b { overflow: hidden; color: var(--ink-2); line-height: 1.6; }
+.tut-bi { padding: 0 2px 14px; }
+.tut-bi p { margin: 0 0 9px; } .tut-bi ol { margin: 0 0 9px; padding-left: 20px; } .tut-bi li { margin-bottom: 4px; } .tut-bi b { color: var(--ink); font-weight: 500; }
 
 .theme-tg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px; gap: 2px; width: max-content; }
 .theme-tg .tg { width: 34px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--muted); }
 .theme-tg .tg:hover { color: var(--ink); }
 .theme-tg .tg[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
 input[type=color] { width: 40px; height: 38px; padding: 3px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--inp); cursor: pointer; }
+
+/* movimento */
+button, .pill, .btn, .nav-i, .nav-g, .nav-home, input, select, textarea, .tbl tr.click td { transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
+.scrim { animation: scrim-in .18s ease both; }
+.modal { animation: modal-in .24s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+html.theming *, html.theming *::before, html.theming *::after { transition: background-color .4s ease, color .4s ease, border-color .4s ease, fill .4s ease, stroke .4s ease, stop-color .4s ease, box-shadow .4s ease !important; }
+@media (prefers-reduced-motion: reduce) { .scrim, .modal { animation: none; } * { transition: none !important; } }
 
 </style>
 </head>
@@ -726,10 +736,14 @@ function renderBar() {
   tickCd();
 }
 /* ---------- tema e contagem regressiva ---------- */
-function applyTheme() {
-  const claro = S.cfg.tema === 'claro';
-  document.documentElement.dataset.theme = claro ? 'light' : 'dark';
-  try { localStorage.setItem('pe-tema', claro ? 'claro' : 'escuro'); } catch (e) { }
+let _thT = 0;
+function applyTheme(v) {
+  const claro = (v || S.cfg.tema) === 'claro', want = claro ? 'light' : 'dark', el = document.documentElement;
+  if (el.dataset.theme !== want) {
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) { el.classList.add('theming'); clearTimeout(_thT); _thT = setTimeout(() => el.classList.remove('theming'), 500); }
+    el.dataset.theme = want;
+  }
+  if (!v) { try { localStorage.setItem('pe-tema', claro ? 'claro' : 'escuro'); } catch (e) { } }
 }
 try { if (localStorage.getItem('pe-tema') === 'claro') document.documentElement.dataset.theme = 'light'; } catch (e) { }
 function provasList() {
@@ -753,7 +767,7 @@ function cdCards() {
     const c = cdParts(p), wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][new Date(p.ts).getDay()];
     const when = `${wd}, ${fd(p.data, true)}${p.hora ? ' · ' + p.hora : ''}`;
     const u = (k, l) => `<div class="cd-u"><b data-cd="${k}">${c.hoje ? '' : c[k]}</b><span>${l}</span></div>`;
-    return `<div class="cd ${c.hoje ? 'hoje' : ''}" data-ts="${p.ts}" style="--cc:${p.cor};--ci:${inkOn(p.cor)}"><div class="cd-top"><div class="cd-n">${esc(p.nome)}${i === 0 ? helpBtn('contagem') : ''}</div><div class="cd-d">${esc(when)}</div></div><div class="cd-hoje">É hoje</div><div class="cd-g">${u('d', 'dias')}${u('h', 'horas')}${u('m', 'min')}${u('s', 'seg')}</div></div>`;
+    return `<div class="cd ${c.hoje ? 'hoje' : ''}" data-ts="${p.ts}" style="--cc:${p.cor};--ci:${inkOn(p.cor)}"><div class="cd-top"><div class="cd-n">${esc(p.nome)}</div><div class="cd-d">${esc(when)}</div></div><div class="cd-hoje">É hoje</div><div class="cd-g">${u('d', 'dias')}${u('h', 'horas')}${u('m', 'min')}${u('s', 'seg')}</div></div>`;
   }).join('')}</div>`;
 }
 function tickCd() {
@@ -1775,10 +1789,10 @@ function cfgForm() {
       <div class="field"><span>Aparência</span><div class="theme-tg" role="group" aria-label="Aparência"><input type="hidden" id="c-tema" value="${c.tema === 'claro' ? 'claro' : 'escuro'}"><button type="button" class="tg" data-t="claro" aria-pressed="${c.tema === 'claro'}" aria-label="Modo claro" title="Modo claro">${ic('sun', 17)}</button><button type="button" class="tg" data-t="escuro" aria-pressed="${c.tema !== 'claro'}" aria-label="Modo escuro" title="Modo escuro">${ic('moon', 17)}</button></div></div>
       <div class="field"><span>Ajuda</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" id="c-tut">Abrir tutorial</button><button type="button" class="btn" id="c-demo">Ver dados de exemplo</button></div><span class="muted" style="font-size:12px">Os dados de exemplo são fictícios e não alteram nem apagam os seus.</span></div>
       <label class="field" ${LITE ? 'hidden' : ''}><span>O que o Claude deve saber sobre você e como responder</span><textarea id="c-instr" rows="9">${esc(c.instr)}</textarea></label>
-      <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<button type="button" class="link" id="c-reset">Restaurar texto padrão</button>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true });
+      <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<button type="button" class="link" id="c-reset">Restaurar texto padrão</button>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true, onClose: () => applyTheme() });
   $('#c-mod', box).onclick = () => modelosForm();
   $('#c-tut', box).onclick = () => tutorialForm();
-  $$('.theme-tg .tg', box).forEach(b => b.onclick = () => { $('#c-tema', box).value = b.dataset.t; $$('.theme-tg .tg', box).forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+  $$('.theme-tg .tg', box).forEach(b => b.onclick = () => { $('#c-tema', box).value = b.dataset.t; applyTheme(b.dataset.t); $$('.theme-tg .tg', box).forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
   $('#c-demo', box).onclick = () => demoOn();
   $('#c-addp', box).onclick = () => { $('#c-provas', box).insertAdjacentHTML('beforeend', provaRowHTML({ cor: SER[$$('.prow', box).length % SER.length] })); const r = $$('.prow', box).at(-1); $('[data-f=pn]', r).focus({ preventScroll: true }); };
   $('#c-provas', box).addEventListener('click', e => { const b = e.target.closest('[data-x=delp]'); if (b) b.closest('.prow').remove(); });
@@ -1879,9 +1893,25 @@ function tutorialForm() {
          : ['Trabalhando com o Claude', `<p>Ao abrir um simulado, você pode adicionar o PDF da prova. O painel lê as questões, você marca as que errou e o Claude indica matéria e assunto. Os acertos que você lançou continuam valendo; se não baterem com as questões marcadas, o painel avisa.</p><p>Em <b>Caderno com o Claude</b> você conversa sobre os seus dados, e <b>Comentar com o Claude</b> pede uma análise de um simulado ou texto.</p>`]
   ];
   const box = modal(`<h2>Tutorial</h2><p class="lead">Clique num tópico para abrir. Em vários quadros do painel também há um botão <span class="help-demo">?</span> que explica o que aquele quadro mostra.</p>
-    <div class="tut">${T.map((t, i) => `<details ${i === 0 ? 'open' : ''}><summary>${esc(t[0])}</summary><div class="tut-b">${t[1]}</div></details>`).join('')}</div>
+    <div class="tut">${T.map((t, i) => `<details ${i === 0 ? 'open' : ''}><summary>${esc(t[0])}</summary><div class="tut-b"><div class="tut-bi">${t[1]}</div></div></details>`).join('')}</div>
     <div class="foot"><button type="button" class="btn primary" data-x="close">Fechar</button></div>`, { wide: true });
   box.addEventListener('click', e => { if (e.target.closest('[data-x=close]')) closeModal(); });
+  const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $$('.tut details', box).forEach(d => {
+    const body = $('.tut-b', d);
+    $('summary', d).addEventListener('click', e => {
+      e.preventDefault(); if (d._an) d._an.cancel();
+      const fim = () => { d._an = null; };
+      if (!d.open) {
+        d.open = true; d.classList.remove('closing'); if (calmo) return;
+        d._an = body.animate([{ height: '0px', opacity: 0 }, { height: body.scrollHeight + 'px', opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2,.7,.2,1)' }); d._an.onfinish = fim;
+      } else {
+        if (calmo) { d.open = false; return; }
+        d.classList.add('closing');
+        d._an = body.animate([{ height: body.offsetHeight + 'px', opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 220, easing: 'cubic-bezier(.4,0,.6,1)' }); d._an.onfinish = () => { d.open = false; d.classList.remove('closing'); fim(); };
+      }
+    });
+  });
 }
 function demoOn() { S.demoOff = false; S.demoForce = true; S.demo = calcDemo(); closeModal(); go('visao'); }
 
