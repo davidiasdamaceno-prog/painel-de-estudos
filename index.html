@@ -65,7 +65,7 @@ h1, h2, h3 { text-wrap: balance; }
 .brand b { font-weight: 700; }
 .crumb { color: var(--muted); font-size: 13px; }
 .tb-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.chip-info { font: 12px var(--mono); color: var(--ink-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 4px 11px; }
+.chip-info, .model-sel { box-sizing: border-box; height: 30px; display: inline-flex; align-items: center; min-height: 0; font: 12px/1 var(--mono); color: var(--ink-2); background-color: var(--card); border: 1px solid var(--line-2); border-radius: 999px; padding: 0 12px; white-space: nowrap; margin: 0; }
 .icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid transparent; background: transparent; border-radius: 9px; color: var(--ink-2); }
 .icon-btn:hover { background: var(--card-2); border-color: var(--line); color: var(--ink); }
 #menuBtn { display: none; }
@@ -194,7 +194,8 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 640px; }
 .h-card { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
 .kv { display: grid; gap: 11px; margin: 18px 0; }
 .kv > div { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); }
-.kv b { font: 500 13px var(--mono); color: var(--ink); text-align: right; }
+.kv > div { flex-wrap: wrap; }
+.kv b { font: 500 13px var(--mono); color: var(--ink); text-align: right; margin-left: auto; min-width: 0; overflow-wrap: anywhere; }
 .mini { border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; margin: 14px 0 18px; }
 .mini > div { display: flex; justify-content: space-between; gap: 12px; }
 .mini > div span:first-child { color: var(--muted); font-size: 12px; }
@@ -300,8 +301,24 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 640px; }
   .titlebar { padding: 0 12px; }
 }
 
-.model-sel { font: 12px var(--mono); color: var(--ink); background: var(--card); border: 1px solid var(--line-2); border-radius: 999px; padding: 5px 28px 5px 12px; height: auto; width: auto; max-width: 200px; }
-@media (max-width: 900px) { .model-sel { max-width: 120px; } }
+.model-sel { display: block; width: auto; max-width: 200px; padding-right: 28px; background-position: calc(100% - 15px) 12px, calc(100% - 10px) 12px; color: var(--ink); cursor: pointer; text-overflow: ellipsis; }
+.model-sel:hover { border-color: var(--bd-hov); }
+@media (max-width: 900px) { .model-sel { max-width: 120px; } .chip-info { padding: 0 10px; } }
+
+/* tour guiado */
+.tour { position: fixed; inset: 0; z-index: 90; animation: scrim-in .25s ease both; }
+.tour.out { opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+.tour-hl { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(0,0,0,.62), 0 0 0 2px var(--pri); pointer-events: none; transition: top .45s cubic-bezier(.4,0,.2,1), left .45s cubic-bezier(.4,0,.2,1), width .45s cubic-bezier(.4,0,.2,1), height .45s cubic-bezier(.4,0,.2,1); }
+.tour-pop { position: fixed; background: var(--card); color: var(--ink); border: 1px solid var(--line-2); border-radius: 16px; padding: 16px 18px 14px; box-shadow: 0 18px 50px rgba(0,0,0,.45); transition: top .45s cubic-bezier(.4,0,.2,1), left .45s cubic-bezier(.4,0,.2,1); max-height: calc(100vh - 24px); overflow: auto; }
+.tour-pop h3 { margin: 2px 0 6px; font-size: 15px; font-weight: 650; }
+.tour-pop p { margin: 0 0 14px; color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+.tour-n { font: 11px var(--mono); color: var(--muted); letter-spacing: .04em; }
+.tour-bar { height: 3px; border-radius: 3px; background: var(--line); margin: -4px 0 12px; overflow: hidden; }
+.tour-bar i { display: block; height: 100%; background: var(--pri); border-radius: 3px; transition: width .45s cubic-bezier(.4,0,.2,1); }
+.tour-b { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-b span { display: inline-flex; gap: 8px; }
+.tour-b [hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .tour-hl, .tour-pop, .tour-bar i { transition: none; } }
 .mod-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
 .mod-area { display: grid; grid-template-columns: 1.2fr 70px 2fr 32px; gap: 8px; align-items: center; margin-top: 8px; }
 
@@ -1836,7 +1853,8 @@ function cfgForm() {
       </section>
       <section class="cfg-sec"><h3>Ajuda</h3>
         <div class="cfg-list">
-          <button type="button" class="cfg-item" id="c-tut"><span class="ci-i">${ic('chat', 18)}</span><span class="ci-t"><b>Tutorial</b><small>Aprenda o que cada parte do painel faz</small></span>${ic('chev', 16)}</button>
+          <button type="button" class="cfg-item" id="c-tour"><span class="ci-i">${ic('target', 18)}</span><span class="ci-t"><b>Tour guiado</b><small>Um passeio pelo painel, parte por parte</small></span>${ic('chev', 16)}</button>
+          <button type="button" class="cfg-item" id="c-tut"><span class="ci-i">${ic('chat', 18)}</span><span class="ci-t"><b>Guia de tópicos</b><small>Tire dúvidas sobre cada parte do painel</small></span>${ic('chev', 16)}</button>
           <button type="button" class="cfg-item" id="c-demo"><span class="ci-i">${ic('spark', 18)}</span><span class="ci-t"><b>Ver dados de exemplo</b><small>Números fictícios; não alteram nem apagam os seus</small></span>${ic('chev', 16)}</button>
         </div>
       </section>
@@ -1844,6 +1862,7 @@ function cfgForm() {
       <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<button type="button" class="link" id="c-reset">Restaurar texto padrão</button>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true, onClose: () => applyTheme() });
   $('#c-mod', box).onclick = () => modelosForm();
   if ($('#c-acc', box)) $('#c-acc', box).onclick = () => { if (S.cloud) cloudLogout(); else { lsDel('pe-modo'); cloudLogin(); } };
+  $('#c-tour', box).onclick = () => { closeModal(); setTimeout(tourStart, 60); };
   $('#c-tut', box).onclick = () => tutorialForm();
   $$('.theme-tg .tg', box).forEach(b => b.onclick = () => { $('#c-tema', box).value = b.dataset.t; applyTheme(b.dataset.t); $$('.theme-tg .tg', box).forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
   $('#c-demo', box).onclick = () => demoOn();
@@ -1927,7 +1946,7 @@ const HELP_PAGE = { 'Simulados': 'p-sim', 'Notas': 'p-notas', 'Simulados complet
 const helpBtn = k => HELP[k] ? `<button type="button" class="help" data-act="help" data-k="${k}" aria-label="O que é isto?" title="O que é isto?">?</button>` : '';
 function helpModal(k) {
   const h = HELP[k]; if (!h) return;
-  const box = modal(`<h2>${esc(h[0])}</h2>${h[1].map(t => `<p class="lead" style="margin-top:10px">${esc(t)}</p>`).join('')}<div class="foot" style="justify-content:space-between"><button type="button" class="link" data-x="tut">Abrir o tutorial completo</button><button type="button" class="btn primary" data-x="close">Entendi</button></div>`);
+  const box = modal(`<h2>${esc(h[0])}</h2>${h[1].map(t => `<p class="lead" style="margin-top:10px">${esc(t)}</p>`).join('')}<div class="foot" style="justify-content:space-between"><button type="button" class="link" data-x="tut">Abrir o guia de tópicos</button><button type="button" class="btn primary" data-x="close">Entendi</button></div>`);
   box.addEventListener('click', e => { const x = e.target.closest('[data-x]'); if (!x) return; if (x.dataset.x === 'close') closeModal(); else if (x.dataset.x === 'tut') tutorialForm(); });
 }
 function tutorialForm() {
@@ -1945,7 +1964,7 @@ function tutorialForm() {
     LITE ? ['Seus dados e backup', FB_CFG ? `<p>Ao entrar com a sua conta Google, os seus simulados, redações e configurações ficam salvos na nuvem e aparecem em qualquer aparelho em que você entrar. Em <b>Configurações > Conta</b> você vê com qual conta está conectado e pode sair.</p><p>Se você usou o painel antes sem entrar, o painel oferece enviar esses dados para a conta na primeira vez. <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta.</p>` : `<p>Nesta versão, os dados ficam só no navegador que você está usando. Se limpar os dados do navegador, eles somem.</p><p>Em Configurações, <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta. É assim que você leva tudo para outro aparelho.</p>`]
          : ['Trabalhando com o Claude', `<p>Ao abrir um simulado, você pode adicionar o PDF da prova. O painel lê as questões, você marca as que errou e o Claude indica matéria e assunto. Os acertos que você lançou continuam valendo; se não baterem com as questões marcadas, o painel avisa.</p><p>Em <b>Caderno com o Claude</b> você conversa sobre os seus dados, e <b>Comentar com o Claude</b> pede uma análise de um simulado ou texto.</p>`]
   ];
-  const box = modal(`<h2>Tutorial</h2><p class="lead">Clique num tópico para abrir. Em vários quadros do painel também há um botão <span class="help-demo">?</span> que explica o que aquele quadro mostra.</p>
+  const box = modal(`<h2>Guia de tópicos</h2><p class="lead">Clique num tópico para abrir. Em vários quadros do painel também há um botão <span class="help-demo">?</span> que explica o que aquele quadro mostra.</p>
     <div class="tut">${T.map((t, i) => `<details ${i === 0 ? 'open' : ''}><summary>${esc(t[0])}</summary><div class="tut-b"><div class="tut-bi">${t[1]}</div></div></details>`).join('')}</div>
     <div class="foot"><button type="button" class="btn primary" data-x="close">Fechar</button></div>`, { wide: true });
   box.addEventListener('click', e => { if (e.target.closest('[data-x=close]')) closeModal(); });
@@ -1967,6 +1986,97 @@ function tutorialForm() {
   });
 }
 function demoOn() { S.demoOff = false; S.demoForce = true; S.demo = calcDemo(); closeModal(); go('visao'); }
+
+/* ---------- tour guiado: o painel anda sozinho e destaca cada parte ---------- */
+const cardWith = t => () => [...document.querySelectorAll('#main section.card, #main .g-2, #main .g-3')].find(e => e.textContent.includes(t));
+function tourSteps() {
+  const L = LITE;
+  return [
+    { c: 1, t: 'Bem-vindo ao Painel de Estudos', x: () => `Vou te levar por uma volta pelo painel. Clique em Avançar para ir andando, em Voltar para rever, ou em Sair quando quiser. As setas do teclado também funcionam.${S.demo ? ' Os números que aparecem agora são de exemplo.' : ''}` },
+    { r: 'visao', s: '.cd-row', opt: 1, t: 'Contagem regressiva', x: 'Cada prova cadastrada em Configurações ganha um quadrado colorido, com os dias, horas, minutos e segundos que faltam. Você escolhe o nome, a data, o horário e a cor.' },
+    { r: 'visao', s: '.g-top > :first-child', t: 'Gráfico principal', x: 'Aqui você acompanha a evolução nos simulados. Nos filtros de cima, escolha quantos simulados mostrar (Últ. 3, Últ. 6, Tudo), a unidade (% ou acertos) e o que mostrar (aproveitamento, áreas ou redação). A linha tracejada é a sua meta.' },
+    { r: 'visao', s: '.g-top > :nth-child(2)', t: 'Conclusões rápidas', x: L ? 'Um resumo calculado com os seus simulados: a área que mais melhorou, a que mais caiu e onde você mais erra. O botão leva ao detalhe.' : 'As conclusões do Claude sobre os seus dados: o que melhorou, o que caiu e onde você mais erra.' },
+    { r: 'visao', s: '#main .view > section.card', t: 'Cada área em detalhe', x: 'Uma linha por área, da mais fraca para a mais forte: último resultado, média, variação em relação ao simulado anterior e a situação em relação à meta.' },
+    { r: 'visao', s: '.g-bot', t: 'Meta, eventos e saúde do estudo', x: 'Embaixo você vê o quanto falta para a meta de acertos, os últimos simulados e redações, e uma checagem simples de constância.' },
+    { r: 'visao', s: '#modelSel', t: 'Modelo de prova', x: 'Escolha aqui o modelo que os gráficos mostram: ENEM, Dia 1, Dia 2, FAMERP… Cada modelo tem as suas áreas e metas. Para criar ou editar, use “Editar modelos…” no fim da lista.', side: 'bottom' },
+    { r: 'visao', s: '#side', opt: 1, t: 'Menu', x: 'Daqui você vai para cada parte: simulados (notas, evolução e completos), redação (textos e competências) e conclusões.', side: 'right' },
+    { r: 'sim-notas', s: '[data-act=simNew]', t: 'Lançar um simulado', x: 'Clique em Novo simulado, escolha o modelo e a data e preencha os acertos de cada área. Use o mesmo grupo no Dia 1 e no Dia 2 para formar um simulado completo.' },
+    { r: 'sim-notas', s: '#main .view > section.card', t: 'Lista de simulados', x: 'Todos os simulados do modelo escolhido, com a melhor e a pior área e a variação em relação ao anterior. Clique numa linha para ver os detalhes, editar ou excluir.' },
+    { r: 'sim-evolucao', s: '#main .view > section.card', t: 'Evolução geral', x: 'A linha do aproveitamento ao longo dos simulados. Troque entre % e acertos nos botões do canto.' },
+    { r: 'sim-evolucao', s: cardWith('Mapa de calor'), t: 'Mapa de calor', x: 'As linhas são áreas e as colunas são simulados: quanto mais forte o azul, maior o acerto. Dá para ver de relance onde você melhorou.' },
+    { r: 'sim-conjuntos', s: '#main .view > section.card', t: 'Simulados completos', x: 'Junta o Dia 1 e o Dia 2 de cada grupo e mostra o total. Se faltar um dos dias, o painel avisa qual.' },
+    { r: 'red-textos', s: '[data-act=redNew]', t: 'Lançar uma redação', x: 'Cadastre o tema, a data, se é escrita ou reescrita e a nota de cada competência (de 0 a 200, em degraus de 40).' },
+    { r: 'red-competencias', s: cardWith('Média por competência'), t: 'Competências e reescrita', x: 'A média de cada competência e o efeito da reescrita: quantos pontos, em média, a reescrita ganha em relação ao texto original.' },
+    L ? { r: 'conclusoes', s: '#main .view > .g-3', t: 'Conclusões', x: 'A área que mais melhorou, a que mais caiu e a em que você mais erra, comparando os simulados recentes (até 3) com os anteriores. Embaixo, a redação por competência.' }
+      : { r: 'plano', s: cardWith('Onde mais erro'), t: 'Onde mais erro', x: 'O ranking do que você mais erra, por área, matéria e assunto. Conforme você acerta mais, o assunto desce na lista.' },
+    { r: 'visao', s: '[data-act=cfg]', t: 'Configurações', x: 'Aqui ficam as metas, as provas e datas da contagem regressiva, o tema claro ou escuro, os dados de exemplo e a conta. Para rever este passeio, abra Configurações > Tour guiado.', side: 'bottom', last: 1 }
+  ];
+}
+const tourVis = e => { if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+function tourEl(st) { if (st.c) return null; const e = typeof st.s === 'function' ? st.s() : document.querySelector(st.s); return tourVis(e) ? e : null; }
+function tourStart() {
+  if (S.tour) return; closeModal(true);
+  const d = document.createElement('div'); d.className = 'tour'; d.id = 'tour';
+  d.innerHTML = '<div class="tour-hl"></div><div class="tour-pop" role="dialog" aria-modal="true" aria-live="polite"><div class="tour-bar"><i></i></div><div class="tour-n"></div><h3></h3><p></p><div class="tour-b"><button type="button" class="link" data-t="exit">Sair</button><span><button type="button" class="btn" data-t="prev">Voltar</button><button type="button" class="btn primary" data-t="next">Avançar</button></span></div></div>';
+  document.body.appendChild(d);
+  S.tour = { i: -1, el: null, steps: tourSteps(), d };
+  d.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; if (b.dataset.t === 'exit') tourEnd(); else if (b.dataset.t === 'next') tourNext(1); else tourNext(-1); });
+  document.addEventListener('keydown', tourKey, true); window.addEventListener('resize', tourPlace); $('#main').addEventListener('scroll', tourPlace);
+  tourGo(0, 1);
+}
+function tourKey(e) {
+  if (!S.tour) return;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); tourEnd(); }
+  else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); tourNext(1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); tourNext(-1); }
+}
+function tourNext(dir) {
+  const T = S.tour; if (!T) return;
+  if (dir > 0 && T.steps[T.i].last) { tourEnd(); return; }
+  tourGo(T.i + dir, dir);
+}
+function tourGo(i, dir) {
+  const T = S.tour; if (!T) return;
+  if (i < 0) return; if (i >= T.steps.length) { tourEnd(); return; }
+  const st = T.steps[i];
+  if (st.r && S.route !== st.r) go(st.r);
+  const el = tourEl(st);
+  if (!el && st.opt) { tourGo(i + dir, dir); return; }
+  T.i = i; T.el = el;
+  if (el) { const r = el.getBoundingClientRect(); if (r.top < 70 || r.bottom > innerHeight - 20) { const m = $('#main'); if (m && m.contains(el)) el.scrollIntoView({ block: 'center' }); } }
+  const p = $('.tour-pop', T.d), n = T.steps.length;
+  $('.tour-n', p).textContent = `${i + 1} de ${n}`; $('h3', p).textContent = st.t; $('p', p).textContent = typeof st.x === 'function' ? st.x() : st.x;
+  $('.tour-bar i', p).style.width = `${(i + 1) / n * 100}%`;
+  $('[data-t=prev]', p).hidden = i === 0; $('[data-t=next]', p).textContent = st.last ? 'Concluir' : i === 0 ? 'Começar' : 'Avançar';
+  tourPlace();
+}
+function tourPlace() {
+  const T = S.tour; if (!T || T.i < 0) return; const st = T.steps[T.i];
+  const hl = $('.tour-hl', T.d), p = $('.tour-pop', T.d), W = innerWidth, H = innerHeight, M = 12;
+  let el = T.el; if (el && !document.contains(el)) { el = T.el = tourEl(st); }
+  const pw = Math.min(360, W - 2 * M); p.style.width = pw + 'px'; const ph = p.offsetHeight;
+  if (!el) { hl.style.cssText = `top:${H / 2}px;left:${W / 2}px;width:0;height:0`; p.style.top = Math.max(M, (H - ph) / 2) + 'px'; p.style.left = Math.max(M, (W - pw) / 2) + 'px'; return; }
+  const r = el.getBoundingClientRect(), pad = 8;
+  const hx = Math.max(0, r.left - pad), hy = Math.max(0, r.top - pad), hw = Math.min(W, r.right + pad) - hx, hh = Math.min(H, r.bottom + pad) - hy;
+  hl.style.cssText = `top:${hy}px;left:${hx}px;width:${hw}px;height:${hh}px`;
+  const fits = {
+    bottom: H - (hy + hh) >= ph + M * 2, top: hy >= ph + M * 2,
+    right: W - (hx + hw) >= pw + M * 2 && H >= ph + 2 * M, left: hx >= pw + M * 2 && H >= ph + 2 * M
+  };
+  const order = st.side ? [st.side, 'bottom', 'top', 'right', 'left'] : ['bottom', 'top', 'right', 'left'];
+  const side = order.find(s => fits[s]); let x, y;
+  if (side === 'bottom') { x = hx; y = hy + hh + M; } else if (side === 'top') { x = hx; y = hy - ph - M; }
+  else if (side === 'right') { x = hx + hw + M; y = hy; } else if (side === 'left') { x = hx - pw - M; y = hy; }
+  else { x = W - pw - M; y = H - ph - M; }
+  x = Math.min(Math.max(M, x), W - pw - M); y = Math.min(Math.max(M, y), H - ph - M);
+  p.style.left = x + 'px'; p.style.top = y + 'px';
+}
+function tourRefresh() { const T = S.tour; if (!T || T.i < 0) return; T.el = tourEl(T.steps[T.i]); tourPlace(); }
+function tourEnd() {
+  const T = S.tour; if (!T) return; S.tour = null;
+  document.removeEventListener('keydown', tourKey, true); window.removeEventListener('resize', tourPlace); const m = $('#main'); if (m) m.removeEventListener('scroll', tourPlace);
+  T.d.classList.add('out'); setTimeout(() => T.d.remove(), 220); go('visao');
+}
 
 /* ============ ações, eventos e início ============ */
 function setQDoc(sid, doc) {
@@ -2073,7 +2183,7 @@ document.addEventListener('input', e => {
   if (t.dataset && t.dataset.bind === 'qSearch') { S.ui.qSearch = t.value; const doc = D().simq[S.ui.simSel], l = $('#qlist'); if (doc && l) l.innerHTML = qListHTML(doc); }
   if (t.dataset && t.dataset.draft) S.draft[t.dataset.draft] = t.value;
 });
-function afterRender() { if (S.route === 'caderno' && S.stream) { const l = $('#live'); if (l && l.scrollIntoView) l.scrollIntoView({ block: 'nearest' }); } }
+function afterRender() { if (S.tour) requestAnimationFrame(() => requestAnimationFrame(tourRefresh)); if (S.route === 'caderno' && S.stream) { const l = $('#live'); if (l && l.scrollIntoView) l.scrollIntoView({ block: 'nearest' }); } }
 
 async function init() {
   const h = location.hash.slice(1); if (ROUTES.some(r => r.id === h)) go(h); else render(true);
