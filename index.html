@@ -341,9 +341,6 @@ button, .pill, .chips, .nav-i, .nav-g, .nav-home, svg { -webkit-user-select: non
 .cd-u span { font-size: 10px; opacity: .8; text-transform: uppercase; letter-spacing: .04em; }
 .cd-hoje { display: none; font: 600 22px/1.1 var(--mono); }
 .cd.hoje .cd-hoje { display: block; } .cd.hoje .cd-g { display: none; }
-.prow { display: grid; grid-template-columns: minmax(120px, 2fr) minmax(130px, 1fr) minmax(92px, .7fr) 40px auto; gap: 8px; align-items: center; margin-bottom: 8px; }
-.prow .icon-btn { justify-self: end; }
-@media (max-width: 560px) { .prow { grid-template-columns: 1fr 1fr; } .prow input[type=text] { grid-column: 1 / -1; } }
 
 /* ajuda */
 .help { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-left: 7px; padding: 0; vertical-align: middle; border: 1px solid var(--line-2); border-radius: 50%; background: transparent; color: var(--muted); font: 600 10px/1 var(--sans); letter-spacing: 0; text-transform: none; }
@@ -375,6 +372,39 @@ button, .pill, .btn, .nav-i, .nav-g, .nav-home, input, select, textarea, .tbl tr
 html.theming *, html.theming *::before, html.theming *::after { transition: background-color .4s ease, color .4s ease, border-color .4s ease, fill .4s ease, stroke .4s ease, stop-color .4s ease, box-shadow .4s ease !important; }
 @media (prefers-reduced-motion: reduce) { .scrim, .modal { animation: none; } * { transition: none !important; } }
 
+/* configurações */
+.cfg { display: grid; gap: 22px; }
+.cfg h3 { font: 600 13px var(--sans); letter-spacing: .02em; margin: 0 0 4px; }
+.cfg-sec { display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+.cfg-sec:first-child { border-top: 0; padding-top: 0; }
+.cfg-h { margin: 0 0 2px; color: var(--muted); font-size: 12px; }
+.cfg input[type=text], .cfg input[type=number], .cfg input[type=date], .cfg input[type=time], .cfg input[type=color], .cfg select { height: 40px; min-height: 40px; }
+.cfg-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.cfg-3 .field { align-content: start; }
+.cfg small, .cfg-line small, .cfg-item small { display: block; color: var(--muted); font-size: 11px; line-height: 1.35; font-weight: 400; }
+.prow, .prow-h { display: grid; grid-template-columns: minmax(0, 1fr) 150px 112px 40px 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+.prow > * { min-width: 0; }
+.prow-h { margin: 0 0 -2px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.prow .icon-btn { justify-self: center; }
+.cfg-line { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.cfg-line b, .cfg-item b { font-weight: 500; font-size: 13px; display: block; }
+.cfg-list { display: grid; gap: 8px; }
+.cfg-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 11px 14px; border: 1px solid var(--line-2); border-radius: 12px; background: transparent; }
+.cfg-item:hover { background: var(--hov); border-color: var(--bd-pill); }
+.cfg-item .ci-i { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--card-2); color: var(--ink-2); flex: none; }
+.cfg-item .ci-t { flex: 1; min-width: 0; }
+.cfg-item > svg:last-child { color: var(--muted); flex: none; }
+@media (max-width: 620px) { .cfg-3 { grid-template-columns: 1fr; } .prow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px 36px; } .prow > :nth-child(1) { grid-column: 1 / -1; } .prow-h { display: none; } }
+
+/* login */
+.login { min-height: 100%; display: grid; place-items: center; padding: 24px; }
+.login-card { width: min(380px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; padding: 34px 28px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+.login-card h1 { font-size: 20px; font-weight: 600; }
+.login-card p { color: var(--ink-2); line-height: 1.55; }
+.login-card .btn { width: 100%; justify-content: center; height: 42px; }
+.login-card small { color: var(--muted); font-size: 11px; }
+body.gate .side, body.gate .tb-right, body.gate #menuBtn, body.gate .crumb { visibility: hidden; }
+
 </style>
 </head>
 <body>
@@ -401,6 +431,7 @@ html.theming *, html.theming *::before, html.theming *::after { transition: back
 
 <script>
 const LITE = true;
+const FB_CFG = {"apiKey": "AIzaSyDFTg_x4tyW0PvhCH4tQxQaI6SzrHCusoU", "authDomain": "painel-de-estudos-f2bba.firebaseapp.com", "projectId": "painel-de-estudos-f2bba", "storageBucket": "painel-de-estudos-f2bba.firebasestorage.app", "messagingSenderId": "655429193480", "appId": "1:655429193480:web:7a5404b46c23b2c6ec66bd"};
 'use strict';
 /* ============ helpers ============ */
 const $ = (s, r = document) => r.querySelector(s);
@@ -785,6 +816,8 @@ function render(force) {
   S.pending = false; applyTheme();
   const main = $('#main'); const top = main.scrollTop;
   CHARTS.length = 0;
+  document.body.classList.toggle('gate', !!S.authGate);
+  if (S.authGate) { main.innerHTML = loginHTML(); renderSide(); renderBar(); return; }
   if (!S.loaded) { main.innerHTML = '<div class="card"><div class="lbl">Carregando</div><p class="sub" style="margin-top:8px">Buscando seus simulados e redações…</p></div>'; renderSide(); renderBar(); return; }
   const v = VIEWS[S.route] || VIEWS.visao;
   main.innerHTML = banners() + `<div class="view">${S.route === 'visao' ? cdCards() : ''}${v()}</div>`;
@@ -1784,13 +1817,33 @@ function cfgForm() {
   const c = S.cfg; const provaRows = (Array.isArray(c.provas) ? c.provas : provasList()).map((p, i) => ({ nome: p.nome, data: p.data, hora: p.hora, cor: p.cor || SER[i % SER.length] }));
   if (!provaRows.length) provaRows.push({ nome: '', data: '', hora: '', cor: SER[0] });
   const box = modal(`<h2>Configurações</h2><p class="lead">Metas, provas${LITE ? '' : ', o que o Claude precisa saber sobre você'} e aparência. <button type="button" class="link" id="c-mod">Editar modelos de prova</button></p>
-    <form class="form" id="f"><div class="cols"><label class="field"><span>Meta padrão (%), se o modelo não tiver meta</span><input type="number" id="c-meta" min="1" max="100" value="${c.metaAcerto}"></label><label class="field"><span>Piso por matéria (%)</span><input type="number" id="c-piso" min="0" max="100" value="${c.piso}"></label><label class="field"><span>Meta de redação (pts)</span><input type="number" id="c-red" min="0" max="1000" step="20" value="${c.metaRed}"></label></div>
-      <div class="field"><span>Provas e datas <span class="muted">· a contagem regressiva aparece na Visão geral</span></span><div id="c-provas">${provaRows.map(provaRowHTML).join('')}</div><div><button type="button" class="link" id="c-addp">+ Adicionar prova</button></div></div>
-      <div class="field"><span>Aparência</span><div class="theme-tg" role="group" aria-label="Aparência"><input type="hidden" id="c-tema" value="${c.tema === 'claro' ? 'claro' : 'escuro'}"><button type="button" class="tg" data-t="claro" aria-pressed="${c.tema === 'claro'}" aria-label="Modo claro" title="Modo claro">${ic('sun', 17)}</button><button type="button" class="tg" data-t="escuro" aria-pressed="${c.tema !== 'claro'}" aria-label="Modo escuro" title="Modo escuro">${ic('moon', 17)}</button></div></div>
-      <div class="field"><span>Ajuda</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" id="c-tut">Abrir tutorial</button><button type="button" class="btn" id="c-demo">Ver dados de exemplo</button></div><span class="muted" style="font-size:12px">Os dados de exemplo são fictícios e não alteram nem apagam os seus.</span></div>
-      <label class="field" ${LITE ? 'hidden' : ''}><span>O que o Claude deve saber sobre você e como responder</span><textarea id="c-instr" rows="9">${esc(c.instr)}</textarea></label>
+    <form class="form cfg" id="f">
+      ${LITE && FB_CFG ? `<section class="cfg-sec"><h3>Conta</h3><div class="cfg-line"><div><b>${S.cloud ? 'Conectado com o Google' : 'Dados só neste navegador'}</b><small>${S.cloud ? esc(S.cloud.email || S.cloud.nome || '') + ' · seus dados ficam salvos na nuvem' : 'Entre para salvar na nuvem e usar em outros aparelhos'}</small></div><button type="button" class="btn" id="c-acc">${S.cloud ? 'Sair' : 'Entrar com Google'}</button></div></section>` : ''}
+      <section class="cfg-sec"><h3>Metas</h3>
+        <div class="cfg-3">
+          <label class="field"><span>Meta de acertos (%)</span><input type="number" id="c-meta" min="1" max="100" value="${c.metaAcerto}"><small>Usada quando o modelo não tem meta</small></label>
+          <label class="field"><span>Piso por matéria (%)</span><input type="number" id="c-piso" min="0" max="100" value="${c.piso}"><small>Abaixo disso a área fica crítica</small></label>
+          <label class="field"><span>Meta de redação (pts)</span><input type="number" id="c-red" min="0" max="1000" step="20" value="${c.metaRed}"><small>Nota alvo, de 0 a 1000</small></label>
+        </div>
+      </section>
+      <section class="cfg-sec"><h3>Provas e datas</h3><p class="cfg-h">Cada prova vira um quadrado colorido de contagem regressiva na Visão geral.</p>
+        <div class="prow-h"><span>Nome</span><span>Data</span><span>Horário</span><span>Cor</span><span></span></div>
+        <div id="c-provas">${provaRows.map(provaRowHTML).join('')}</div>
+        <div><button type="button" class="link" id="c-addp">+ Adicionar prova</button></div>
+      </section>
+      <section class="cfg-sec"><h3>Aparência</h3>
+        <div class="cfg-line"><div><b>Tema</b><small>Alterna entre o modo claro e o escuro</small></div><div class="theme-tg" role="group" aria-label="Aparência"><input type="hidden" id="c-tema" value="${c.tema === 'claro' ? 'claro' : 'escuro'}"><button type="button" class="tg" data-t="claro" aria-pressed="${c.tema === 'claro'}" aria-label="Modo claro" title="Modo claro">${ic('sun', 17)}</button><button type="button" class="tg" data-t="escuro" aria-pressed="${c.tema !== 'claro'}" aria-label="Modo escuro" title="Modo escuro">${ic('moon', 17)}</button></div></div>
+      </section>
+      <section class="cfg-sec"><h3>Ajuda</h3>
+        <div class="cfg-list">
+          <button type="button" class="cfg-item" id="c-tut"><span class="ci-i">${ic('chat', 18)}</span><span class="ci-t"><b>Tutorial</b><small>Aprenda o que cada parte do painel faz</small></span>${ic('chev', 16)}</button>
+          <button type="button" class="cfg-item" id="c-demo"><span class="ci-i">${ic('spark', 18)}</span><span class="ci-t"><b>Ver dados de exemplo</b><small>Números fictícios; não alteram nem apagam os seus</small></span>${ic('chev', 16)}</button>
+        </div>
+      </section>
+      <section class="cfg-sec" ${LITE ? 'hidden' : ''}><h3>Claude</h3><label class="field"><span>O que o Claude deve saber sobre você e como responder</span><textarea id="c-instr" rows="9">${esc(c.instr)}</textarea></label></section>
       <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<button type="button" class="link" id="c-reset">Restaurar texto padrão</button>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true, onClose: () => applyTheme() });
   $('#c-mod', box).onclick = () => modelosForm();
+  if ($('#c-acc', box)) $('#c-acc', box).onclick = () => { if (S.cloud) cloudLogout(); else { lsDel('pe-modo'); cloudLogin(); } };
   $('#c-tut', box).onclick = () => tutorialForm();
   $$('.theme-tg .tg', box).forEach(b => b.onclick = () => { $('#c-tema', box).value = b.dataset.t; applyTheme(b.dataset.t); $$('.theme-tg .tg', box).forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
   $('#c-demo', box).onclick = () => demoOn();
@@ -1889,7 +1942,7 @@ function tutorialForm() {
     ['Redação', `<p>Em <b>Textos</b>, lance o tema, a data, se é escrita ou reescrita e a nota de cada uma das 5 competências (0 a 200, em degraus de 40). O total vai até 1000.</p><p>O filtro <b>Todas / Escritas / Reescritas</b> vale para a lista e para os gráficos. Em <b>Competências</b> você vê a evolução de cada competência, a média e o <b>efeito da reescrita</b>, que compara a reescrita com o texto original.</p>`],
     ['Metas, provas e contagem regressiva', `<p>Em <b>Configurações</b> você define a meta padrão, o <b>piso</b> (abaixo dele uma área aparece como crítica) e a meta de redação.</p><p>Em <b>Provas e datas</b>, cadastre quantas provas quiser, com nome, data, horário opcional e a cor do quadrado. Cada prova ganha um quadrado colorido na Visão geral (você escolhe a cor), com dias, horas, minutos e segundos.</p>`],
     ['Aparência e dados de exemplo', `<p>Em Configurações, <b>Aparência</b> troca entre escuro e claro. <b>Ver dados de exemplo</b> mostra o painel com números fictícios; eles não são salvos e os seus dados reais ficam guardados. Para sair, use o botão do aviso no topo ou lance um simulado.</p>`],
-    LITE ? ['Seus dados e backup', `<p>Nesta versão, os dados ficam só no navegador que você está usando. Se limpar os dados do navegador, eles somem.</p><p>Em Configurações, <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta. É assim que você leva tudo para outro aparelho.</p>`]
+    LITE ? ['Seus dados e backup', FB_CFG ? `<p>Ao entrar com a sua conta Google, os seus simulados, redações e configurações ficam salvos na nuvem e aparecem em qualquer aparelho em que você entrar. Em <b>Configurações > Conta</b> você vê com qual conta está conectado e pode sair.</p><p>Se você usou o painel antes sem entrar, o painel oferece enviar esses dados para a conta na primeira vez. <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta.</p>` : `<p>Nesta versão, os dados ficam só no navegador que você está usando. Se limpar os dados do navegador, eles somem.</p><p>Em Configurações, <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta. É assim que você leva tudo para outro aparelho.</p>`]
          : ['Trabalhando com o Claude', `<p>Ao abrir um simulado, você pode adicionar o PDF da prova. O painel lê as questões, você marca as que errou e o Claude indica matéria e assunto. Os acertos que você lançou continuam valendo; se não baterem com as questões marcadas, o painel avisa.</p><p>Em <b>Caderno com o Claude</b> você conversa sobre os seus dados, e <b>Comentar com o Claude</b> pede uma análise de um simulado ou texto.</p>`]
   ];
   const box = modal(`<h2>Tutorial</h2><p class="lead">Clique num tópico para abrir. Em vários quadros do painel também há um botão <span class="help-demo">?</span> que explica o que aquele quadro mostra.</p>
@@ -1965,6 +2018,8 @@ const ACT = {
   cfg: () => cfgForm(),
   demoOff: () => { S.demoOff = true; S.demoForce = false; S.demo = false; render(true); },
   help: el => helpModal(el.dataset.k),
+  gLogin: () => cloudLogin(),
+  gLocal: () => { lsSet('pe-modo', 'local'); useLocal(); },
   range: el => { S.ui.range = el.dataset.k; render(true); },
   grain: el => { S.ui.grain = el.dataset.k; S.ui.matSel = null; render(true); },
   unit: el => { S.ui.unit = el.dataset.k; render(true); },
@@ -2027,7 +2082,7 @@ async function init() {
     const get = async n => { try { return await claude.use(n); } catch (e) { return null; } };
     [S.ai, S.assets, S.db] = await Promise.all([get('sample'), get('assets'), get('db')]);
   }
-  if (LITE) S.db = liteDb();
+  if (LITE) { if (FB_CFG) { cloudInit(); return; } S.db = liteDb(); }
   if (S.db) subscribe(); else { S.loaded = true; S.demo = calcDemo(); render(true); }
 }
 
@@ -2051,7 +2106,7 @@ function liteDb() {
   };
 }
 function liteExport() {
-  const blob = new Blob([JSON.stringify({ app: 'painel-de-estudos', v: 1, data: liteLoad() })], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ app: 'painel-de-estudos', v: 1, data: liteData() })], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'painel-de-estudos-' + isoOf(new Date()) + '.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast('Backup baixado.');
 }
@@ -2061,7 +2116,8 @@ function liteImport() {
     const f = inp.files[0]; if (!f) return;
     try {
       const j = JSON.parse(await f.text()); const d = j && j.data; if (!d || typeof d !== 'object' || !(d.sim || d.red || d.config)) throw new Error('arquivo inválido');
-      const ok = await confirmBox({ title: 'Importar dados?', text: 'Os dados deste navegador serão substituídos pelos do arquivo.', ok: 'Importar' }); if (!ok) return;
+      const ok = await confirmBox({ title: 'Importar dados?', text: S.cloud ? 'Os itens do arquivo serão enviados para a sua conta. Itens com o mesmo código são substituídos; os demais continuam como estão.' : 'Os dados deste navegador serão substituídos pelos do arquivo.', ok: 'Importar' }); if (!ok) return;
+      if (S.cloud) { const n = await cloudWriteAll(d); toast(`${n} itens importados.`); return; }
       liteSave(d); location.reload();
     } catch (e) { toast('Esse arquivo não parece um backup do painel.', 'err'); }
   };
@@ -2121,6 +2177,77 @@ if (LITE) {
   ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n]));
   ACT.simOpen = el => simDetail(el.dataset.id);
   ACT.cfg = ACT.cfg;
+}
+
+/* ============ nuvem (Firebase) — só no site, quando há configuração ============ */
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
+const lsDel = k => { try { localStorage.removeItem(k); } catch (e) { } };
+const FB_VER = '10.14.1';
+const CLOUD_COLS = ['sim', 'simq', 'red', 'cad', 'ans', 'config'];
+function fbLoad(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('falha ao carregar ' + src)); document.head.appendChild(s); }); }
+async function fbBoot() {
+  const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+  await fbLoad(base + 'firebase-app-compat.js');
+  await Promise.all([fbLoad(base + 'firebase-auth-compat.js'), fbLoad(base + 'firebase-firestore-compat.js')]);
+  firebase.initializeApp(FB_CFG);
+  try { await firebase.firestore().enablePersistence({ synchronizeTabs: true }); } catch (e) { }
+}
+function fireDb(uid) { const fs = firebase.firestore(); return { collection: col => fs.collection(`users/${uid}/${col}`), doc: path => fs.doc(`users/${uid}/${path}`) }; }
+function useLocal() { S.authGate = false; S.cloud = null; S.db = liteDb(); subscribe(); render(true); }
+function showLogin() { S.authGate = true; S.loaded = false; render(true); }
+async function cloudInit() {
+  try { await fbBoot(); } catch (e) { toast('Não consegui conectar à nuvem. Usando só este navegador por enquanto.', 'err'); useLocal(); return; }
+  firebase.auth().onAuthStateChanged(async user => {
+    if (user) {
+      if (S.db && !S.cloud) { location.reload(); return; }
+      if (S.cloud && S.cloud.uid === user.uid) return;
+      await cloudEnter(user);
+    } else if (S.cloud) location.reload();
+    else if (!S.db) { if (lsGet('pe-modo') === 'local') useLocal(); else showLogin(); }
+  });
+}
+async function cloudEnter(user) {
+  S.cloud = { uid: user.uid, email: user.email || '', nome: user.displayName || '' };
+  S.authGate = false; S.db = fireDb(user.uid); lsDel('pe-modo');
+  try { await cloudMigrate(); } catch (e) { toast('Não consegui enviar os dados deste navegador: ' + (e.message || e.code), 'err'); }
+  subscribe(); render(true);
+}
+async function cloudWriteAll(d) {
+  const fs = firebase.firestore(), uid = S.cloud.uid; let b = fs.batch(), n = 0, total = 0;
+  const flush = async () => { if (n) { await b.commit(); b = fs.batch(); n = 0; } };
+  for (const col of CLOUD_COLS) { const docs = (d && d[col]) || {}; for (const [id, v] of Object.entries(docs)) { if (!id || id.includes('/') || !v || typeof v !== 'object') continue; b.set(fs.doc(`users/${uid}/${col}/${id}`), v); total++; if (++n >= 400) await flush(); } }
+  await flush(); return total;
+}
+async function cloudMigrate() {
+  const local = liteLoad(), uid = S.cloud.uid;
+  const has = CLOUD_COLS.some(c => local[c] && Object.keys(local[c]).length);
+  if (!has || lsGet('pe-migrado-' + uid)) return;
+  const fs = firebase.firestore();
+  const probe = await Promise.all(CLOUD_COLS.map(c => fs.collection(`users/${uid}/${c}`).limit(1).get()));
+  if (probe.some(p => !p.empty)) { lsSet('pe-migrado-' + uid, '1'); return; }
+  const ok = await confirmBox({ title: 'Enviar os dados deste navegador para a sua conta?', text: 'Encontrei simulados, redações e configurações salvos neste navegador. Posso enviá-los para a sua conta Google, para ficarem guardados e aparecerem em qualquer aparelho.', ok: 'Enviar' });
+  if (!ok) return;
+  const n = await cloudWriteAll(local); lsSet('pe-migrado-' + uid, '1'); toast(`${n} itens enviados para a sua conta.`);
+}
+async function cloudLogin() {
+  const p = new firebase.auth.GoogleAuthProvider();
+  try { await firebase.auth().signInWithPopup(p); }
+  catch (e) {
+    if (e.code === 'auth/popup-blocked') { try { await firebase.auth().signInWithRedirect(p); } catch (e2) { toast('Não consegui entrar: ' + (e2.message || e2.code), 'err'); } }
+    else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') toast('Não consegui entrar: ' + (e.message || e.code), 'err');
+  }
+}
+async function cloudLogout() { try { await firebase.auth().signOut(); } catch (e) { } lsDel('pe-modo'); location.reload(); }
+function loginHTML() {
+  return `<div class="login"><div class="login-card"><svg width="44" height="44" viewBox="0 0 26 26" fill="none" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="7" stroke="currentColor" stroke-width="1.6"/><path d="M6.5 18.5 11 13l3.4 3.2 5.1-6.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h1>Painel de Estudos</h1><p>Entre com a sua conta Google para guardar simulados e redações na nuvem. Os dados ficam salvos e aparecem em qualquer aparelho.</p>
+    <button class="btn primary" data-act="gLogin">Entrar com Google</button><button type="button" class="link" data-act="gLocal">Usar só neste navegador</button><small>Só você vê os seus dados.</small></div></div>`;
+}
+function liteData() {
+  if (!S.cloud) return liteLoad();
+  const m = a => Object.fromEntries(a.map(({ id, ...r }) => [id, r]));
+  return { sim: m(S.sims), simq: { ...S.simq }, red: m(S.reds), cad: m(S.cad), ans: m(S.ans), config: { geral: { ...S.cfg } } };
 }
 
 document.addEventListener('click', e => { if (e.target.closest('button,[data-act],svg') && !e.target.closest('input,textarea,select')) { const g = getSelection(); if (g && g.type !== 'None') g.removeAllRanges(); } }, true);
