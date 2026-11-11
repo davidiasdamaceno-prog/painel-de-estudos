@@ -427,6 +427,20 @@ html.theming *, html.theming *::before, html.theming *::after { transition: back
 body.gate .side, body.gate .tb-right, body.gate #menuBtn, body.gate .crumb { display: none; }
 body.gate .shell { grid-template-columns: minmax(0, 1fr); padding: 0 20px 18px; }
 
+/* o dia chegou */
+.cel { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 20px; animation: scrim-in .3s ease both; }
+.cel::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.62); }
+.cel.out { opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+.cel-cv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cel-card { width: min(420px, 100%); text-align: center; background: var(--card); color: var(--ink); border: 1px solid var(--line-2); border-top: 5px solid var(--cc); border-radius: 20px; padding: 30px 28px 26px; position: relative; box-shadow: 0 24px 70px rgba(0,0,0,.5); animation: cel-pop .5s cubic-bezier(.2,1.3,.4,1) both; display: grid; gap: 12px; justify-items: center; }
+.cel-k { font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; background: var(--cc); color: var(--ci); max-width: 100%; overflow-wrap: anywhere; }
+.cel-card h2 { font-size: 30px; font-weight: 700; letter-spacing: -.01em; margin: 4px 0 0; }
+.cel-card p { margin: 0; color: var(--ink-2); line-height: 1.6; font-size: 14px; }
+.cel-st { font: 12px var(--mono); color: var(--muted); }
+.cel-card .btn { margin-top: 6px; min-width: 140px; }
+@keyframes cel-pop { from { opacity: 0; transform: translateY(14px) scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cel-card { animation: none; } }
+
 </style>
 </head>
 <body>
@@ -824,6 +838,7 @@ function cdCards() {
   }).join('')}</div>`;
 }
 function tickCd() {
+  if (typeof celCheck === 'function') celCheck();
   $$('.cd[data-ts]').forEach(el => {
     const c = cdParts({ ts: +el.dataset.ts }); el.classList.toggle('hoje', c.hoje);
     if (!c.hoje) ['d', 'h', 'm', 's'].forEach(k => { const e = $(`[data-cd=${k}]`, el); if (e && e.textContent !== c[k]) e.textContent = c[k]; });
@@ -2081,6 +2096,58 @@ function tourEnd() {
   const T = S.tour; if (!T) return; S.tour = null;
   document.removeEventListener('keydown', tourKey, true); window.removeEventListener('resize', tourPlace); const m = $('#main'); if (m) m.removeEventListener('scroll', tourPlace);
   T.d.classList.add('out'); setTimeout(() => T.d.remove(), 220); go('visao');
+}
+
+/* ---------- o dia chegou: confetes + mensagem quando a prova começa ---------- */
+const CEL_FRASES = [
+  'Você não começou hoje: começou há meses. Hoje é dia de colher o que plantou.',
+  'Respire fundo e confie no que estudou. Uma questão de cada vez, como você já treinou.',
+  'Cada simulado, cada redação e cada erro corrigido trouxeram você até aqui. Agora é só mostrar.',
+  'Nervosismo é sinal de que isso importa. Transforme em foco e vá com tudo.',
+  'O mais difícil já ficou para trás: a preparação. Agora é fazer a prova.',
+  'Você sabe mais do que imagina. Leia com calma, marque com segurança e siga em frente.'
+];
+const celDone = () => { try { return JSON.parse(localStorage.getItem('pe-cel') || '[]'); } catch (e) { return []; } };
+const celMark = ts => { try { localStorage.setItem('pe-cel', JSON.stringify(celDone().concat(ts).slice(-40))); } catch (e) { } };
+function celCheck() {
+  if (!S.loaded || S.demo || S.cel || S.tour || S.modal || typeof provasList !== 'function') return;
+  const now = Date.now(), hoje = isoOf(new Date()), done = celDone();
+  const p = provasList().find(p => p.ts <= now && p.data === hoje && (p.hora ? now - p.ts < 6 * 36e5 : true) && !done.includes(p.ts));
+  if (p) celebrate(p);
+}
+function celebrate(p) {
+  celMark(p.ts); S.cel = true;
+  const frase = CEL_FRASES[Math.abs(Math.floor(p.ts / 6e4)) % CEL_FRASES.length];
+  const feitos = (S.sims || []).length + (S.reds || []).length;
+  const extra = feitos ? `<div class="cel-st">${(S.sims || []).length} simulado${(S.sims || []).length === 1 ? '' : 's'} e ${(S.reds || []).length} reda${(S.reds || []).length === 1 ? 'ção' : 'ções'} no seu caminho até aqui.</div>` : '';
+  const d = document.createElement('div'); d.className = 'cel'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.style.setProperty('--cc', p.cor); d.style.setProperty('--ci', inkOn(p.cor));
+  d.innerHTML = `<div class="cel-card"><div class="cel-k">${esc(p.nome)}</div><h2>O dia chegou!</h2><p>${esc(frase)}</p>${extra}<button type="button" class="btn primary" data-c="x">Bora!</button></div>`;
+  document.body.appendChild(d);
+  const close = () => { document.removeEventListener('keydown', key, true); d.classList.add('out'); setTimeout(() => { d.remove(); S.cel = false; }, 220); stopConfetti(); };
+  const key = e => { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); close(); } };
+  d.addEventListener('click', e => { if (e.target.closest('[data-c]') || e.target === d) close(); });
+  document.addEventListener('keydown', key, true);
+  setTimeout(() => { const b = $('[data-c]', d); if (b) b.focus(); }, 50);
+  confetti(d, [p.cor, '#ffd166', '#06d6a0', '#ef476f', '#4cc9f0', '#f5f5f5']);
+}
+let _cf = null;
+function stopConfetti() { if (_cf) { cancelAnimationFrame(_cf.raf); _cf.cv.remove(); _cf = null; } }
+function confetti(host, cols) {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  stopConfetti();
+  const cv = document.createElement('canvas'); cv.className = 'cel-cv'; host.insertBefore(cv, host.firstChild);
+  const dpr = window.devicePixelRatio || 1, W = innerWidth, H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; const x = cv.getContext('2d'); x.scale(dpr, dpr);
+  const mk = side => ({ x: side === 0 ? W * .15 : side === 1 ? W * .85 : Math.random() * W, y: side === 2 ? -20 : H * .75, vx: (side === 0 ? 1 : side === 1 ? -1 : 0) * (4 + Math.random() * 6) + (Math.random() - .5) * 4, vy: side === 2 ? 1 + Math.random() * 3 : -(9 + Math.random() * 10), w: 6 + Math.random() * 6, h: 4 + Math.random() * 5, r: Math.random() * 6.28, vr: (Math.random() - .5) * .35, c: cols[Math.floor(Math.random() * cols.length)] });
+  const P = []; for (let i = 0; i < 150; i++) P.push(mk(i % 3));
+  const t0 = performance.now(); _cf = { cv, raf: 0 };
+  const step = t => {
+    const el = t - t0; x.clearRect(0, 0, W, H);
+    if (el < 1800 && P.length < 260) for (let i = 0; i < 3; i++) P.push(mk(2));
+    P.forEach(q => { q.vy += .28; q.vx *= .992; q.x += q.vx; q.y += q.vy; q.r += q.vr; x.save(); x.globalAlpha = Math.max(0, Math.min(1, (7000 - el) / 1500)); x.translate(q.x, q.y); x.rotate(q.r); x.fillStyle = q.c; x.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); x.restore(); });
+    if (el < 7000) _cf.raf = requestAnimationFrame(step); else stopConfetti();
+  };
+  _cf.raf = requestAnimationFrame(step);
 }
 
 /* ============ ações, eventos e início ============ */
