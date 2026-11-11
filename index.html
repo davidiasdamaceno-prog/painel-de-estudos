@@ -414,13 +414,14 @@ html.theming *, html.theming *::before, html.theming *::after { transition: back
 @media (max-width: 620px) { .cfg-3 { grid-template-columns: 1fr; } .prow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px 36px; } .prow > :nth-child(1) { grid-column: 1 / -1; } .prow-h { display: none; } }
 
 /* login */
-.login { min-height: 100%; display: grid; place-items: center; padding: 24px; }
+.login { min-height: calc(100dvh - 110px); display: grid; place-items: center; padding: 24px; }
 .login-card { width: min(380px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; padding: 34px 28px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
 .login-card h1 { font-size: 20px; font-weight: 600; }
 .login-card p { color: var(--ink-2); line-height: 1.55; }
 .login-card .btn { width: 100%; justify-content: center; height: 42px; }
 .login-card small { color: var(--muted); font-size: 11px; }
-body.gate .side, body.gate .tb-right, body.gate #menuBtn, body.gate .crumb { visibility: hidden; }
+body.gate .side, body.gate .tb-right, body.gate #menuBtn, body.gate .crumb { display: none; }
+body.gate .shell { grid-template-columns: minmax(0, 1fr); padding: 0 20px 18px; }
 
 </style>
 </head>
