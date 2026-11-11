@@ -330,17 +330,40 @@ button, .pill, .chips, .nav-i, .nav-g, .nav-home, svg { -webkit-user-select: non
 .main:focus { outline: none; }
 
 /* contagem regressiva */
-.cd-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 14px; }
-.cd { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.cd .cd-n { font-weight: 600; font-size: 13px; }
-.cd .cd-d { color: var(--muted); font-size: 12px; margin-top: 2px; }
-.cd .cd-big { font: 600 30px/1 var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
-.cd .cd-big small { font: 500 12px var(--sans); color: var(--muted); margin-left: 4px; }
-.cd .cd-t { font: 12px var(--mono); color: var(--ink-2); text-align: right; margin-top: 5px; font-variant-numeric: tabular-nums; }
-.cd.hoje .cd-big { color: var(--warn); font-size: 22px; }
-.prow { display: grid; grid-template-columns: minmax(120px, 2fr) minmax(130px, 1fr) minmax(92px, .7fr) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cd-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.cd { width: 176px; min-height: 164px; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; background: var(--cc); color: var(--ci); }
+.cd .cd-n { font-weight: 600; font-size: 13px; line-height: 1.25; overflow-wrap: anywhere; }
+.cd .cd-d { font-size: 11px; opacity: .8; margin-top: 2px; }
+.cd .help { color: inherit; border-color: currentColor; opacity: .75; }
+.cd-g { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.cd-u { display: flex; align-items: baseline; gap: 5px; }
+.cd-u b { font: 600 22px/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 2ch; }
+.cd-u span { font-size: 10px; opacity: .8; text-transform: uppercase; letter-spacing: .04em; }
+.cd-hoje { display: none; font: 600 22px/1.1 var(--mono); }
+.cd.hoje .cd-hoje { display: block; } .cd.hoje .cd-g { display: none; }
+.prow { display: grid; grid-template-columns: minmax(120px, 2fr) minmax(130px, 1fr) minmax(92px, .7fr) 40px auto; gap: 8px; align-items: center; margin-bottom: 8px; }
 .prow .icon-btn { justify-self: end; }
 @media (max-width: 560px) { .prow { grid-template-columns: 1fr 1fr; } .prow input[type=text] { grid-column: 1 / -1; } }
+
+/* ajuda */
+.help { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-left: 7px; padding: 0; vertical-align: middle; border: 1px solid var(--line-2); border-radius: 50%; background: transparent; color: var(--muted); font: 600 10px/1 var(--sans); letter-spacing: 0; text-transform: none; }
+.help:hover, .help:focus-visible { color: var(--ink); border-color: var(--bd-pill); }
+h1 .help { width: 20px; height: 20px; font-size: 11px; margin-left: 10px; position: relative; top: -2px; }
+.help-demo { display: inline-grid; place-items: center; width: 17px; height: 17px; border: 1px solid var(--line-2); border-radius: 50%; font: 600 10px/1 var(--sans); color: var(--muted); vertical-align: middle; }
+.tut details { border-top: 1px solid var(--line); }
+.tut details:last-child { border-bottom: 1px solid var(--line); }
+.tut summary { cursor: pointer; padding: 13px 2px; font-weight: 500; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+.tut summary::-webkit-details-marker { display: none; }
+.tut summary::after { content: "+"; color: var(--muted); font: 400 18px/1 var(--mono); }
+.tut details[open] summary::after { content: "–"; }
+.tut-b { padding: 0 2px 14px; color: var(--ink-2); line-height: 1.6; }
+.tut-b p { margin: 0 0 9px; } .tut-b ol { margin: 0 0 9px; padding-left: 20px; } .tut-b li { margin-bottom: 4px; } .tut-b b { color: var(--ink); font-weight: 500; }
+
+.theme-tg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px; gap: 2px; width: max-content; }
+.theme-tg .tg { width: 34px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--muted); }
+.theme-tg .tg:hover { color: var(--ink); }
+.theme-tg .tg[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+input[type=color] { width: 40px; height: 38px; padding: 3px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--inp); cursor: pointer; }
 
 </style>
 </head>
@@ -355,7 +378,6 @@ button, .pill, .chips, .nav-i, .nav-g, .nav-home, svg { -webkit-user-select: non
     <span class="crumb" id="crumb"></span>
     <div class="tb-right">
       <select class="model-sel" id="modelSel" aria-label="Modelo de prova"></select>
-      <span class="chip-info" id="prova" hidden></span>
       <span class="chip-info" id="today"></span>
       <button class="icon-btn" data-act="cfg" aria-label="Configurações" title="Configurações"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
@@ -465,7 +487,7 @@ const DEF_CFG = {
 const S = {
   route: 'visao', db: null, ai: null, assets: null,
   sims: [], simq: {}, reds: [], cad: [], ans: [], cfg: { ...DEF_CFG },
-  loaded: false, demo: false, demoOff: false, dbErr: null, slow: false,
+  loaded: false, demo: false, demoOff: false, demoForce: false, dbErr: null, slow: false,
   ui: { modelo: (() => { try { return localStorage.getItem('pe-modelo') || null; } catch (e) { return null; } })(), range: 'all', metric: 'geral', matSel: null, simSel: null, qMat: 'todas', qSt: 'todas', qSearch: '', evSel: null, thread: null, openG: { SIMULADOS: true, 'REDAÇÃO': true, ESTUDO: true }, menu: false },
   draft: {}, stream: null, modal: null, pending: false, qDirty: {}, qTimers: {}
 };
@@ -487,6 +509,8 @@ const ICONS = {
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
   upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/>',
   spark: '<path d="m12 3 2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>',
   book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/>',
@@ -566,7 +590,7 @@ function subscribe() {
   S.db.doc('config/geral').onSnapshot(s => { S.cfg = { ...DEF_CFG, ...(s.exists ? s.data() : {}) }; done('config'); }, fail);
   S.loadTimer = setTimeout(() => { if (!S.loaded) { S.slow = true; schedule(); } }, 10000);
 }
-const calcDemo = () => S.loaded && !S.demoOff && !S.sims.length && !S.reds.length && !S.cad.length;
+const calcDemo = () => S.loaded && (S.demoForce || (!S.demoOff && !S.sims.length && !S.reds.length && !S.cad.length));
 
 /* ============ derived data ============ */
 const simsAllSorted = () => [...D().sims].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
@@ -711,8 +735,8 @@ try { if (localStorage.getItem('pe-tema') === 'claro') document.documentElement.
 function provasList() {
   const c = S.cfg;
   const raw = Array.isArray(c.provas) ? c.provas : (c.provaData ? [{ nome: c.prova || 'Prova', data: c.provaData, hora: '' }] : []);
-  return raw.filter(p => p && p.data).map(p => ({ nome: (p.nome || '').trim() || 'Prova', data: p.data, hora: p.hora || '', ts: new Date(`${p.data}T${p.hora || '00:00'}:00`).getTime() }))
-    .filter(p => !isNaN(p.ts)).sort((a, b) => a.ts - b.ts);
+  return raw.map((p, i) => p && p.data ? { nome: (p.nome || '').trim() || 'Prova', data: p.data, hora: p.hora || '', cor: /^#[0-9a-f]{6}$/i.test(p.cor || '') ? p.cor : SER[i % SER.length], ts: new Date(`${p.data}T${p.hora || '00:00'}:00`).getTime() } : null)
+    .filter(p => p && !isNaN(p.ts)).sort((a, b) => a.ts - b.ts);
 }
 /* próximas provas: as que ainda não passaram (no dia da prova sem horário, mostra "hoje") */
 function provasProx() { const now = Date.now(); return provasList().filter(p => p.ts > now || p.data === isoOf(new Date())); }
@@ -720,26 +744,22 @@ function cdParts(p) {
   const ms = p.ts - Date.now();
   if (ms <= 0) return { hoje: true };
   const s = Math.floor(ms / 1000), pad = n => String(n).padStart(2, '0');
-  return { hoje: false, d: Math.floor(s / 86400), t: `${pad(Math.floor(s % 86400 / 3600))}:${pad(Math.floor(s % 3600 / 60))}:${pad(s % 60)}` };
+  return { hoje: false, d: String(Math.floor(s / 86400)), h: pad(Math.floor(s % 86400 / 3600)), m: pad(Math.floor(s % 3600 / 60)), s: pad(s % 60) };
 }
+const inkOn = hex => { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = n >> 8 & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111111' : '#ffffff'; };
 function cdCards() {
   const L = provasProx(); if (!L.length) return '';
-  return `<div class="cd-row" aria-label="Contagem regressiva para as provas">${L.slice(0, 4).map(p => {
-    const c = cdParts(p), dt = new Date(p.ts), wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][dt.getDay()];
+  return `<div class="cd-row" aria-label="Contagem regressiva para as provas">${L.map((p, i) => {
+    const c = cdParts(p), wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][new Date(p.ts).getDay()];
     const when = `${wd}, ${fd(p.data, true)}${p.hora ? ' · ' + p.hora : ''}`;
-    return `<div class="cd ${c.hoje ? 'hoje' : ''}" data-ts="${p.ts}" data-data="${p.data}"><div><div class="cd-n">${esc(p.nome)}</div><div class="cd-d">${esc(when)}</div></div><div><div class="cd-big" data-cd="d">${c.hoje ? 'É hoje' : `${c.d}<small>${c.d === 1 ? 'dia' : 'dias'}</small>`}</div><div class="cd-t" data-cd="t">${c.hoje ? '' : c.t}</div></div></div>`;
+    const u = (k, l) => `<div class="cd-u"><b data-cd="${k}">${c.hoje ? '' : c[k]}</b><span>${l}</span></div>`;
+    return `<div class="cd ${c.hoje ? 'hoje' : ''}" data-ts="${p.ts}" style="--cc:${p.cor};--ci:${inkOn(p.cor)}"><div class="cd-top"><div class="cd-n">${esc(p.nome)}${i === 0 ? helpBtn('contagem') : ''}</div><div class="cd-d">${esc(when)}</div></div><div class="cd-hoje">É hoje</div><div class="cd-g">${u('d', 'dias')}${u('h', 'horas')}${u('m', 'min')}${u('s', 'seg')}</div></div>`;
   }).join('')}</div>`;
 }
 function tickCd() {
-  const p = $('#prova'); const L = provasProx();
-  if (p) {
-    if (!L.length) p.hidden = true;
-    else { const q = L[0], c = cdParts(q); p.hidden = false; p.textContent = c.hoje ? `${q.nome} · é hoje` : `${q.nome} · ${c.d}d ${c.t}`; }
-  }
   $$('.cd[data-ts]').forEach(el => {
-    const q = { ts: +el.dataset.ts }, c = cdParts(q); el.classList.toggle('hoje', c.hoje);
-    const d = $('[data-cd=d]', el), t = $('[data-cd=t]', el);
-    d.innerHTML = c.hoje ? 'É hoje' : `${c.d}<small>${c.d === 1 ? 'dia' : 'dias'}</small>`; t.textContent = c.hoje ? '' : c.t;
+    const c = cdParts({ ts: +el.dataset.ts }); el.classList.toggle('hoje', c.hoje);
+    if (!c.hoje) ['d', 'h', 'm', 's'].forEach(k => { const e = $(`[data-cd=${k}]`, el); if (e && e.textContent !== c[k]) e.textContent = c[k]; });
   });
 }
 setInterval(tickCd, 1000);
@@ -763,7 +783,7 @@ function banners() {
   if (S.dbErr) h += `<div class="banner err" style="margin-bottom:16px">${ic('alert')}<span>O banco de dados respondeu com erro (${esc(S.dbErr)}). Novas alterações podem não ser salvas.</span></div>`;
   else if (S.slow) h += `<div class="banner err" style="margin-bottom:16px">${ic('alert')}<span>Ainda não consegui alcançar o banco de dados. O que aparece pode estar desatualizado.</span></div>`;
   if (!S.db && S.loaded) h += `<div class="banner" style="margin-bottom:16px">${ic('alert')}<span>Sem banco de dados nesta visualização: o que você lançar só vale até fechar a página.</span></div>`;
-  if (S.demo) h += `<div class="banner" style="margin-bottom:16px">${ic('spark')}<span><b>Exemplo.</b> Os números abaixo são fictícios, só para você ver como o painel fica. Nada disso foi salvo.</span><button class="btn sm" data-act="demoOff">Começar com meus dados</button></div>`;
+  if (S.demo) { const real = S.sims.length || S.reds.length || S.cad.length; h += `<div class="banner" style="margin-bottom:16px">${ic('spark')}<span><b>Exemplo.</b> Os números abaixo são fictícios, só para você ver como o painel fica. ${real ? 'Os seus dados continuam salvos e não foram alterados.' : 'Nada disso foi salvo.'}</span><button class="btn sm" data-act="demoOff">${real ? 'Voltar aos meus dados' : 'Começar com meus dados'}</button></div>`; }
   return h;
 }
 
@@ -864,7 +884,7 @@ const deltaHTML = (d, unit = ' pp', dec = 1) => d == null ? '<span class="muted 
 
 /* ============ views, part 1: visão geral, simulados, redação ============ */
 const VIEWS = {};
-const head = (t, d, actions) => `<div class="view-head"><div><h1>${esc(t)}</h1>${d ? `<p>${esc(d)}</p>` : ''}</div><div class="grow"></div>${actions || ''}</div>`;
+const head = (t, d, actions) => `<div class="view-head"><div><h1>${esc(t)}${helpBtn(HELP_PAGE[t])}</h1>${d ? `<p>${esc(d)}</p>` : ''}</div><div class="grow"></div>${actions || ''}</div>`;
 const pct0 = v => v == null ? '—' : nf(v, 0) + '%';
 const aiOff = () => !S.ai || S.demo;
 const aiAttr = () => !S.ai ? 'disabled title="O Claude não está disponível nesta visualização"' : '';
@@ -949,7 +969,7 @@ VIEWS.visao = function () {
   if (unitN() && metric !== 'red' && lastSim) { const t = simStat(lastSim); big = t.t ? String(t.a) : '—'; unit = '/' + t.t + ' acertos'; if (metric === 'geral' && sp != null) subline = nf(sp, 1) + '% de aproveitamento' + (prevSim ? ` · ${sp - spPrev >= 0 ? '+' : '−'}${nf(Math.abs(sp - spPrev), 1)} pp vs anterior` : ''); }
   const top = `<div class="g-top">
     <section class="card" aria-label="Evolução">
-      <div class="hero-head"><div><div class="lbl">${lblTop}</div><div class="sub" style="margin-top:3px">${esc(subline)}</div><div class="big" style="margin-top:8px">${big}${big !== '—' ? `<small>${unit}</small>` : ''}</div></div>
+      <div class="hero-head"><div><div class="lbl">${lblTop}${helpBtn('grafico')}</div><div class="sub" style="margin-top:3px">${esc(subline)}</div><div class="big" style="margin-top:8px">${big}${big !== '—' ? `<small>${unit}</small>` : ''}</div></div>
         <div class="hero-side"><div class="lbl">${side[0]}</div><div class="v">${side[1]}</div></div></div>
       <div class="toolbar">${rangeChips()}${metric !== 'red' ? unitChips() + grainChips() : redTipoChips()}<div class="chips">${[['geral', 'Aproveitamento'], ['mat', grainMat() ? 'Matérias' : hasAreas(activeModelo()) ? 'Áreas' : 'Matérias'], ['red', 'Redação']].map(([k, l]) => `<button class="pill" data-act="metric" data-k="${k}" aria-pressed="${metric === k}">${l}</button>`).join('')}</div></div>
       ${chart}${chips}
@@ -1008,7 +1028,7 @@ function tableCard(ms, reds) {
 }
 function goalCard(sims) {
   const cfg = S.cfg, last3 = sims.slice(-3).map(s => simStat(s).p), r = avg(last3);
-  return `<section class="card"><div class="lbl">Meta de acertos</div><div class="big" style="margin-top:10px">${r == null ? '—' : nf(r, 1)}${r == null ? '' : '<small>%</small>'}</div>
+  return `<section class="card"><div class="lbl">Meta de acertos${helpBtn('meta')}</div><div class="big" style="margin-top:10px">${r == null ? '—' : nf(r, 1)}${r == null ? '' : '<small>%</small>'}</div>
     <div class="sub" style="margin-top:6px">média dos últimos ${Math.min(3, sims.length) || 3} simulados · ${metaLbl(activeModelo())}</div><div class="ring-wrap">${ring(r, metaAtual())}</div></section>`;
 }
 function eventsCard(sims, reds) {
@@ -1030,7 +1050,7 @@ function healthCard(sims, reds, ms) {
     { ok: !!ls && !low.length, t: `Nenhuma matéria abaixo de ${cfg.piso}%`, s: !ls ? 'Sem simulados para avaliar.' : low.length ? 'Abaixo: ' + low.map(x => `${x.m} ${nf(x.last, 0)}%`).join(', ') + '.' : 'Todas acima do piso no último simulado.' },
     { ok: rt != null && rt >= cfg.metaRed, t: 'Redação na meta', s: rt == null ? 'Sem nota de redação.' : `${nf(rt)} de ${nf(cfg.metaRed)} pontos no último texto.` }
   ];
-  return `<section class="card"><div class="h-card">Saúde do estudo</div><div class="checks" style="margin-top:16px">${items.map(i => `<div class="check"><span class="chk ${i.ok ? 'on' : 'off'}">${ic(i.ok ? 'check' : 'x', 14)}</span><div><div class="t">${i.t}</div><div class="s">${esc(i.s)}</div></div></div>`).join('')}</div></section>`;
+  return `<section class="card"><div class="h-card">Saúde do estudo${helpBtn('saude')}</div><div class="checks" style="margin-top:16px">${items.map(i => `<div class="check"><span class="chk ${i.ok ? 'on' : 'off'}">${ic(i.ok ? 'check' : 'x', 14)}</span><div><div class="t">${i.t}</div><div class="s">${esc(i.s)}</div></div></div>`).join('')}</div></section>`;
 }
 
 /* ---------- Simulados: notas ---------- */
@@ -1127,7 +1147,7 @@ VIEWS['sim-evolucao'] = function () {
       ${cmpCard(sims, ms)}
       <section class="card"><div class="lbl">Variação no último simulado</div><div class="events" style="margin-top:12px">${deltas.length ? deltas.map(x => `<div class="ev" style="grid-template-columns:1fr auto"><div class="t">${esc(x.m)}<div class="s">${pct0(x.prev)} → ${pct0(x.last)}</div></div>${deltaHTML(x.delta)}</div>`).join('') : '<p class="sub">Precisa de pelo menos dois simulados com a mesma matéria.</p>'}</div></section>
     </div>
-    <section class="card"><div class="lbl">Mapa de calor · % de acertos por ${grainName()} e simulado</div><div style="margin-top:14px">${heat(sims, matNames(sims))}</div></section>`;
+    <section class="card"><div class="lbl">Mapa de calor · % de acertos por ${grainName()} e simulado${helpBtn('heat')}</div><div style="margin-top:14px">${heat(sims, matNames(sims))}</div></section>`;
 };
 
 /* ---------- Redação: textos ---------- */
@@ -1162,7 +1182,7 @@ VIEWS['red-competencias'] = function () {
     <section class="card"><div class="lbl">Competências ao longo dos textos · máximo 200</div><div style="margin-top:14px">${lineChart('c-comp', { h: 270, labels: reds.map(r => fd(r.data)), full: reds.map(r => `${r.tema} · ${fd(r.data, true)}`), series: COMPS.map((c, i) => ({ name: `${c} · ${COMP_NOMES[i]}`, color: SER[i], values: reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null) })), min: compMin(reds), max: 200, ticks: compTicks(reds), fmt: v => nf(v), emptyT: 'Sem textos ainda', empty: '', aria: 'Nota de cada competência por texto' })}</div></section>
     <div class="g-2">
       <section class="card"><div class="lbl">Média por competência</div><div style="margin-top:16px">${barRows(cs.map((c, i) => ({ n: `${c.c} · ${c.nome}`, pct: c.all / 200 * 100, v: nf(c.all, 0), color: SER[COMPS.indexOf(c.c)] })))}</div></section>
-      <section class="card"><div class="lbl">Efeito da reescrita</div>${pairs.length ? `<div class="big" style="margin-top:10px">${avg(pairs) >= 0 ? '+' : '−'}${nf(Math.abs(avg(pairs)), 0)}<small>pts</small></div><p class="sub" style="margin-top:8px">média de ${pairs.length} ${pairs.length === 1 ? 'reescrita ligada' : 'reescritas ligadas'} ao texto escrito. ${up} de ${pairs.length} subiram.</p>` : '<p class="sub" style="margin-top:12px">Ao lançar uma reescrita, escolha o texto escrito no campo "Reescrita de" para medir o ganho.</p>'}</section>
+      <section class="card"><div class="lbl">Efeito da reescrita${helpBtn('reescrita')}</div>${pairs.length ? `<div class="big" style="margin-top:10px">${avg(pairs) >= 0 ? '+' : '−'}${nf(Math.abs(avg(pairs)), 0)}<small>pts</small></div><p class="sub" style="margin-top:8px">média de ${pairs.length} ${pairs.length === 1 ? 'reescrita ligada' : 'reescritas ligadas'} ao texto escrito. ${up} de ${pairs.length} subiram.</p>` : '<p class="sub" style="margin-top:12px">Ao lançar uma reescrita, escolha o texto escrito no campo "Reescrita de" para medir o ganho.</p>'}</section>
     </div>`;
 };
 
@@ -1273,7 +1293,7 @@ VIEWS.plano = function () {
   const hist = list.map((a, i) => `<section class="card"><div class="hero-head" style="align-items:center"><div><div class="lbl">${AN_NOME[a.tipo] || 'Análise'}</div><div class="sub">${hm(a.ts)}${a.ref ? ` · ${a.ref.sims} simulados, ${a.ref.reds} redações` : ''}</div></div><div style="display:flex;gap:8px"><button class="btn sm" data-act="anComent" data-id="${a.id}">Comentar</button><button class="btn sm danger" data-act="anDel" data-id="${a.id}" aria-label="Apagar análise">${ic('trash', 14)}</button></div></div>${i === 0 && !live ? `<div class="md" style="margin-top:14px">${md(a.texto)}</div>` : `<details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Abrir análise</summary><div class="md" style="margin-top:12px">${md(a.texto)}</div></details>`}</section>`).join('');
   const busy = !!S.stream;
   const rk = errRank(), sc = ['last', 'last3'].includes(S.ui.errScope) ? S.ui.errScope : 'all';
-  const rkCard = `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Onde mais erro</span><div class="chips" style="margin-left:auto">${[['all', 'Todos os simulados'], ['last3', 'Últimos 3'], ['last', 'Último']].map(([k, l]) => `<button class="pill" data-act="errScope" data-k="${k}" aria-pressed="${sc === k}">${l}</button>`).join('')}</div></div>
+  const rkCard = `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Onde mais erro${helpBtn('onde')}</span><div class="chips" style="margin-left:auto">${[['all', 'Todos os simulados'], ['last3', 'Últimos 3'], ['last', 'Último']].map(([k, l]) => `<button class="pill" data-act="errScope" data-k="${k}" aria-pressed="${sc === k}">${l}</button>`).join('')}</div></div>
     ${rk.units.length ? `<p class="sub" style="margin-top:6px">Base: ${rk.units.map(esc).join(' · ')}</p>` : ''}
     ${(rk.areas.length || rk.mats.length) ? `<div class="g-2" style="margin-top:16px">
       <div><div class="sub" style="margin-bottom:10px">Por área · % de erro</div>${rk.areas.length ? barRows(rk.areas.map(x => ({ n: x.n, pct: x.p, v: `${x.err} erros · ${nf(x.p, 0)}%`, color: matColor(x.n) }))) : '<p class="sub">Sem acertos por área nesse período.</p>'}</div>
@@ -1510,7 +1530,7 @@ async function runImport(o, ui) {
 }
 
 /* ============ formulários e janelas ============ */
-function leaveDemo() { if (S.demo) { S.demoOff = true; S.demo = false; render(true); } }
+function leaveDemo() { if (S.demo) { S.demoOff = true; S.demoForce = false; S.demo = false; render(true); } }
 const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
 const selOpts = (arr, cur) => arr.map(x => { const [v, l] = Array.isArray(x) ? x : [x, x]; return `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`; }).join('');
 
@@ -1745,25 +1765,29 @@ function pdfModal(simId) {
 }
 
 /* ---------- configurações ---------- */
-function provaRowHTML(p) { return `<div class="prow"><input type="text" data-f="pn" value="${esc(p.nome || '')}" placeholder="Ex.: ENEM Dia 1" aria-label="Nome da prova"><input type="date" data-f="pd" value="${esc(p.data || '')}" aria-label="Data da prova"><input type="time" data-f="ph" value="${esc(p.hora || '')}" aria-label="Horário (opcional)" title="Horário (opcional)"><button type="button" class="icon-btn" data-x="delp" aria-label="Remover prova" title="Remover prova">${ic('trash', 14)}</button></div>`; }
+function provaRowHTML(p) { return `<div class="prow"><input type="text" data-f="pn" value="${esc(p.nome || '')}" placeholder="Ex.: ENEM Dia 1" aria-label="Nome da prova"><input type="date" data-f="pd" value="${esc(p.data || '')}" aria-label="Data da prova"><input type="time" data-f="ph" value="${esc(p.hora || '')}" aria-label="Horário (opcional)" title="Horário (opcional)"><input type="color" data-f="pc" value="${esc(p.cor || '#3987e5')}" aria-label="Cor do quadrado" title="Cor do quadrado"><button type="button" class="icon-btn" data-x="delp" aria-label="Remover prova" title="Remover prova">${ic('trash', 14)}</button></div>`; }
 function cfgForm() {
-  const c = S.cfg; const provaRows = provasList().map(p => ({ nome: p.nome, data: p.data, hora: p.hora }));
-  if (!provaRows.length) provaRows.push({ nome: '', data: '', hora: '' });
+  const c = S.cfg; const provaRows = (Array.isArray(c.provas) ? c.provas : provasList()).map((p, i) => ({ nome: p.nome, data: p.data, hora: p.hora, cor: p.cor || SER[i % SER.length] }));
+  if (!provaRows.length) provaRows.push({ nome: '', data: '', hora: '', cor: SER[0] });
   const box = modal(`<h2>Configurações</h2><p class="lead">Metas, provas${LITE ? '' : ', o que o Claude precisa saber sobre você'} e aparência. <button type="button" class="link" id="c-mod">Editar modelos de prova</button></p>
     <form class="form" id="f"><div class="cols"><label class="field"><span>Meta padrão (%), se o modelo não tiver meta</span><input type="number" id="c-meta" min="1" max="100" value="${c.metaAcerto}"></label><label class="field"><span>Piso por matéria (%)</span><input type="number" id="c-piso" min="0" max="100" value="${c.piso}"></label><label class="field"><span>Meta de redação (pts)</span><input type="number" id="c-red" min="0" max="1000" step="20" value="${c.metaRed}"></label></div>
-      <div class="field"><span>Provas e datas <span class="muted">· a contagem regressiva aparece na Visão geral e no topo</span></span><div id="c-provas">${provaRows.map(provaRowHTML).join('')}</div><div><button type="button" class="link" id="c-addp">+ Adicionar prova</button></div></div>
-      <label class="field"><span>Aparência</span><select id="c-tema"><option value="escuro" ${c.tema !== 'claro' ? 'selected' : ''}>Escuro</option><option value="claro" ${c.tema === 'claro' ? 'selected' : ''}>Claro</option></select></label>
+      <div class="field"><span>Provas e datas <span class="muted">· a contagem regressiva aparece na Visão geral</span></span><div id="c-provas">${provaRows.map(provaRowHTML).join('')}</div><div><button type="button" class="link" id="c-addp">+ Adicionar prova</button></div></div>
+      <div class="field"><span>Aparência</span><div class="theme-tg" role="group" aria-label="Aparência"><input type="hidden" id="c-tema" value="${c.tema === 'claro' ? 'claro' : 'escuro'}"><button type="button" class="tg" data-t="claro" aria-pressed="${c.tema === 'claro'}" aria-label="Modo claro" title="Modo claro">${ic('sun', 17)}</button><button type="button" class="tg" data-t="escuro" aria-pressed="${c.tema !== 'claro'}" aria-label="Modo escuro" title="Modo escuro">${ic('moon', 17)}</button></div></div>
+      <div class="field"><span>Ajuda</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" id="c-tut">Abrir tutorial</button><button type="button" class="btn" id="c-demo">Ver dados de exemplo</button></div><span class="muted" style="font-size:12px">Os dados de exemplo são fictícios e não alteram nem apagam os seus.</span></div>
       <label class="field" ${LITE ? 'hidden' : ''}><span>O que o Claude deve saber sobre você e como responder</span><textarea id="c-instr" rows="9">${esc(c.instr)}</textarea></label>
       <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<button type="button" class="link" id="c-reset">Restaurar texto padrão</button>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true });
   $('#c-mod', box).onclick = () => modelosForm();
-  $('#c-addp', box).onclick = () => { $('#c-provas', box).insertAdjacentHTML('beforeend', provaRowHTML({})); const r = $$('.prow', box).at(-1); $('[data-f=pn]', r).focus({ preventScroll: true }); };
+  $('#c-tut', box).onclick = () => tutorialForm();
+  $$('.theme-tg .tg', box).forEach(b => b.onclick = () => { $('#c-tema', box).value = b.dataset.t; $$('.theme-tg .tg', box).forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+  $('#c-demo', box).onclick = () => demoOn();
+  $('#c-addp', box).onclick = () => { $('#c-provas', box).insertAdjacentHTML('beforeend', provaRowHTML({ cor: SER[$$('.prow', box).length % SER.length] })); const r = $$('.prow', box).at(-1); $('[data-f=pn]', r).focus({ preventScroll: true }); };
   $('#c-provas', box).addEventListener('click', e => { const b = e.target.closest('[data-x=delp]'); if (b) b.closest('.prow').remove(); });
   if ($('#c-reset', box)) $('#c-reset', box).onclick = () => { $('#c-instr', box).value = DEF_CFG.instr; };
   if (LITE) { $('#c-exp', box).onclick = liteExport; $('#c-imp', box).onclick = liteImport; }
   box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) closeModal(); });
   $('#f', box).onsubmit = async e => {
     e.preventDefault();
-    const provas = $$('.prow', box).map(r => ({ nome: $('[data-f=pn]', r).value.trim(), data: $('[data-f=pd]', r).value, hora: $('[data-f=ph]', r).value })).filter(p => p.data);
+    const provas = $$('.prow', box).map(r => ({ nome: $('[data-f=pn]', r).value.trim(), data: $('[data-f=pd]', r).value, hora: $('[data-f=ph]', r).value, cor: $('[data-f=pc]', r).value })).filter(p => p.data);
     const nc = { ...S.cfg, metaAcerto: num($('#c-meta', box).value) || 75, piso: num($('#c-piso', box).value) || 0, metaRed: num($('#c-red', box).value) || 900, provas, prova: '', provaData: '', tema: $('#c-tema', box).value === 'claro' ? 'claro' : 'escuro', instr: $('#c-instr', box).value.trim() };
     try { await dbSet('config', 'geral', nc); S.cfg = { ...DEF_CFG, ...nc }; applyTheme(); closeModal(); toast('Configurações salvas.'); render(true); } catch (e2) { }
   };
@@ -1811,6 +1835,55 @@ function modelosForm() {
     try { await dbSet('config', 'geral', { ...S.cfg, modelos: d }); if (!S.db) S.cfg = { ...S.cfg, modelos: d }; if (!d.some(m => m.id === S.ui.modelo)) S.ui.modelo = d[0].id; closeModal(); toast('Modelos salvos.'); render(true); } catch (e2) { }
   };
 }
+
+/* ---------- ajuda: botões "?" e tutorial ---------- */
+const HELP = {
+  grafico: ['Gráfico principal', ['Mostra como você evolui nos simulados do modelo escolhido no topo.', 'Últ. 3, Últ. 6 e Tudo escolhem quantos simulados entram. “%” mostra o aproveitamento e “Acertos” mostra o número de questões certas.', 'Aproveitamento junta tudo numa linha, Áreas separa uma linha por área e Redação troca para as notas dos textos. A linha tracejada é a sua meta.']],
+  meta: ['Meta de acertos', ['Compara a média dos seus últimos simulados com a meta do modelo (você define em Configurações > Editar modelos de prova).', 'O ponteiro do anel marca a meta. Se o anel passou dele, você está acima da meta.']],
+  saude: ['Saúde do estudo', ['Lista de verificação simples: se você fez simulado e redação recentemente e se está dentro das metas. Serve de lembrete de constância, não de nota.']],
+  contagem: ['Contagem regressiva', ['Mostra quanto falta para cada prova que você cadastrou em Configurações > Provas e datas. Cada prova tem o seu quadrado, com a cor que você escolher, e o relógio mostra dias, horas, minutos e segundos correndo ao vivo. No dia da prova, aparece “É hoje”. A contagem só aparece na Visão geral.']],
+  'p-sim': ['Simulados (Notas)', ['Lista dos simulados do modelo escolhido, do mais novo para o mais antigo. “Melhor/pior” mostra a área em que você foi melhor e pior, e a seta mostra a variação em relação ao simulado anterior.', 'Clique numa linha para ver os detalhes, editar ou excluir. Para lançar um novo, use o botão de novo simulado.']],
+  'p-notas': ['Notas do simulado', ['Aqui você vê as notas de um simulado e confere as questões que marcou. Os acertos lançados na lista de simulados são os valores oficiais; se a contagem das questões não bater, o painel avisa.']],
+  conjuntos: ['Simulados completos', ['Junta o Dia 1 e o Dia 2 que têm o mesmo nome em “grupo” (por exemplo “5º SAS”) e calcula o total. Se faltar um dos dias, o painel avisa qual falta e não calcula o total desse simulado.']],
+  evolucao: ['Evolução dos simulados', ['Mostra como cada área evolui simulado a simulado. Use “%” ou “Acertos” para trocar a unidade.', '“Variação no último simulado” compara cada área com o simulado anterior. O mapa de calor usa cor mais forte onde o acerto foi maior.']],
+  heat: ['Mapa de calor', ['Cada linha é uma área e cada coluna é um simulado. Quanto mais forte o azul, maior a porcentagem de acertos. Passe o mouse sobre uma célula para ver o simulado.']],
+  conclusoes: ['Conclusões', ['Calculadas só com os seus simulados, sem IA. “Mais melhorou” e “Mais caiu” comparam a média dos simulados mais recentes (até 3) com a dos anteriores, na mesma quantidade. “Em que mais erra” é a área com mais erros no período escolhido.', 'Os botões Todos, Últimos 3 e Último mudam só a contagem de erros.']],
+  porarea: ['Por área', ['“Antes” é a média dos simulados mais antigos do período e “Agora” é a dos mais recentes. A variação é a diferença entre as duas, em pontos percentuais (p.p.). “Erros” conta as questões erradas de cada área.']],
+  redcomp: ['Redação por competência', ['Média de cada uma das 5 competências (de 0 a 200), com o filtro Todas, Escritas ou Reescritas. A competência com a média mais baixa é a que mais vale treinar.']],
+  'p-red': ['Redação', ['Lista de todos os seus textos com a nota de cada competência e o total (máximo 1000). O filtro mostra só as escritas, só as reescritas ou todas. Reescrita é a nova versão de um texto que você já tinha escrito.']],
+  competencias: ['Competências da redação', ['As 5 competências do ENEM valem até 200 pontos cada, em degraus de 40. Aqui você vê a evolução de cada uma, a média e o efeito da reescrita.']],
+  reescrita: ['Efeito da reescrita', ['Compara cada reescrita com o texto original ligado a ela e mostra a média de pontos ganhos. Só entram reescritas que você ligou a uma escrita.']],
+  plano: ['Plano e conclusões', ['Reúne o que o painel concluiu dos seus dados e onde estudar primeiro. “Onde mais erro” usa as questões que você marcou nos PDFs e mostra por área, matéria e assunto, com a opção de ver todos os simulados, os últimos 3 ou só o último.']],
+  onde: ['Onde mais erro', ['Ranking do que você mais erra. Conforme você acerta mais de um assunto, ele desce na lista e mostra que já não precisa de tanto estudo. Todos os simulados considera o histórico inteiro; Últimos 3 e Último olham só o momento recente.']]
+};
+const HELP_PAGE = { 'Simulados': 'p-sim', 'Notas': 'p-notas', 'Simulados completos': 'conjuntos', 'Evolução dos simulados': 'evolucao', 'Redação': 'p-red', 'Competências da redação': 'competencias', 'Plano e conclusões': 'plano', 'Conclusões': 'conclusoes' };
+const helpBtn = k => HELP[k] ? `<button type="button" class="help" data-act="help" data-k="${k}" aria-label="O que é isto?" title="O que é isto?">?</button>` : '';
+function helpModal(k) {
+  const h = HELP[k]; if (!h) return;
+  const box = modal(`<h2>${esc(h[0])}</h2>${h[1].map(t => `<p class="lead" style="margin-top:10px">${esc(t)}</p>`).join('')}<div class="foot" style="justify-content:space-between"><button type="button" class="link" data-x="tut">Abrir o tutorial completo</button><button type="button" class="btn primary" data-x="close">Entendi</button></div>`);
+  box.addEventListener('click', e => { const x = e.target.closest('[data-x]'); if (!x) return; if (x.dataset.x === 'close') closeModal(); else if (x.dataset.x === 'tut') tutorialForm(); });
+}
+function tutorialForm() {
+  const T = [
+    ['Primeiros passos', `<ol><li>Em <b>Configurações</b>, defina as metas e cadastre as suas provas e datas.</li><li>Em <b>Simulados</b>, clique em novo simulado e lance os acertos por área.</li><li>Em <b>Redação</b>, lance os textos com a nota de cada competência.</li><li>Volte à <b>Visão geral</b> e às <b>Conclusões</b> para ver o que melhorou, o que caiu e onde você mais erra.</li></ol><p>Se quiser ver o painel preenchido antes de lançar algo, use <b>Configurações > Ver dados de exemplo</b>.</p>`],
+    ['Visão geral', `<p>O gráfico principal mostra a evolução nos simulados do modelo escolhido no topo. <b>Últ. 3</b>, <b>Últ. 6</b> e <b>Tudo</b> escolhem quantos simulados entram; <b>%</b> e <b>Acertos</b> trocam a unidade; <b>Aproveitamento</b>, <b>Áreas</b> e <b>Redação</b> trocam o que o gráfico mostra. A linha tracejada é a meta.</p><p>Abaixo ficam a tabela por componente (último, média, variação e situação), a meta de acertos e a saúde do estudo. Os quadrados coloridos no alto são a contagem regressiva das suas provas.</p>`],
+    ['Modelos de prova', `<p>O seletor no topo escolhe o modelo: ENEM, ENEM Dia 1, ENEM Dia 2, FAMERP… Os gráficos e análises de simulados mostram um modelo por vez.</p><p>Cada modelo tem as suas áreas, o número de questões por área e a meta. Para criar ou mudar um modelo, use <b>Configurações > Editar modelos de prova</b>.</p>`],
+    ['Lançar um simulado', `<p>Em <b>Simulados</b>, use o botão de novo simulado. Escolha o modelo, a data e preencha os acertos de cada área.</p><p>O campo <b>grupo</b> serve para ligar o Dia 1 e o Dia 2 do mesmo simulado: use o mesmo nome nos dois (por exemplo “5º SAS”). Clique numa linha da lista para ver os detalhes, editar ou excluir.</p>`],
+    ['Simulados completos', `<p>Junta o Dia 1 e o Dia 2 de cada grupo e mostra o total. Se faltar um dos dias, o painel avisa qual falta.</p>`],
+    ['Evolução', `<p>Mostra cada área ao longo dos simulados, a variação no último simulado e o <b>mapa de calor</b>, em que o azul mais forte indica acerto maior.</p>`],
+    ['Conclusões', LITE ? `<p>A aba <b>Conclusões</b> mostra a área que mais melhorou, a que mais caiu e a em que você mais erra. É tudo cálculo sobre os seus simulados.</p><p>Melhorou e caiu comparam a média dos simulados mais recentes (até 3) com a dos anteriores. Os botões Todos, Últimos 3 e Último mudam só a contagem de erros. Embaixo você vê a redação por competência.</p>` : `<p>Em <b>Plano e conclusões</b> você vê onde mais erra por área, matéria e assunto, e pode pedir análises ao Claude. Conforme você acerta mais de um assunto, ele desce no ranking.</p>`],
+    ['Redação', `<p>Em <b>Textos</b>, lance o tema, a data, se é escrita ou reescrita e a nota de cada uma das 5 competências (0 a 200, em degraus de 40). O total vai até 1000.</p><p>O filtro <b>Todas / Escritas / Reescritas</b> vale para a lista e para os gráficos. Em <b>Competências</b> você vê a evolução de cada competência, a média e o <b>efeito da reescrita</b>, que compara a reescrita com o texto original.</p>`],
+    ['Metas, provas e contagem regressiva', `<p>Em <b>Configurações</b> você define a meta padrão, o <b>piso</b> (abaixo dele uma área aparece como crítica) e a meta de redação.</p><p>Em <b>Provas e datas</b>, cadastre quantas provas quiser, com nome, data, horário opcional e a cor do quadrado. Cada prova ganha um quadrado colorido na Visão geral (você escolhe a cor), com dias, horas, minutos e segundos.</p>`],
+    ['Aparência e dados de exemplo', `<p>Em Configurações, <b>Aparência</b> troca entre escuro e claro. <b>Ver dados de exemplo</b> mostra o painel com números fictícios; eles não são salvos e os seus dados reais ficam guardados. Para sair, use o botão do aviso no topo ou lance um simulado.</p>`],
+    LITE ? ['Seus dados e backup', `<p>Nesta versão, os dados ficam só no navegador que você está usando. Se limpar os dados do navegador, eles somem.</p><p>Em Configurações, <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta. É assim que você leva tudo para outro aparelho.</p>`]
+         : ['Trabalhando com o Claude', `<p>Ao abrir um simulado, você pode adicionar o PDF da prova. O painel lê as questões, você marca as que errou e o Claude indica matéria e assunto. Os acertos que você lançou continuam valendo; se não baterem com as questões marcadas, o painel avisa.</p><p>Em <b>Caderno com o Claude</b> você conversa sobre os seus dados, e <b>Comentar com o Claude</b> pede uma análise de um simulado ou texto.</p>`]
+  ];
+  const box = modal(`<h2>Tutorial</h2><p class="lead">Clique num tópico para abrir. Em vários quadros do painel também há um botão <span class="help-demo">?</span> que explica o que aquele quadro mostra.</p>
+    <div class="tut">${T.map((t, i) => `<details ${i === 0 ? 'open' : ''}><summary>${esc(t[0])}</summary><div class="tut-b">${t[1]}</div></details>`).join('')}</div>
+    <div class="foot"><button type="button" class="btn primary" data-x="close">Fechar</button></div>`, { wide: true });
+  box.addEventListener('click', e => { if (e.target.closest('[data-x=close]')) closeModal(); });
+}
+function demoOn() { S.demoOff = false; S.demoForce = true; S.demo = calcDemo(); closeModal(); go('visao'); }
 
 /* ============ ações, eventos e início ============ */
 function setQDoc(sid, doc) {
@@ -1860,7 +1933,8 @@ const ACT = {
   grp: el => { const g = el.dataset.g; S.ui.openG[g] = !S.ui.openG[g]; renderSide(); },
   menu: () => { S.ui.menu = !S.ui.menu; renderSide(); },
   cfg: () => cfgForm(),
-  demoOff: () => { S.demoOff = true; S.demo = false; render(true); },
+  demoOff: () => { S.demoOff = true; S.demoForce = false; S.demo = false; render(true); },
+  help: el => helpModal(el.dataset.k),
   range: el => { S.ui.range = el.dataset.k; render(true); },
   grain: el => { S.ui.grain = el.dataset.k; S.ui.matSel = null; render(true); },
   unit: el => { S.ui.unit = el.dataset.k; render(true); },
@@ -1997,7 +2071,7 @@ function liteCard() {
 }
 VIEWS.conclusoes = function () {
   const A = liteAreas(), H = liteHighlights(A), C = liteComps(), sc = ['last', 'last3'].includes(S.ui.errScope) ? S.ui.errScope : 'all', rk = errRank();
-  const tile = (t, x, v, sub, cls) => `<div class="card" style="padding:16px"><div class="lbl">${t}</div><div class="big ${cls || ''}" style="margin-top:10px;font-size:22px">${x ? esc(x.n) : '—'}</div><div class="sub" style="margin-top:4px">${x ? v : sub}</div></div>`;
+  const tile = (t, x, v, sub, cls) => `<div class="card" style="padding:16px"><div class="lbl">${t}${helpBtn('conclusoes')}</div><div class="big ${cls || ''}" style="margin-top:10px;font-size:22px">${x ? esc(x.n) : '—'}</div><div class="sub" style="margin-top:4px">${x ? v : sub}</div></div>`;
   const scope = `<div class="chips">${[['all', 'Todos os simulados'], ['last3', 'Últimos 3'], ['last', 'Último']].map(([k, l]) => `<button class="pill" data-act="errScope" data-k="${k}" aria-pressed="${sc === k}">${l}</button>`).join('')}</div>`;
   const rows = [...A].sort((a, b) => (b.e ? b.e.p : -1) - (a.e ? a.e.p : -1)).map(a => `<tr><td>${esc(a.n)}</td><td class="mono">${a.t ? nf(a.t.before, 0) + '%' : '—'}</td><td class="mono">${a.t ? nf(a.t.now, 0) + '%' : nf(a.v.at(-1), 0) + '%'}</td><td class="mono">${a.d == null ? '—' : `<span class="${a.d >= 0 ? 'pos' : 'neg'}">${sgn(a.d)}</span>`}</td><td class="mono">${a.e ? a.e.err + ' de ' + a.e.t + ' · ' + nf(a.e.p, 0) + '%' : '—'}</td></tr>`).join('');
   const crows = C.map(c => `<tr><td>${c.n}</td><td class="mono">${c.t ? nf(c.t.before, 0) : '—'}</td><td class="mono">${c.t ? nf(c.t.now, 0) : nf(c.last, 0)}</td><td class="mono">${c.d == null ? '—' : `<span class="${c.d >= 0 ? 'pos' : 'neg'}">${sgn(c.d, 'pts')}</span>`}</td><td class="mono">${nf(200 - c.avg, 0)} pts</td></tr>`).join('');
@@ -2006,9 +2080,9 @@ VIEWS.conclusoes = function () {
     `<div class="g-3">${tile('Área que mais melhorou', H.up, H.up ? `${nf(H.up.t.before, 0)}% → ${nf(H.up.t.now, 0)}% (${sgn(H.up.d)})` : '', 'Precisa de pelo menos 2 simulados', 'good')}
       ${tile('Área que mais caiu', H.dn, H.dn ? `${nf(H.dn.t.before, 0)}% → ${nf(H.dn.t.now, 0)}% (${sgn(H.dn.d)})` : '', A.some(x => x.d != null) ? 'Nenhuma área caiu' : 'Precisa de pelo menos 2 simulados')}
       ${tile('Área em que mais erra', H.er, H.er ? `${H.er.e.err} erros em ${H.er.e.t} questões · ${nf(H.er.e.p, 0)}% de erro` : '', 'Lance um simulado')}</div>
-    <section class="card"><div class="lbl">Por área · ${rk.units.length ? 'base: ' + rk.units.map(esc).join(' · ') : 'sem simulados'}</div>
+    <section class="card"><div class="lbl">Por área · ${rk.units.length ? 'base: ' + rk.units.map(esc).join(' · ') : 'sem simulados'}${helpBtn('porarea')}</div>
       ${A.length ? `<div class="scroll-x" style="margin-top:12px"><table class="tbl"><thead><tr><th>Área</th><th>Antes</th><th>Agora</th><th>Variação</th><th>Erros (${sc === 'all' ? 'todos' : sc === 'last3' ? 'últimos 3' : 'último'})</th></tr></thead><tbody>${rows}</tbody></table></div><p class="sub" style="margin-top:10px">“Antes” e “Agora” comparam a média dos simulados mais recentes com a dos anteriores, na mesma quantidade (até 3 de cada).</p>` : '<div class="empty"><b>Nada para comparar ainda</b>Lance dois ou mais simulados com acertos por área.</div>'}</section>
-    <section class="card"><div class="row" style="align-items:center"><span class="lbl">Redação · por competência</span><span style="margin-left:auto">${redTipoChips()}</span></div>
+    <section class="card"><div class="row" style="align-items:center"><span class="lbl">Redação · por competência${helpBtn('redcomp')}</span><span style="margin-left:auto">${redTipoChips()}</span></div>
       ${C.length ? `<div class="g-3" style="margin-top:14px"><div><div class="sub">Mais melhorou</div><b>${cup && cup.d > 0 ? cup.n + ' ' + sgn(cup.d, 'pts') : '—'}</b></div><div><div class="sub">Mais caiu</div><b>${cdn && cdn.d < 0 ? cdn.n + ' ' + sgn(cdn.d, 'pts') : '—'}</b></div><div><div class="sub">Onde mais perde pontos</div><b>${cweak ? cweak.n + ' · média ' + nf(cweak.avg, 0) : '—'}</b></div></div>
       <div class="scroll-x" style="margin-top:14px"><table class="tbl"><thead><tr><th>Competência</th><th>Antes</th><th>Agora</th><th>Variação</th><th>Perde em média</th></tr></thead><tbody>${crows}</tbody></table></div>` : '<div class="empty"><b>Sem redações</b>Lance uma redação para ver as competências.</div>'}</section>`;
 };
