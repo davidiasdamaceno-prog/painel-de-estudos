@@ -505,6 +505,30 @@ tr.rd-drag{opacity:.45}
 tr.rd-above td{box-shadow:inset 0 2px 0 var(--accent,#6aa8ff)}
 tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 
+/* Raio-X no formato do PDF */
+.rx-list { display: grid; gap: 22px; max-width: 760px; margin: 18px 0 8px; }
+.rx-pillh { display: inline-block; border: 1.5px solid var(--rx-h); color: var(--rx-h); border-radius: 8px; padding: 6px 14px; font: 600 12.5px var(--sans, inherit); letter-spacing: .02em; filter: brightness(1.25); }
+.rx-area { margin-top: 30px; }
+.rx-kick { margin-top: 18px; font-size: 13px; letter-spacing: .04em; color: var(--muted); }
+.rx-title { margin: 2px 0 0; font-size: 30px; font-weight: 750; letter-spacing: -.01em; color: var(--ink); }
+.rx-info { max-width: 820px; margin-top: 18px; line-height: 1.6; color: var(--ink-2); }
+.rx-info p { margin: 12px 0; font-size: 14px; } .rx-info ul { margin: 6px 0 0; padding-left: 20px; font-size: 14px; } .rx-info ul ul { margin: 4px 0 8px; list-style: none; padding-left: 8px; } .rx-info li { margin: 3px 0; } .rx-info a { color: var(--pri, #6aa8ff); word-break: break-all; }
+.rx-tb { background: #fff; color: #222; border-radius: 2px; overflow: hidden; font-family: Arial, 'Liberation Sans', Helvetica, sans-serif; box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+.rx-tb[hidden] { display: none; }
+.rx-tb table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.rx-tb th, .rx-tb td { padding: 3px 8px; text-align: left; vertical-align: middle; line-height: 1.25; border: 0; }
+.rx-tb .rx-th th { background: var(--rx-h); color: #fff; text-align: center; font-weight: 700; padding: 3px 8px; }
+.rx-tb .rx-sh th { background: var(--rx-s); color: #111; font-weight: 700; }
+.rx-tb th:nth-child(2), .rx-tb td:nth-child(2) { width: 110px; text-align: center; }
+.rx-tb th:nth-child(3), .rx-tb td:nth-child(3) { width: 90px; text-align: center; }
+.rx-tb tbody tr.rx-r { display: table-row; background: #fff; border-bottom: 0; padding: 0; }
+.rx-tb tbody tr.rx-r:nth-child(even) { background: var(--rx-z); }
+.rx-tb tbody tr.rx-r[hidden] { display: none; }
+.rx-tb tbody tr.rx-r.mine td { box-shadow: inset 3px 0 0 #ef476f; font-weight: 700; }
+@media (max-width: 700px) { .rx-title { font-size: 24px; } .rx-tb table { font-size: 12.5px; } .rx-tb th:nth-child(2), .rx-tb td:nth-child(2) { width: 76px; } .rx-tb th:nth-child(3), .rx-tb td:nth-child(3) { width: 60px; } }
+.rx-tb col.c2 { width: 110px; } .rx-tb col.c3 { width: 90px; }
+@media (max-width: 700px) { .rx-tb col.c2 { width: 76px; } .rx-tb col.c3 { width: 60px; } }
+
 </style>
 </head>
 <body>
@@ -866,7 +890,7 @@ function renderBar() {
   $('#crumb').textContent = routeLabel(S.route);
   const wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][TODAY.getDay()];
   $('#today').textContent = `${wd}, ${TODAY.getDate()} ${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][TODAY.getMonth()]}`;
-  const ms = $('#modelSel'); if (ms) { const all = modelosAll(), cur = activeModelo().id; ms.hidden = /^red-|^sim-conjuntos$/.test(S.route); ms.innerHTML = all.map(m => `<option value="${esc(m.id)}" ${m.id === cur ? 'selected' : ''}>${esc(m.nome)}</option>`).join('') + '<option value="__manage">Editar modelos…</option>'; }
+  const ms = $('#modelSel'); if (ms) { const all = modelosAll(), cur = activeModelo().id; ms.hidden = /^red-|^sim-conjuntos$|^sim-notas$/.test(S.route); ms.innerHTML = all.map(m => `<option value="${esc(m.id)}" ${m.id === cur ? 'selected' : ''}>${esc(m.nome)}</option>`).join('') + '<option value="__manage">Editar modelos…</option>'; }
   tickCd();
 }
 /* ---------- tema e contagem regressiva ---------- */
@@ -1206,16 +1230,20 @@ function healthCard(sims, reds, ms) {
 
 /* ---------- Simulados: notas ---------- */
 VIEWS['sim-notas'] = function () {
-  const asc = simsSorted(), list = [...asc].reverse(), cfg = S.cfg;
+  const all = simsAllSorted(), mods = modelosAll().filter(m => all.some(s => modeloOf(s).id === m.id));
+  const fk = mods.some(m => m.id === S.ui.notasMod) ? S.ui.notasMod : 'todos';
+  const list = all.filter(s => fk === 'todos' || modeloOf(s).id === fk).reverse(), cfg = S.cfg;
+  const chipsN = mods.length > 1 ? `<div class="chips" role="group" aria-label="Filtrar por prova">${[['todos', 'Todos'], ...mods.map(m => [m.id, m.nome])].map(([k, l]) => `<button class="pill" data-act="notasMod" data-k="${k}" aria-pressed="${fk === k}">${esc(l)}</button>`).join('')}</div>` : '';
   const body = list.map(s => {
-    const t = simStat(s), i = asc.indexOf(s), prev = i > 0 ? simStat(asc[i - 1]).p : null;
+    /* variação: contra o simulado anterior da mesma prova (Dia 1 com Dia 1, Dia 2 com Dia 2) */
+    const mid = modeloOf(s).id, same = all.filter(x => modeloOf(x).id === mid), t = simStat(s), i = same.indexOf(s), prev = i > 0 ? simStat(same[i - 1]).p : null;
     const ranked = (s.mats || []).filter(m => m.t).map(m => ({ m: m.m, p: m.a / m.t * 100 })).sort((a, b) => b.p - a.p);
     const best = ranked[0], worst = ranked.length > 1 ? ranked.at(-1) : null;
-    return `<tr class="click" data-act="simOpen" data-id="${s.id}"><td class="num">${fd(s.data, true)}</td><td><div class="t">${esc(s.nome)}</div>${s.grupo ? `<div class="s sub">${esc(s.grupo)}</div>` : ''}${s.pdfNome ? `<div class="s sub">${ic('file', 12)} ${esc(trunc(s.pdfNome, 30))}</div>` : ''}</td><td class="num">${t.a}/${t.t}</td><td class="num">${pct0(t.p)}</td>
+    return `<tr class="click" data-act="simOpen" data-id="${s.id}"><td class="num">${fd(s.data, true)}</td><td><div class="t">${esc(s.nome)}</div>${mods.length > 1 ? `<div class="s sub">${esc(modeloOf(s).nome)}</div>` : ''}${s.grupo ? `<div class="s sub">${esc(s.grupo)}</div>` : ''}${s.pdfNome ? `<div class="s sub">${ic('file', 12)} ${esc(trunc(s.pdfNome, 30))}</div>` : ''}</td><td class="num">${t.a}/${t.t}</td><td class="num">${pct0(t.p)}</td>
       <td class="sub">${best ? `+ ${esc(best.m)} ${nf(best.p, 0)}%` : ''}${worst ? `<br>− ${esc(worst.m)} ${nf(worst.p, 0)}%` : ''}</td><td>${deltaHTML(prev != null && t.p != null ? t.p - prev : null)}</td><td class="go">${ic('chev', 16)}</td></tr>`;
   }).join('');
-  return head('Simulados', 'Notas de cada simulado do modelo escolhido no topo. Clique numa linha para ver os detalhes ou editar.', `<button class="btn primary" data-act="simNew">${ic('plus', 15)} Novo simulado</button>`) +
-    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl"><thead><tr><th>Data</th><th>Simulado</th><th>Acertos</th><th>%</th><th>Melhor e pior</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhum simulado em ${esc(activeModelo().nome)}</b>${simsAllSorted().length ? `Você tem ${simsAllSorted().length} ${simsAllSorted().length === 1 ? 'simulado' : 'simulados'} em outros modelos: troque o modelo no seletor, no topo da tela.` : 'Lance as notas por área ou envie o PDF do simulado na aba "Questões e PDF".'}<div style="margin-top:14px"><button class="btn primary" data-act="simNew">Novo simulado</button></div></div>`}</section>`;
+  return head('Simulados', 'Todos os simulados lançados. Filtre por prova (Dia 1, Dia 2…) e clique numa linha para ver os detalhes ou editar.', `${chipsN}<button class="btn primary" data-act="simNew">${ic('plus', 15)} Novo simulado</button>`) +
+    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl"><thead><tr><th>Data</th><th>Simulado</th><th>Acertos</th><th>%</th><th>Melhor e pior</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhum simulado${fk === 'todos' ? '' : ' nesta prova'}</b>${all.length ? 'Escolha outra prova nos filtros acima.' : 'Lance as notas por área ou envie o PDF do simulado na aba "Questões e PDF".'}<div style="margin-top:14px"><button class="btn primary" data-act="simNew">Novo simulado</button></div></div>`}</section>`;
 };
 
 
@@ -1836,7 +1864,7 @@ function redDetail(id) {
     ${r.obs ? `<p style="margin-top:16px;color:var(--ink-2);white-space:pre-wrap">${esc(r.obs)}</p>` : ''}
     ${(() => { const ax = anxList(r.id); return ax.length ? `<div class="anx-sec"><div class="lbl">Anexos</div><div class="anx-g">${ax.map(anxTile).join('')}</div></div>` : ''; })()}
     ${r.texto ? `<details style="margin-top:14px"><summary class="sub" style="cursor:pointer">Ver texto</summary><div class="q-txt" style="margin-top:10px">${esc(r.texto)}</div></details>` : ''}
-    <div class="foot" style="justify-content:space-between"><button class="btn danger" data-x="del">${ic('trash', 14)} Excluir</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-x="edit">Editar</button><button class="btn" data-x="ask">Comentar</button><button class="btn primary" data-x="an" ${aiAttr()}>Pedir análise deste texto</button></div></div>`, { wide: true });
+    <div class="foot" style="justify-content:space-between"><button class="btn danger" data-x="del">${ic('trash', 14)} Excluir</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-x="edit">Editar</button>${LITE ? '' : `<button class="btn" data-x="ask">Comentar</button><button class="btn primary" data-x="an" ${aiAttr()}>Pedir análise deste texto</button>`}</div></div>`, { wide: true });
   box.addEventListener('click', async e => {
     const tl = e.target.closest('[data-anx]'); if (tl) { anxOpen(id, tl.dataset.anx); return; }
     const x = e.target.closest('[data-x]'); if (!x) return; const k = x.dataset.x;
@@ -2121,7 +2149,7 @@ function tourSteps() {
     { r: 'visao', s: '#modelSel', t: 'Modelo de prova', x: 'Escolha aqui o modelo que os gráficos mostram: ENEM, Dia 1, Dia 2, FAMERP… Cada modelo tem as suas áreas e metas. Para criar ou editar, use “Editar modelos…” no fim da lista.', side: 'bottom' },
     { r: 'visao', s: '#side', opt: 1, t: 'Menu', x: 'Daqui você vai para cada parte: simulados (notas, evolução e completos), redação (textos e competências) e conclusões.', side: 'right' },
     { r: 'sim-notas', s: '[data-act=simNew]', t: 'Lançar um simulado', x: 'Clique em Novo simulado, escolha o modelo e a data e preencha os acertos de cada área. Use o mesmo grupo no Dia 1 e no Dia 2 para formar um simulado completo.' },
-    { r: 'sim-notas', s: '#main .view > section.card', t: 'Lista de simulados', x: 'Todos os simulados do modelo escolhido, com a melhor e a pior área e a variação em relação ao anterior. Clique numa linha para ver os detalhes, editar ou excluir.' },
+    { r: 'sim-notas', s: '#main .view > section.card', t: 'Lista de simulados', x: 'Todos os simulados, com filtro por prova (Dia 1, Dia 2…), a melhor e a pior área e a variação em relação ao anterior. Clique numa linha para ver os detalhes, editar ou excluir.' },
     { r: 'sim-evolucao', s: '#main .view > section.card', t: 'Evolução geral', x: 'A linha do aproveitamento ao longo dos simulados. Troque entre % e acertos nos botões do canto.' },
     { r: 'sim-evolucao', s: cardWith('Mapa de calor'), t: 'Mapa de calor', x: 'As linhas são áreas e as colunas são simulados: quanto mais forte o azul, maior o acerto. Dá para ver de relance onde você melhorou.' },
     { r: 'sim-conjuntos', s: '#main .view > section.card', t: 'Simulados completos', x: 'Junta o Dia 1 e o Dia 2 de cada grupo e mostra o total. Se faltar um dos dias, o painel avisa qual.' },
@@ -2129,7 +2157,7 @@ function tourSteps() {
     { r: 'red-competencias', s: cardWith('Média por competência'), t: 'Competências e reescrita', x: 'A média de cada competência e o efeito da reescrita: quantos pontos, em média, a reescrita ganha em relação ao texto original.' },
     L ? { r: 'conclusoes', s: '#main .view > .g-3', t: 'Conclusões', x: 'A área que mais melhorou, a que mais caiu e a em que você mais erra, comparando os simulados recentes (até 3) com os anteriores. Embaixo, a redação por competência.' }
       : { r: 'plano', s: cardWith('Onde mais erro'), t: 'Onde mais erro', x: 'O ranking do que você mais erra, por área, matéria e assunto. Conforme você acerta mais, o assunto desce na lista.' },
-    { r: 'raiox', s: '.rx-bar', t: 'Raio-X ENEM', x: 'Os assuntos mais cobrados no ENEM de 2009 a 2025, por matéria. Troque a área nos botões, busque um assunto no campo de cima e veja, no quadro acima, onde o seu desempenho pede prioridade e o que pode esperar.' },
+    { r: 'raiox', s: '.rx-bar', t: 'Raio-X ENEM', x: 'Os assuntos mais cobrados no ENEM de 2009 a 2025, por matéria. Troque a área nos botões e busque um assunto no campo de cima.' },
     { r: 'visao', s: '[data-act=cfg]', t: 'Configurações', x: 'Aqui ficam as metas, as provas e datas da contagem regressiva, o tema claro ou escuro, os dados de exemplo e a conta. Para rever este passeio, abra Configurações > Tour guiado.', side: 'bottom', last: 1 }
   ];
 }
@@ -2401,6 +2429,7 @@ const ACT = {
   verMat: el => { S.ui.matSel = [el.dataset.m]; go('sim-evolucao'); },
   simQ: el => { const id = el.dataset.id; if (S.simq[id] || D().simq[id]) { S.ui.simSel = id; go('sim-questoes'); } else pdfModal(id); },
   simNew: () => simForm(), simNewG: el => simForm(null, { grupo: el.dataset.g, modelo: el.dataset.m, data: el.dataset.d }), simOpen: el => { const id = el.dataset.id; if (String(id).startsWith('demo-')) { simDetail(id); return; } S.ui.simSel = id; S.ui.qMat = 'todas'; S.ui.qSt = 'todas'; S.ui.qSearch = ''; go('sim-questoes'); },
+  notasMod: el => { S.ui.notasMod = el.dataset.k; render(true); },
   redTipo: el => { S.ui.redTipo = el.dataset.k; render(true); },
   errScope: el => { S.ui.errScope = el.dataset.k; render(true); },
   simEdit: el => simForm(el.dataset.id), simAsk: el => threadModal({ k: 'sim', id: el.dataset.id }, '', false), simDel: el => simDel(el.dataset.id),
@@ -2702,15 +2731,22 @@ function rxPack() {
 
 /* ---- página ---- */
 HELP_PAGE['Raio-X ENEM'] = 'raiox';
-HELP.raiox = ['Raio-X ENEM', `<p>Mostra, por matéria, os assuntos que mais caíram no ENEM de 2009 a 2025 (fonte: SAS Educação). O número ao lado de cada assunto é a quantidade de questões e a % dos itens daquela matéria.</p><p><b>Incidência</b> é o peso da matéria dentro da sua área: alta (25% ou mais), média (5% a 25%) ou baixa (menos de 5%). A estimativa de questões por prova é só uma ordem de grandeza.</p><p>O quadro <b>Seu desempenho × peso no ENEM</b> cruza as suas notas por matéria com esse peso: erro alto em matéria de peso alto é prioridade; erro alto em matéria de pouco peso pode esperar. Para aparecer, lance as notas por matéria (Biologia, Física…) nos simulados.</p>`];
+HELP.raiox = ['Raio-X ENEM', LITE ? `<p>Reproduz o material <b>Raio X ENEM 2009–2025</b> da SAS Educação: em cada matéria, os assuntos que mais caíram no ENEM, com a frequência (quantidade de itens) e a % dos itens daquela matéria. Use os botões para trocar de área e o campo de busca para achar um assunto.</p>` : `<p>Mostra, por matéria, os assuntos que mais caíram no ENEM de 2009 a 2025 (fonte: SAS Educação), com a frequência e a % dos itens da matéria.</p><p>O quadro <b>Seu desempenho × peso no ENEM</b> cruza as suas notas por matéria com o peso dela na área: erro alto em matéria de peso alto é prioridade; erro alto em matéria de pouco peso pode esperar. Para aparecer, lance as notas por matéria (Biologia, Física…) nos simulados.</p>`];
 const rxBadge = c => `<span class="rx-badge ${c}">${RX_CLS[c]}</span>`;
+const RX_COR = { lin: ['#8a6aae', '#d3c9e3', '#efecf4'], hum: ['#504fa1', '#bdbadb', '#e9e8f3'], nat: ['#f7931d', '#fedab3', '#fef0dd'], mat: ['#ee275c', '#fbd6d2', '#fdeceb'] };
+/* tabela no mesmo formato do PDF: Matéria (N itens) · Assunto | Frequência | % */
 function rxCard(a, m) {
-  const sh = m.it / rxAreaTot(a), cls = rxCls(sh), mx = m.a[0][1];
-  const mine = new Set(rxAssCross().filter(x => x.hit && x.rx.ms[0].n === m.n).map(x => x.hit.n));
-  return `<section class="card rx-card" data-m="${esc(rxNrm(m.n))}"><div class="rx-top"><div><h3>${esc(m.n)}</h3><div class="rx-sub">${nf(m.it)} itens · ${nf(sh * 100, 1)}% da área · ${rxQ(sh * 45)}</div></div>${rxBadge(cls)}</div>
-    <div class="rx-rows">${m.a.map(([n, f]) => `<div class="rx-r${mine.has(n) ? ' mine' : ''}" data-t="${esc(rxNrm(n + ' ' + m.n))}"><span class="rx-n" title="${esc(n)}">${esc(n)}</span><span class="rx-b"><i style="width:${(f / mx * 100).toFixed(1)}%"></i></span><span class="rx-v"><b>${nf(f / m.it * 100, 1)}%</b><small>${nf(f)}</small></span></div>`).join('')}</div>
-    <div class="rx-foot">Assuntos mais cobrados · % dos itens de ${esc(m.n)}${mine.size ? ' · <span class="rx-mine">destacado: onde você mais erra</span>' : ''}</div></section>`;
+  const c = RX_COR[a.id] || RX_COR.lin, mine = LITE ? new Set() : new Set(rxAssCross().filter(x => x.hit && x.rx.ms[0].n === m.n).map(x => x.hit.n));
+  const pc = f => nf(f / m.it * 100, 2) + '%';
+  return `<section class="rx-tb rx-card" data-m="${esc(rxNrm(m.n))}" style="--rx-h:${c[0]};--rx-s:${c[1]};--rx-z:${c[2]}"><table><colgroup><col><col class="c2"><col class="c3"></colgroup><thead><tr class="rx-th"><th colspan="3">${esc(m.n)} (${nf(m.it)} itens)</th></tr><tr class="rx-sh"><th>Assunto</th><th>${a.id === 'hum' ? 'Quantidade' : 'Frequência'}</th><th>%</th></tr></thead><tbody>${m.a.map(([n, f]) => `<tr class="rx-r${mine.has(n) ? ' mine' : ''}" data-t="${esc(rxNrm(n + ' ' + m.n))}"><td>${esc(n)}</td><td>${nf(f)}</td><td>${pc(f)}</td></tr>`).join('')}</tbody></table></section>`;
 }
+const RX_INFO = `<p>O Exame Nacional do Ensino Médio (Enem) foi instituído em 1998, com o objetivo de avaliar o desempenho escolar dos estudantes ao término da educação básica. Em 2009, o exame aperfeiçoou sua metodologia e passou a ser utilizado como mecanismo de acesso à educação superior. As notas do Enem podem ser usadas para acesso ao Sistema de Seleção Unificada (Sisu) e ao Programa Universidade para Todos (ProUni). Elas também são aceitas em instituições de educação superior portuguesas que têm acordo com o Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira (Inep). Além disso, os participantes do Enem podem pleitear financiamento estudantil em programas do governo, como o Fundo de Financiamento Estudantil (Fies). Os resultados do Enem possibilitam, ainda, o desenvolvimento de estudos e indicadores educacionais e o uso dos resultados para obtenção do certificado de conclusão do Ensino Médio ou a declaração parcial de proficiência.</p>
+<p><b>Período de inscrição:</b><br>A inscrição para o processo seletivo pode ser feita online, por meio do portal GOV.</p>
+<p><b>Período de aplicação:</b><br>Aplicação anual, com aplicação única dividido em dois dias.</p>
+<p><b>Site oficial:</b><br><a href="https://www.gov.br/inep/pt-br/centrais-de-conteudo/legislacao/enem" target="_blank" rel="noopener">https://www.gov.br/inep/pt-br/centrais-de-conteudo/legislacao/enem</a></p>
+<p><b>Vagas:</b><br>Para o ingresso no ano de 2026 foram dispostas 261.779 oportunidades. Contemplando universidades de todo o país</p>
+<p><b>Como é o vestibular:</b><br>A prova é composta por 180 questões objetivas e uma proposta de redação. As perguntas objetivas são de múltipla escolha, com cinco alternativas de resposta para cada (representadas pelas letras A, B, C, D e E). O exame é aplicado em dois dias:</p>
+<ul><li><b>1º dia:</b><ul><li>45 questões de Linguagens, Códigos e suas Tecnologias;</li><li>45 questões de Ciências Humanas e suas Tecnologias;</li><li>Redação (Dissertativa-argumentativa).</li></ul></li><li><b>2º dia:</b><ul><li>45 questões de Ciências da Natureza e suas Tecnologias;</li><li>45 questões de Matemática e suas Tecnologias.</li></ul></li></ul>`;
 function rxCrossCard(compact) {
   const X = rxCross();
   if (!X.rows.length) return compact ? '' : `<section class="card"><div class="lbl">Seu desempenho × peso no ENEM</div><div class="empty" style="padding:18px 0 6px"><b>Ainda sem notas por matéria</b>Lance as notas por matéria (Biologia, Física, História…) nos simulados e o painel diz onde vale gastar tempo e o que pode esperar.</div></section>`;
@@ -2724,11 +2760,13 @@ S.ui.rxArea = S.ui.rxArea || 'todas';
 VIEWS.raiox = function () {
   const A = S.ui.rxArea, areas = RAIOX.filter(a => A === 'todas' || a.id === A);
   const chips = `<div class="chips">${[['todas', 'Todas'], ...RAIOX.map(a => [a.id, a.curto])].map(([k, l]) => `<button class="pill" data-act="rxArea" data-k="${k}" aria-pressed="${A === k}">${l}</button>`).join('')}</div>`;
-  return head('Raio-X ENEM', 'Os assuntos mais cobrados de 2009 a 2025, por matéria. Use para decidir onde vale gastar tempo.', `<input id="rx-q" class="rx-q" type="search" placeholder="Buscar assunto…" autocomplete="off" aria-label="Buscar assunto">`) +
-    rxCrossCard(false) +
-    `<div class="rx-bar">${chips}</div><div id="rx-none" class="empty" hidden><b>Nenhum assunto encontrado</b>Tente outra palavra.</div>` +
-    areas.map(a => `<div class="rx-area" data-a="${a.id}"><h2 class="rx-ah">${esc(a.nome)}</h2><div class="rx-grid">${a.mats.map(m => rxCard(a, m)).join('')}</div></div>`).join('') +
-    `<div class="rx-note" style="margin:6px 4px 24px">Fonte: ${RX_FONTE}. Itens analisados de 2009 a 2025; cada % é a parte dos itens da matéria. Português considera só a lista de assuntos mais cobrados.</div>`;
+  return head('Raio X ENEM 2009–2025', 'Assuntos mais cobrados no ENEM, organizados por disciplinas. Fonte: SAS Educação.', `<input id="rx-q" class="rx-q" type="search" placeholder="Buscar assunto…" autocomplete="off" aria-label="Buscar assunto">`) +
+    (LITE ? '' : rxCrossCard(false)) +
+    `<div class="rx-bar">${chips}</div>` +
+    (A === 'todas' ? `<section class="card rx-info"><div class="rx-kick">RAIO X | ENEM</div><h2 class="rx-title">Informações Gerais</h2>${RX_INFO}</section>` : '') +
+    `<div id="rx-none" class="empty" hidden><b>Nenhum assunto encontrado</b>Tente outra palavra.</div>` +
+    areas.map(a => `<div class="rx-area" data-a="${a.id}"><div class="rx-pillh" style="--rx-h:${(RX_COR[a.id] || RX_COR.lin)[0]}">${esc(a.nome.toUpperCase())}</div><div class="rx-kick">RAIO X | ENEM</div><h2 class="rx-title">Principais assuntos</h2><div class="rx-list">${a.mats.map(m => rxCard(a, m)).join('')}</div></div>`).join('') +
+    `<div class="rx-note" style="margin:6px 4px 24px">Fonte: ${RX_FONTE}.</div>`;
 };
 function rxFilter(q) {
   q = rxNrm(q); let any = false;
@@ -2743,7 +2781,7 @@ ACT.rxArea = el => { S.ui.rxArea = el.dataset.k; render(true); };
 if (LITE) { NAV.push({ id: 'raiox', label: 'Raio-X ENEM', icon: 'radar' }); ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n])); }
 else { NAV.find(n => n.g === 'ESTUDO').items.push({ id: 'raiox', label: 'Raio-X ENEM', icon: 'radar' }); ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n]), { id: 'sim-questoes', label: 'Notas' }); }
 ICONS.radar = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/><path d="M12 12 19 5"/>';
-if (LITE) { const _c = VIEWS.conclusoes; VIEWS.conclusoes = function () { return _c.apply(this, arguments) + rxCrossCard(true); }; }
+
 
 document.addEventListener('click', e => { if (e.target.closest('button,[data-act],svg') && !e.target.closest('input,textarea,select')) { const g = getSelection(); if (g && g.type !== 'None') g.removeAllRanges(); } }, true);
 init();
