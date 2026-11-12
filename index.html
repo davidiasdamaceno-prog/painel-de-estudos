@@ -1472,7 +1472,7 @@ VIEWS.plano = function () {
       ${rk.ass.length ? `<div style="margin-top:22px"><div class="sub" style="margin-bottom:10px">Assuntos para priorizar · % de erro (mínimo de 2 questões marcadas)</div><div class="ass-list">${rk.ass.slice(0, 12).map(x => `<div class="ass-row"><span class="dot" style="background:${matColor(x.m)}"></span><span class="ass-n"><b>${esc(x.n)}</b> <span class="sub">${esc(x.m)}</span></span><span class="mono ink2">${x.err} de ${x.t} · ${nf(x.p, 0)}%</span><span class="ass-t ${x.tr == null ? '' : x.tr <= -15 ? 'up' : x.tr >= 15 ? 'down' : ''}">${x.tr == null ? 'poucos dados' : x.tr <= -15 ? 'melhorando' : x.tr >= 15 ? 'piorando' : 'estável'}</span></div>`).join('')}</div></div>` : ''}` : '<p class="sub" style="margin-top:10px">Lance um simulado para ver onde você mais erra.</p>'}</section>`;
   return head('Plano e conclusões', 'O Claude lê os seus simulados, redações e questões marcadas e devolve o que está evoluindo, o que está travando e o que estudar agora.', '') +
     `<section class="card"><div class="lbl">Pedir ao Claude</div><div class="chips" style="margin-top:14px">${['geral', 'plano', 'simulados', 'redacao'].map(k => `<button class="btn" data-act="analisar" data-k="${k}" ${busy || !S.ai ? 'disabled' : ''}>${ic(k === 'plano' ? 'target' : 'spark', 15)} ${AN_NOME[k]}</button>`).join('')}</div>${!S.ai ? '<p class="sub" style="margin-top:10px">O Claude não está disponível nesta visualização.</p>' : ''}</section>
-    ${rkCard}${live}${hist}
+    ${projCard()}${rxCrossCard(false)}${rkCard}${live}${hist}
     <section class="card"><div class="lbl">Mapa de erros · onde estudar · ${errRank().units.length ? (S.ui.errScope === 'last3' ? 'últimos 3 simulados' : S.ui.errScope === 'last' ? 'último simulado' : 'todos os simulados') : ''}</div><div style="margin-top:14px">${map}</div></section>`;
 };
 
@@ -1491,7 +1491,7 @@ const AIERR = {
 };
 const aiMsg = e => (e && AIERR[e.code]) || (e && e.message) || 'Algo deu errado.';
 
-const RULES = () => `Você é o tutor de estudos dentro do painel de acompanhamento do aluno. Responda em português do Brasil, direto, usando apenas os dados abaixo. Cite números (datas, acertos, notas). Se uma série tiver menos de 3 pontos, diga que ainda não dá para falar de tendência. Nunca invente notas, questões ou resultados que não estejam nos dados; se faltar informação, diga o que falta. RAIO-X ENEM: os dados trazem a frequência dos assuntos no ENEM e um cruzamento já calculado com os meus resultados. Use isso para ponderar as conclusões: se eu erro muito uma matéria ou assunto de pouca incidência (ou fora dos assuntos mais cobrados), diga que pode ser menos prioritário e que o tempo rende mais em matérias de peso alto; se eu erro em algo de alta incidência, priorize e cite a frequência. Sempre cite o dado do Raio-X (por exemplo, a % dos itens ou o peso na área) e lembre que ele vale para o ENEM, não para FAMERP ou FAMEMA. Formato: parágrafos curtos, listas só quando ajudam, **negrito** nos pontos principais, sem tabelas grandes.\n\nINSTRUÇÕES DO ALUNO\n${S.cfg.instr || ''}`;
+const RULES = () => `Você é o tutor de estudos dentro do painel de acompanhamento do aluno. Responda em português do Brasil, direto, usando apenas os dados abaixo. Cite números (datas, acertos, notas). Se uma série tiver menos de 3 pontos, diga que ainda não dá para falar de tendência. Nunca invente notas, questões ou resultados que não estejam nos dados; se faltar informação, diga o que falta. PREVISÃO E CONSISTÊNCIA: o bloco já traz a previsão da próxima nota e o perfil de oscilação de cada matéria/área; use esses números (não recalcule) e diga se a queda ou o erro é falta de base (baixo e estável) ou desatenção (média boa que oscila). RAIO-X ENEM: os dados trazem a frequência dos assuntos no ENEM e um cruzamento já calculado com os meus resultados. Use isso para ponderar as conclusões: se eu erro muito uma matéria ou assunto de pouca incidência (ou fora dos assuntos mais cobrados), diga que pode ser menos prioritário e que o tempo rende mais em matérias de peso alto; se eu erro em algo de alta incidência, priorize e cite a frequência. Sempre cite o dado do Raio-X (por exemplo, a % dos itens ou o peso na área) e lembre que ele vale para o ENEM, não para FAMERP ou FAMEMA. Formato: parágrafos curtos, listas só quando ajudam, **negrito** nos pontos principais, sem tabelas grandes.\n\nINSTRUÇÕES DO ALUNO\n${S.cfg.instr || ''}`;
 
 function pack() {
   const d = D(), cfg = S.cfg, L = [];
@@ -1517,6 +1517,7 @@ function pack() {
   if (!er.length) L.push('(nenhuma marcada)');
   er.forEach(([m, v]) => L.push(`- ${m}: ${v.e} erros, ${v.c} chutes; assuntos: ${Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 8).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}`));
   L.push(rxPack());
+  L.push(projPack());
   return L.join('\n');
 }
 function ctxDetail(ctx) {
@@ -1990,7 +1991,7 @@ function cfgForm() {
         </div>
       </section>
       <section class="cfg-sec" ${LITE ? 'hidden' : ''}><h3>Claude</h3><label class="field"><span>O que o Claude deve saber sobre você e como responder</span><textarea id="c-instr" rows="9">${esc(c.instr)}</textarea></label></section>
-      <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<button type="button" class="link" id="c-reset">Restaurar texto padrão</button>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true, onClose: () => applyTheme() });
+      <div class="foot" style="justify-content:space-between">${LITE ? '<span class="row" style="gap:10px"><button type="button" class="link" id="c-exp">Exportar dados</button><button type="button" class="link" id="c-imp">Importar dados</button></span>' : '<span class="row" style="gap:10px"><button type="button" class="link" id="c-reset">Restaurar texto padrão</button><button type="button" class="link" id="c-imp">Importar dados do site</button></span>'}<div style="display:flex;gap:8px"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar</button></div></div></form>`, { wide: true, onClose: () => applyTheme() });
   $('#c-mod', box).onclick = () => modelosForm();
   if ($('#c-acc', box)) $('#c-acc', box).onclick = () => { if (S.cloud) cloudLogout(); else { lsDel('pe-modo'); cloudLogin(); } };
   $('#c-tour', box).onclick = () => { closeModal(); setTimeout(tourStart, 60); };
@@ -1999,6 +2000,7 @@ function cfgForm() {
   $('#c-demo', box).onclick = () => demoOn();
   $('#c-addp', box).onclick = () => { $('#c-provas', box).insertAdjacentHTML('beforeend', provaRowHTML({ cor: SER[$$('.prow', box).length % SER.length] })); const r = $$('.prow', box).at(-1); $('[data-f=pn]', r).focus({ preventScroll: true }); };
   $('#c-provas', box).addEventListener('click', e => { const b = e.target.closest('[data-x=delp]'); if (b) b.closest('.prow').remove(); });
+  if (!LITE && $('#c-imp', box)) $('#c-imp', box).onclick = artImport;
   if ($('#c-reset', box)) $('#c-reset', box).onclick = () => { $('#c-instr', box).value = DEF_CFG.instr; };
   if (LITE) { $('#c-exp', box).onclick = liteExport; $('#c-imp', box).onclick = liteImport; }
   box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) closeModal(); });
@@ -2351,6 +2353,86 @@ document.addEventListener('drop', async e => {
   try { await redWriteOrder(asc); toast(`Redação movida para #${asc.indexOf(src) + 1}.`); } catch (x) { }
 });
 document.addEventListener('dragend', () => { _rd = _rdT = null; rdClear(); });
+
+/* ============ importar o backup do site do GitHub (versão com Claude) ============ */
+function artImport() {
+  if (LITE) return;
+  closeModal();
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    let d;
+    try { const j = JSON.parse(await f.text()); d = j && j.data; if (!d || typeof d !== 'object' || !(d.sim || d.red || d.config)) throw 0; } catch (e) { toast('Esse arquivo não parece um backup do painel.', 'err'); return; }
+    const cnt = c => Object.keys(d[c] || {}).length;
+    const ok = await confirmBox({ title: 'Importar dados do site?', text: `O arquivo traz ${cnt('sim')} simulados, ${cnt('red')} redações, ${cnt('anx') ? cnt('anx') + ' anexos, ' : ''}e as configurações. Itens com o mesmo código são substituídos; o que você já tem aqui e não está no arquivo continua. Suas instruções para o Claude não mudam.`, ok: 'Importar' });
+    if (!ok) return;
+    let n = 0, bad = 0;
+    for (const col of ['sim', 'simq', 'red', 'cad', 'ans', 'anx']) {
+      for (const [id, v] of Object.entries(d[col] || {})) {
+        if (!id || id.includes('/') || !v || typeof v !== 'object') continue;
+        try { await dbSet(col, id, v); n++; } catch (e) { bad++; }
+      }
+    }
+    const g = d.config && d.config.geral;
+    if (g && typeof g === 'object') { try { await dbSet('config', 'geral', { ...S.cfg, ...g, instr: S.cfg.instr }); S.cfg = { ...DEF_CFG, ...S.cfg, ...g, instr: S.cfg.instr }; n++; } catch (e) { bad++; } }
+    applyTheme(); render(true);
+    toast(bad ? `${n} itens importados; ${bad} não couberam (provavelmente anexos grandes).` : `${n} itens importados.`, bad ? 'err' : undefined);
+  };
+  inp.click();
+}
+
+/* ============ previsão e consistência (versão com Claude) ============ */
+const clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const sdOf = y => { const m = avg(y); return Math.sqrt(y.reduce((s, v) => s + (v - m) ** 2, 0) / y.length); };
+function linfit(y) {
+  const n = y.length, xm = (n - 1) / 2, ym = avg(y); let sxx = 0, sxy = 0;
+  y.forEach((v, i) => { sxx += (i - xm) ** 2; sxy += (i - xm) * (v - ym); });
+  const b = sxx ? sxy / sxx : 0, a = ym - b * xm, ss = y.reduce((s, v, i) => s + (v - (a + b * i)) ** 2, 0);
+  return { b, sd: n > 2 ? Math.sqrt(ss / (n - 2)) : 0, next: a + b * n, now: a + b * (n - 1) };
+}
+function projData() {
+  const M = activeModelo(), sims = simsSorted().slice(-8), q = modQ(M), meta = modPct(M, null);
+  const tot = sims.map(s => simStat(s).p).filter(v => v != null), out = { M, q, n: tot.length, meta, unit: grainName() };
+  if (tot.length >= 3) { const f = linfit(tot), band = Math.max(3, f.sd); out.total = { next: clampN(f.next, 0, 100), lo: clampN(f.next - band, 0, 100), hi: clampN(f.next + band, 0, 100), slope: f.b, last: tot.at(-1), reach: f.now >= meta, steps: f.b > 0.3 && f.now < meta ? Math.ceil((meta - f.now) / f.b) : null }; }
+  out.rows = matNames(sims).map(m => {
+    const y = sims.map(s => mp(s, m)).filter(v => v != null); if (y.length < 3) return null;
+    const f = linfit(y), y6 = y.slice(-6), mm = modPct(M, m), mean = avg(y6), sd = sdOf(y6);
+    const k = sd < 5 ? 'estavel' : sd < 10 ? 'oscila' : 'instavel';
+    const txt = mean >= mm ? (k === 'estavel' ? 'Em dia e firme.' : 'Média boa, mas oscila: provável desatenção ou falta de revisão.') : (k === 'estavel' ? 'Abaixo da meta e estável: falta base, pede estudo de conteúdo.' : (k === 'oscila' ? 'Abaixo da meta e oscilando: base incompleta, revise e treine.' : 'Abaixo da meta e muito instável: base frágil, volte ao conteúdo e treine.'));
+    return { m, n: y.length, mean, sd, k, txt, last: y.at(-1), next: clampN(f.next, 0, 100), slope: f.b, meta: mm };
+  }).filter(Boolean);
+  const rs = redsSorted().filter(r => r.tipo !== 'reescrita').slice(-8).map(redTotal);
+  if (rs.length >= 3) { const f = linfit(rs); out.red = { n: rs.length, last: rs.at(-1), next: stepN(clampN(f.next, 0, 1000), 1000), slope: f.b, meta: S.cfg.metaRed }; }
+  return out;
+}
+const pp1 = v => (v >= 0 ? '+' : '−') + nf(Math.abs(v), 1);
+function projCard() {
+  const P = projData();
+  if (P.n < 3) return `<section class="card"><div class="lbl">Previsão e consistência</div><div class="empty" style="padding:18px 0 6px"><b>Faltam simulados</b>Com pelo menos 3 simulados de ${esc(P.M.nome)} o painel calcula a previsão da próxima nota e a consistência de cada ${P.unit}.</div></section>`;
+  const T = P.total, cnt = P.q ? Math.round(T.next / 100 * P.q) : null, trend = T.slope >= 0.3 ? 'subindo' : T.slope <= -0.3 ? 'caindo' : 'estável';
+  const meta = T.reach ? 'Você já está na meta pela tendência.' : T.steps ? `No ritmo atual, chega na meta (${nf(P.meta, 0)}%) em cerca de ${T.steps} ${T.steps === 1 ? 'simulado' : 'simulados'}.` : `Com a tendência atual, a meta de ${nf(P.meta, 0)}% não é alcançada: é preciso mudar o ritmo.`;
+  const prow = P.rows.map(r => `<tr><td>${esc(r.m)}</td><td class="num">${nf(r.last, 0)}%</td><td class="num"><b>${nf(r.next, 0)}%</b></td><td class="num">${deltaHTML(r.slope, ' pp', 1)}</td><td class="num">${nf(r.meta, 0)}%</td></tr>`).join('');
+  const crow = [...P.rows].sort((a, b) => b.sd - a.sd).map(r => `<tr><td>${esc(r.m)}</td><td class="num">${nf(r.mean, 0)}%</td><td class="num">± ${nf(r.sd, 1)}</td><td><span class="rx-st ${r.k === 'estavel' ? 'ok' : r.k === 'oscila' ? 'wait' : 'prior'}">${{ estavel: 'Estável', oscila: 'Oscila', instavel: 'Instável' }[r.k]}</span></td><td class="sub">${esc(r.txt)}</td></tr>`).join('');
+  const R = P.red;
+  return `<section class="card"><div class="lbl">Previsão da próxima nota · ${esc(P.M.nome)}</div>
+    <div class="big" style="margin-top:12px">${nf(T.next, 0)}<small>%</small>${cnt != null ? `<small style="margin-left:10px">≈ ${cnt}/${P.q}</small>` : ''}</div>
+    <div class="sub" style="margin-top:6px">Faixa provável ${nf(T.lo, 0)}% a ${nf(T.hi, 0)}% · tendência ${trend} (${pp1(T.slope)} pp por simulado) · último ${nf(T.last, 0)}%</div>
+    <p class="sub" style="margin-top:8px">${meta}</p>
+    ${R ? `<div class="sub" style="margin-top:10px">Redação: previsão de ${nf(R.next)} pts no próximo texto escrito (${pp1(R.slope)} pts por texto; último ${nf(R.last)}; meta ${nf(R.meta)}).</div>` : ''}
+    <div class="scroll-x" style="margin-top:16px"><table class="tbl"><thead><tr><th>Por ${P.unit}</th><th>Último</th><th>Previsão</th><th>Tendência</th><th>Meta</th></tr></thead><tbody>${prow}</tbody></table></div>
+    <div class="lbl" style="margin-top:26px">Consistência · últimos ${Math.min(6, P.n)} simulados</div>
+    <div class="scroll-x" style="margin-top:10px"><table class="tbl"><thead><tr><th>${P.unit[0].toUpperCase() + P.unit.slice(1)}</th><th>Média</th><th>Oscilação</th><th>Perfil</th><th>Leitura</th></tr></thead><tbody>${crow}</tbody></table></div>
+    <div class="rx-note">Previsão = tendência linear dos últimos ${P.n} simulados do modelo; é uma estimativa, não uma garantia. Oscilação = desvio padrão em pontos percentuais.</div></section>`;
+}
+/* texto para o Claude */
+function projPack() {
+  if (LITE) return ''; const P = projData(); if (P.n < 3) return '';
+  const L = [`\nPREVISÃO E CONSISTÊNCIA (calculado pelo painel; tendência linear dos últimos ${P.n} simulados de ${P.M.nome}):`];
+  const T = P.total; L.push(`- Total: próxima nota prevista ${nf(T.next, 0)}% (faixa ${nf(T.lo, 0)}–${nf(T.hi, 0)}%), tendência ${pp1(T.slope)} pp/simulado, meta ${nf(P.meta, 0)}%${T.reach ? ' (já na meta)' : T.steps ? `, chega à meta em ~${T.steps} simulados` : ', meta não alcançada nessa tendência'}`);
+  P.rows.forEach(r => L.push(`- ${r.m}: previsão ${nf(r.next, 0)}%, tendência ${pp1(r.slope)} pp, média ${nf(r.mean, 0)}%, oscilação ±${nf(r.sd, 1)} (${r.k}), meta ${nf(r.meta, 0)}% → ${r.txt}`));
+  if (P.red) L.push(`- Redação: próximo texto previsto ${P.red.next} pts (${pp1(P.red.slope)} pts/texto), último ${P.red.last}, meta ${P.red.meta}`);
+  return L.join('\n');
+}
 
 /* ============ ações, eventos e início ============ */
 function setQDoc(sid, doc) {
@@ -2766,6 +2848,9 @@ if (LITE) { NAV.push({ id: 'raiox', label: 'Raio-X ENEM', icon: 'radar' }); ROUT
 else { NAV.find(n => n.g === 'ESTUDO').items.push({ id: 'raiox', label: 'Raio-X ENEM', icon: 'radar' }); ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n]), { id: 'sim-questoes', label: 'Notas' }); }
 ICONS.radar = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/><path d="M12 12 19 5"/>';
 
+
+/* previsão e consistência também nas Conclusões do site */
+if (LITE) { const _c = VIEWS.conclusoes; VIEWS.conclusoes = function () { return _c.apply(this, arguments) + projCard(); }; }
 
 document.addEventListener('click', e => { if (e.target.closest('button,[data-act],svg') && !e.target.closest('input,textarea,select')) { const g = getSelection(); if (g && g.type !== 'None') g.removeAllRanges(); } }, true);
 init();
