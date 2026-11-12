@@ -1230,7 +1230,7 @@ function healthCard(sims, reds, ms) {
 
 /* ---------- Simulados: notas ---------- */
 VIEWS['sim-notas'] = function () {
-  const all = simsAllSorted(), mods = modelosAll().filter(m => all.some(s => modeloOf(s).id === m.id));
+  const all = simsAllSorted(), mods = modelosAll(); /* todo modelo cadastrado vira um filtro, mesmo antes do primeiro simulado dele */
   const fk = mods.some(m => m.id === S.ui.notasMod) ? S.ui.notasMod : 'todos';
   const list = all.filter(s => fk === 'todos' || modeloOf(s).id === fk).reverse(), cfg = S.cfg;
   const chipsN = mods.length > 1 ? `<div class="chips" role="group" aria-label="Filtrar por prova">${[['todos', 'Todos'], ...mods.map(m => [m.id, m.nome])].map(([k, l]) => `<button class="pill" data-act="notasMod" data-k="${k}" aria-pressed="${fk === k}">${esc(l)}</button>`).join('')}</div>` : '';
