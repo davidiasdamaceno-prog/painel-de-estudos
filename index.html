@@ -289,12 +289,13 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 640px; }
 }
 @media (max-width: 900px) {
   html, body { overflow: auto; height: auto; }
-  .app { height: auto; min-height: 100%; grid-template-rows: 46px auto; }
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto; padding: 0 12px 18px; gap: 12px; }
+  .app { height: auto; min-height: 100%; grid-template-rows: 46px auto; grid-template-columns: minmax(0, 1fr); }
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; padding: 0 12px 18px; gap: 12px; }
   .side { align-self: start; }
   .side { display: none; }
   .side.open { display: block; }
   #menuBtn { display: grid; }
+  .crumb { display: none; }
   .main { overflow: visible; padding: 0; }
   .card { padding: 18px 16px; }
   .cad { grid-template-columns: 1fr; }
@@ -441,6 +442,69 @@ body.gate .shell { grid-template-columns: minmax(0, 1fr); padding: 0 20px 18px; 
 @keyframes cel-pop { from { opacity: 0; transform: translateY(14px) scale(.9); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .cel-card { animation: none; } }
 
+/* Raio-X ENEM */
+.rx-q { height: 38px; min-width: 220px; border-radius: 999px; padding: 0 14px; border: 1px solid var(--line-2); background: var(--card); color: var(--ink); font: 13px var(--sans, inherit); }
+.rx-bar { margin: 18px 0 6px; }
+.rx-ah { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 22px 4px 10px; }
+.rx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 14px; align-items: start; }
+.rx-card[hidden], .rx-area[hidden], .rx-r[hidden] { display: none; }
+.rx-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.rx-top h3 { margin: 0; font-size: 16px; font-weight: 650; }
+.rx-sub { font: 11.5px var(--mono); color: var(--muted); margin-top: 4px; }
+.rx-badge { flex: none; font: 600 10.5px var(--mono); letter-spacing: .04em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--ink-2); white-space: nowrap; }
+.rx-badge.alta { background: color-mix(in srgb, var(--pri) 16%, transparent); border-color: color-mix(in srgb, var(--pri) 45%, transparent); color: var(--ink); }
+.rx-badge.baixa { opacity: .75; }
+.rx-rows { display: grid; gap: 7px; }
+.rx-r { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(70px, 1fr) 74px; align-items: center; gap: 10px; font-size: 12.5px; padding: 2px 4px; border-radius: 8px; }
+.rx-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.rx-b { height: 8px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.rx-b i { display: block; height: 100%; border-radius: 6px; background: var(--ink-2); }
+.rx-v { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; font-family: var(--mono); }
+.rx-v b { font-weight: 600; font-size: 12.5px; color: var(--ink); } .rx-v small { color: var(--muted); font-size: 11px; min-width: 3ch; text-align: right; }
+.rx-r.mine { background: color-mix(in srgb, var(--bad, #ef476f) 14%, transparent); } .rx-r.mine .rx-b i { background: var(--bad, #ef476f); } .rx-r.mine .rx-n { color: var(--ink); }
+.rx-foot, .rx-note { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 12px; }
+.rx-xl { display: grid; margin-top: 8px; }
+.rx-x { display: grid; grid-template-columns: minmax(130px, 200px) 74px 1fr; gap: 14px; align-items: start; padding: 14px 2px; border-top: 1px solid var(--line); }
+.rx-x:first-child { border-top: 0; }
+.rx-as .rx-x { grid-template-columns: minmax(160px, 280px) 1fr; }
+.rx-xm b { display: block; font-size: 14px; } .rx-xm small { display: block; margin-top: 5px; color: var(--muted); font-size: 11.5px; }
+.rx-xa b { display: block; font: 600 18px var(--mono); } .rx-xa small { color: var(--muted); font-size: 11px; }
+.rx-xt p { margin: 6px 0 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.rx-st { display: inline-block; font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line-2); }
+.rx-st.prior { background: color-mix(in srgb, var(--bad, #ef476f) 16%, transparent); border-color: color-mix(in srgb, var(--bad, #ef476f) 50%, transparent); }
+.rx-st.wait { background: color-mix(in srgb, var(--warn, #ffd166) 16%, transparent); border-color: color-mix(in srgb, var(--warn, #ffd166) 50%, transparent); }
+.rx-st.ok { background: color-mix(in srgb, var(--good, #06d6a0) 16%, transparent); border-color: color-mix(in srgb, var(--good, #06d6a0) 50%, transparent); }
+@media (max-width: 700px) { .rx-x { grid-template-columns: 1fr 64px; } .rx-x .rx-xt { grid-column: 1 / -1; } .rx-as .rx-x { grid-template-columns: 1fr; } .rx-r { grid-template-columns: minmax(0, 1fr) 54px 64px; } .rx-q { min-width: 0; width: 100%; } }
+
+/* anexos das redações */
+.anx-l { display: grid; gap: 8px; margin: 8px 0; } .anx-l:empty { display: none; }
+.anx-i { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--card); }
+.anx-th { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; background: var(--line); display: grid; place-items: center; }
+.anx-th img { width: 100%; height: 100%; object-fit: cover; }
+.anx-m { min-width: 0; } .anx-m b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .anx-m small, .anx-act small { color: var(--muted); font-size: 11.5px; }
+.anx-act { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.anx-sec { margin-top: 18px; } .anx-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 10px; }
+.anx-t { display: grid; gap: 4px; text-align: left; padding: 8px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; transition: border-color .15s, transform .15s; }
+.anx-t:hover { border-color: var(--bd-hov); transform: translateY(-1px); } .anx-t:disabled { opacity: .6; cursor: default; }
+.anx-t img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: var(--line); }
+.anx-pdf { display: grid; place-items: center; gap: 2px; aspect-ratio: 4 / 3; border-radius: 8px; background: var(--line); color: var(--ink-2); } .anx-th .anx-pdf { aspect-ratio: auto; width: 100%; height: 100%; } .anx-pdf b { font: 600 10px var(--mono); }
+.anx-tn { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .anx-t small { color: var(--muted); font-size: 11px; }
+.anx-clip { display: inline-flex; vertical-align: -2px; color: var(--muted); margin-left: 4px; }
+.lb { position: fixed; inset: 0; z-index: 97; background: rgba(0,0,0,.86); display: grid; grid-template-rows: auto 1fr; animation: scrim-in .2s ease both; }
+.lb-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; color: #fff; } .lb-n { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .lb-act { display: flex; gap: 8px; flex: none; }
+.lb-body { min-height: 0; display: grid; place-items: center; padding: 0 16px 16px; overflow: auto; }
+.lb-body img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; } .lb-body iframe { width: min(1000px, 100%); height: 100%; border: 0; border-radius: 6px; background: #fff; }
+
+/* reordenar redações */
+.rd-g{width:34px;padding-left:8px;padding-right:0}
+.rd-h{display:inline-flex;align-items:center;justify-content:center;width:26px;height:30px;border-radius:6px;color:var(--muted,#8a93a6);cursor:grab;touch-action:none}
+.rd-h:hover{background:rgba(255,255,255,.07);color:var(--text,#e8ecf5)}
+.rd-h:active{cursor:grabbing}
+.rd-h svg{fill:currentColor;stroke:none;pointer-events:none}
+tr.rd-drag{opacity:.45}
+tr.rd-above td{box-shadow:inset 0 2px 0 var(--accent,#6aa8ff)}
+tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
+
 </style>
 </head>
 <body>
@@ -489,6 +553,8 @@ const trunc = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); retur
 
 const SER = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
 const NOTAS_RED = [0, 40, 80, 120, 160, 200];
+/* médias de nota só podem ser notas possíveis: múltiplos de 40 (competência até 200, total até 1000) */
+const stepN = (v, max = 200) => v == null || isNaN(v) ? null : Math.max(0, Math.min(max, Math.round(v / 40) * 40));
 const COMPS = ['C1', 'C2', 'C3', 'C4', 'C5'];
 const COMP_NOMES = ['Norma culta', 'Compreensão do tema', 'Argumentação', 'Coesão', 'Proposta de intervenção'];
 const MARCAS = ['Acento', 'Crase', 'Vírgula', 'Concordância', 'Regência', 'Paralelismo', 'Maiúsculas', 'Repetição de conectivo', 'Repertório sem retomada', 'Consequência vaga', 'Proposta incompleta', 'Palavra-chave do tema', 'Margens e caligrafia'];
@@ -563,7 +629,7 @@ const DEF_CFG = {
 /* ============ state ============ */
 const S = {
   route: 'visao', db: null, ai: null, assets: null,
-  sims: [], simq: {}, reds: [], cad: [], ans: [], cfg: { ...DEF_CFG },
+  sims: [], simq: {}, reds: [], cad: [], ans: [], anx: [], cfg: { ...DEF_CFG },
   loaded: false, demo: false, demoOff: false, demoForce: false, dbErr: null, slow: false,
   ui: { modelo: (() => { try { return localStorage.getItem('pe-modelo') || null; } catch (e) { return null; } })(), range: 'all', metric: 'geral', matSel: null, simSel: null, qMat: 'todas', qSt: 'todas', qSearch: '', evSel: null, thread: null, openG: { SIMULADOS: true, 'REDAÇÃO': true, ESTUDO: true }, menu: false },
   draft: {}, stream: null, modal: null, pending: false, qDirty: {}, qTimers: {}
@@ -633,7 +699,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.modal &&
 /* ============ db layer ============ */
 const wq = {};
 const enqueue = (key, fn) => { const p = (wq[key] || Promise.resolve()).catch(() => { }).then(fn); wq[key] = p; return p; };
-const LISTS = { sim: 'sims', red: 'reds', cad: 'cad', ans: 'ans' };
+const LISTS = { sim: 'sims', red: 'reds', cad: 'cad', ans: 'ans', anx: 'anx' };
 function memSet(col, id, data) {
   if (col === 'simq') { S.simq[id] = data; return; }
   if (col === 'config') { S.cfg = { ...DEF_CFG, ...data }; return; }
@@ -653,11 +719,11 @@ async function dbDel(col, id) {
   catch (e) { toast('Não consegui apagar: ' + (e && (e.message || e.code) || 'erro'), 'err'); throw e; }
 }
 function subscribe() {
-  const pend = new Set(['sim', 'simq', 'red', 'cad', 'ans', 'config']);
+  const pend = new Set(['sim', 'simq', 'red', 'cad', 'ans', 'anx', 'config']);
   const done = k => { pend.delete(k); if (!pend.size) { S.loaded = true; S.slow = false; clearTimeout(S.loadTimer); } S.demo = calcDemo(); schedule(); };
   const fail = e => { S.dbErr = e && (e.message || e.code) || 'erro'; schedule(); };
   Object.entries(LISTS).forEach(([col, key]) => {
-    S.db.collection(col).onSnapshot(snap => { S[key] = snap.docs.map(d => ({ id: d.id, ...d.data() })); done(col); }, fail);
+    S.db.collection(col).onSnapshot(snap => { S[key] = snap.docs.map(d => ({ id: d.id, ...d.data() })); done(col); }, e => { fail(e); if (col === 'anx') done(col); });
   });
   S.db.collection('simq').onSnapshot(snap => {
     const m = {}; snap.docs.forEach(d => { m[d.id] = d.data(); });
@@ -673,7 +739,7 @@ const calcDemo = () => S.loaded && (S.demoForce || (!S.demoOff && !S.sims.length
 const simsAllSorted = () => [...D().sims].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
 const simsSorted = () => { const id = activeModelo().id; return simsAllSorted().filter(s => modeloOf(s).id === id); };
 const redNo = r => redsSorted().findIndex(x => x.id === r.id) + 1;
-const redsSorted = () => [...D().reds].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
+const redsSorted = () => [...D().reds].sort((a, b) => (a.ord ?? 1e9) - (b.ord ?? 1e9) || (a.data || '').localeCompare(b.data || '') || (a.ts || 0) - (b.ts || 0));
 const simStat = s => { let a = 0, t = 0; (s.mats || []).forEach(m => { a += +m.a || 0; t += +m.t || 0; }); return { a, t, p: t ? a / t * 100 : null }; };
 const mp = (s, m) => { const x = rowsOf(s).find(y => y.m === m); return x && x.t ? x.a / x.t * 100 : null; };
 const redTotal = r => (r.c || []).reduce((x, y) => x + (+y || 0), 0);
@@ -698,7 +764,7 @@ function matStats(sims) {
 }
 function compStats(reds) {
   reds = reds || redsSorted();
-  return COMPS.map((c, i) => { const v = reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null).filter(x => x != null); return { c, nome: COMP_NOMES[i], all: avg(v), recent: avg(v.slice(-4)), last: v.at(-1) }; });
+  return COMPS.map((c, i) => { const v = reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null).filter(x => x != null); return { c, nome: COMP_NOMES[i], all: stepN(avg(v)), recent: stepN(avg(v.slice(-4))), allRaw: avg(v), recentRaw: avg(v.slice(-4)), last: v.at(-1) }; });
 }
 function errRank(n) {
   n = n || ({ last: 1, last3: 3 }[S.ui.errScope] || 9999);
@@ -1067,7 +1133,7 @@ function analysisCard(ms, sims, reds) {
   if (LITE) return liteCard();
   const cfg = S.cfg, byRecent = [...ms].sort((a, b) => (b.recent ?? 0) - (a.recent ?? 0));
   const best = byRecent[0], worst = byRecent.length > 1 ? byRecent.at(-1) : null;
-  const cs = compStats(reds).filter(c => c.all != null).sort((a, b) => (a.recent ?? 0) - (b.recent ?? 0))[0];
+  const cs = compStats(reds).filter(c => c.all != null).sort((a, b) => (a.recent ?? 0) - (b.recent ?? 0) || (a.recentRaw ?? 0) - (b.recentRaw ?? 0))[0];
   const lastSim = sims.at(-1), lastRed = reds.at(-1);
   const er = errMap(errRank().ids); const nErr = Object.values(er).reduce((x, m) => x + m.e + m.c, 0);
   const lastAn = [...D().ans].sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
@@ -1106,7 +1172,7 @@ function tableCard(ms, reds) {
   if (reds.length) {
     const tot = reds.map(redTotal), last = tot.at(-1), prev = tot.at(-2);
     red = `<tr class="click" data-act="go" data-id="red-competencias"><td><div class="cell-name"><span class="ico">${ic('pen', 17)}</span><div><div class="t">Redação ENEM</div><div class="s">${esc(trunc(reds.at(-1).tema, 34))} · ${reds.length} ${reds.length === 1 ? 'texto' : 'textos'}</div></div></div></td>
-      <td>${spark(tot)}</td><td class="num">${nf(last)} pts</td><td class="num">${nf(avg(tot))} pts</td><td>${deltaHTML(prev != null ? last - prev : null, ' pts', 0)}</td><td>${statusOf(last, cfg.metaRed, null)}</td><td class="go">${ic('arrow', 16)}</td></tr>`;
+      <td>${spark(tot)}</td><td class="num">${nf(last)} pts</td><td class="num">${nf(stepN(avg(tot), 1000))} pts</td><td>${deltaHTML(prev != null ? last - prev : null, ' pts', 0)}</td><td>${statusOf(last, cfg.metaRed, null)}</td><td class="go">${ic('arrow', 16)}</td></tr>`;
   }
   return `<section class="card" aria-label="Por matéria"><div class="scroll-x"><table class="tbl"><thead><tr><th>Componente · mais fraca primeiro</th><th>Tendência</th><th>Último</th><th>Média</th><th>Variação</th><th>Situação</th><th></th></tr></thead><tbody>${body || ''}${red}</tbody></table></div>
     ${!rows.length && !reds.length ? '<div class="empty" style="margin-top:6px"><b>Nada por aqui ainda</b>Lance um simulado ou uma redação e este quadro se monta sozinho.</div>' : ''}</section>`;
@@ -1246,10 +1312,10 @@ const redOk = r => redFilt() === 'todas' || (redFilt() === 'reescrita') === (r.t
 const redTipoChips = () => `<div class="chips">${[['todas', 'Todas'], ['original', 'Escritas'], ['reescrita', 'Reescritas']].map(([k, l]) => `<button class="pill" data-act="redTipo" data-k="${k}" aria-pressed="${redFilt() === k}">${l}</button>`).join('')}</div>`;
 VIEWS['red-textos'] = function () {
   const asc = redsSorted(), list = [...asc].filter(redOk).reverse();
-  const body = list.map(r => `<tr class="click" data-act="redOpen" data-id="${r.id}"><td class="num">#${redNo(r)}</td><td><div class="t">${esc(trunc(r.tema, 54))}</div></td><td><span class="tag ${r.tipo === 'reescrita' ? 'solid' : ''}">${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}</span></td>
+  const body = list.map(r => `<tr class="click" data-act="redOpen" data-id="${r.id}"><td class="rd-g"><span class="rd-h" draggable="true" data-id="${r.id}" title="Arraste para mudar a posição" aria-label="Arrastar para reordenar">${ic('grip', 16)}</span></td><td class="num">#${redNo(r)}</td><td><div class="t">${esc(trunc(r.tema, 54))}${anxList(r.id).length ? ` <span class="anx-clip" title="Tem anexo">${ic('clip', 13)}</span>` : ''}</div></td><td><span class="tag ${r.tipo === 'reescrita' ? 'solid' : ''}">${r.tipo === 'reescrita' ? 'Reescrita' : 'Escrita'}</span></td>
     ${COMPS.map((c, i) => `<td class="num">${r.c && r.c[i] != null ? r.c[i] : '—'}</td>`).join('')}<td class="num"><b>${nf(redTotal(r))}</b></td><td>${deltaHTML(redDelta(r, asc), ' pts', 0)}</td><td class="go">${ic('chev', 16)}</td></tr>`).join('');
-  return head('Redação', 'Cada texto com as cinco competências. A variação da reescrita é contra o texto escrito; a das escritas, contra a escrita anterior.', `${redTipoChips()}<button class="btn primary" data-act="redNew">${ic('plus', 15)} Nova redação</button>`) +
-    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl" style="min-width:760px"><thead><tr><th>Nº</th><th>Tema</th><th>Tipo</th>${COMPS.map(c => `<th title="${COMP_NOMES[COMPS.indexOf(c)]}">${c}</th>`).join('')}<th>Nota</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhuma redação ainda</b>Lance a nota de cada competência e o que a professora marcou.<div style="margin-top:14px"><button class="btn primary" data-act="redNew">Nova redação</button></div></div>`}</section>`;
+  return head('Redação', 'Cada texto com as cinco competências. Arraste pela alça para mudar a posição (#). A variação da reescrita é contra o texto escrito; a das escritas, contra a escrita anterior.', `${redTipoChips()}<button class="btn primary" data-act="redNew">${ic('plus', 15)} Nova redação</button>`) +
+    `<section class="card">${list.length ? `<div class="scroll-x"><table class="tbl" style="min-width:760px"><thead><tr><th class="rd-g"></th><th>Nº</th><th>Tema</th><th>Tipo</th>${COMPS.map(c => `<th title="${COMP_NOMES[COMPS.indexOf(c)]}">${c}</th>`).join('')}<th>Nota</th><th>Variação</th><th></th></tr></thead><tbody>${body}</tbody></table></div>` : `<div class="empty"><b>Nenhuma redação ainda</b>Lance a nota de cada competência e o que a professora marcou.<div style="margin-top:14px"><button class="btn primary" data-act="redNew">Nova redação</button></div></div>`}</section>`;
 };
 
 /* ---------- Redação: competências ---------- */
@@ -1405,7 +1471,7 @@ const AIERR = {
 };
 const aiMsg = e => (e && AIERR[e.code]) || (e && e.message) || 'Algo deu errado.';
 
-const RULES = () => `Você é o tutor de estudos dentro do painel de acompanhamento do aluno. Responda em português do Brasil, direto, usando apenas os dados abaixo. Cite números (datas, acertos, notas). Se uma série tiver menos de 3 pontos, diga que ainda não dá para falar de tendência. Nunca invente notas, questões ou resultados que não estejam nos dados; se faltar informação, diga o que falta. Formato: parágrafos curtos, listas só quando ajudam, **negrito** nos pontos principais, sem tabelas grandes.\n\nINSTRUÇÕES DO ALUNO\n${S.cfg.instr || ''}`;
+const RULES = () => `Você é o tutor de estudos dentro do painel de acompanhamento do aluno. Responda em português do Brasil, direto, usando apenas os dados abaixo. Cite números (datas, acertos, notas). Se uma série tiver menos de 3 pontos, diga que ainda não dá para falar de tendência. Nunca invente notas, questões ou resultados que não estejam nos dados; se faltar informação, diga o que falta. RAIO-X ENEM: os dados trazem a frequência dos assuntos no ENEM e um cruzamento já calculado com os meus resultados. Use isso para ponderar as conclusões: se eu erro muito uma matéria ou assunto de pouca incidência (ou fora dos assuntos mais cobrados), diga que pode ser menos prioritário e que o tempo rende mais em matérias de peso alto; se eu erro em algo de alta incidência, priorize e cite a frequência. Sempre cite o dado do Raio-X (por exemplo, a % dos itens ou o peso na área) e lembre que ele vale para o ENEM, não para FAMERP ou FAMEMA. Formato: parágrafos curtos, listas só quando ajudam, **negrito** nos pontos principais, sem tabelas grandes.\n\nINSTRUÇÕES DO ALUNO\n${S.cfg.instr || ''}`;
 
 function pack() {
   const d = D(), cfg = S.cfg, L = [];
@@ -1430,6 +1496,7 @@ function pack() {
   L.push(`\nQUESTÕES ERRADAS E CHUTES DE TODOS OS SIMULADOS (por matéria e assunto):`);
   if (!er.length) L.push('(nenhuma marcada)');
   er.forEach(([m, v]) => L.push(`- ${m}: ${v.e} erros, ${v.c} chutes; assuntos: ${Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 8).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}`));
+  L.push(rxPack());
   return L.join('\n');
 }
 function ctxDetail(ctx) {
@@ -1444,7 +1511,7 @@ function ctxDetail(ctx) {
     t = `REDAÇÃO EM FOCO: "${r.tema}" (${r.data}, ${r.tipo}) — ${(r.c || []).map((v, i) => `C${i + 1} ${v}`).join(', ')}, total ${redTotal(r)}.${(r.marcas || []).length ? ' Marcas: ' + r.marcas.join(', ') + '.' : ''}${r.obs ? '\nComentários da correção/anotações: ' + r.obs : ''}${r.texto ? '\nTEXTO DO ALUNO:\n' + r.texto.slice(0, 6000) : ''}`;
   } else if (ctx.k === 'mat') {
     const x = matStats().find(y => y.m === ctx.id); const e = errMap()[ctx.id];
-    t = `MATÉRIA EM FOCO: ${ctx.id}.${x ? ` Série (% por simulado, antigo → novo): ${x.series.map(v => v == null ? '–' : nf(v, 0)).join(', ')}.` : ''}${e ? ` Assuntos com erro: ${Object.values(e.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}.` : ''}`;
+    t = `MATÉRIA EM FOCO: ${ctx.id}.${x ? ` Série (% por simulado, antigo → novo): ${x.series.map(v => v == null ? '–' : nf(v, 0)).join(', ')}.` : ''}${e ? ` Assuntos com erro: ${Object.values(e.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}.` : ''}${(() => { const rx = rxMat(ctx.id); return rx ? `\nRAIO-X: ${rx.n} tem peso ${nf(rx.share * 100, 1)}% da área (${rxQ(rx.q)}), incidência ${rx.cls}. Assuntos mais cobrados: ${rx.a.slice(0, 6).map(x => `${x[0]} ${nf(x[1] / rx.it * 100, 1)}%`).join('; ')}.` : ''; })()}`;
   } else if (ctx.k === 'q') {
     const [sid, n] = String(ctx.id).split(':'); const doc = d.simq[sid]; const q = doc && (doc.itens || []).find(x => String(x.n) === n); const s = d.sims.find(x => x.id === sid);
     if (q) t = `QUESTÃO EM FOCO: Q${q.n} do simulado "${s ? s.nome : ''}" — matéria ${q.mat}, assunto ${q.ass || '?'}, situação: ${q.st ? ST_LABEL[q.st] : 'sem marcação'}${q.gab || q.resp ? `, gabarito ${q.gab || '?'}, minha resposta ${q.resp || '?'}` : ''}.\nENUNCIADO (extraído do PDF, pode ter falhas de formatação):\n${q.txt || '(sem texto)'}`;
@@ -1711,21 +1778,43 @@ function redForm(id) {
       <div class="row"><label class="field" style="flex:3 1 260px"><span>Tema</span><input type="text" id="f-tema" required value="${esc(cur ? cur.tema : '')}" placeholder="Ex.: Festas populares no Brasil"></label></div>
       <div class="row"><label class="field"><span>Tipo</span><select id="f-tipo"><option value="original" ${cur && cur.tipo === 'reescrita' ? '' : 'selected'}>Escrita</option><option value="reescrita" ${cur && cur.tipo === 'reescrita' ? 'selected' : ''}>Reescrita</option></select></label>
         <label class="field" id="f-de-w" style="flex:2 1 240px" ${cur && cur.tipo === 'reescrita' ? '' : 'hidden'}><span>Reescrita de</span><select id="f-de"><option value="">Escolha o texto escrito</option>${originals.map(r => `<option value="${r.id}" ${cur && cur.de === r.id ? 'selected' : ''}>#${redNo(r)} · ${esc(trunc(r.tema, 40))} · ${redTotal(r)}</option>`).join('')}</select></label>
+        <label class="field" style="flex:0 1 120px"><span>Posição (#)</span><input type="number" id="f-pos" min="1" max="${redsSorted().length + (cur ? 0 : 1)}" value="${cur ? redNo(cur) : ''}" placeholder="${redsSorted().length + 1}" title="Posição na lista de textos (1 = mais antigo). Deixe em branco para colocar por último."></label>
         <label class="field" style="flex:0 1 120px"><span>Linhas usadas</span><input type="number" id="f-lin" min="0" max="40" value="${cur && cur.linhas ? cur.linhas : ''}" placeholder="30"></label></div>
       <div class="cols">${COMPS.map((c, i) => compSel(i)).join('')}</div>
       <div class="total-line" id="f-tot"></div>
       <label class="field"><span>Comentários da correção e anotações</span><textarea id="f-obs" rows="3" placeholder="Anotações livres (opcional)">${esc(cur ? cur.obs : '')}</textarea></label>
+      <div class="field anx-f"><span>Anexos · imagem ou PDF (opcional)</span><div class="anx-l" id="anx-l"></div>
+        <div class="anx-act"><button type="button" class="btn sm" id="anx-add">${ic('plus', 14)} Adicionar arquivo</button><small>Foto da redação ou PDF da correção. Fotos são reduzidas sozinhas; PDF até 3 MB.</small></div><input type="file" id="anx-in" accept="image/*,application/pdf" multiple hidden></div>
       <details ${LITE ? 'hidden' : ''} ${cur && cur.texto ? 'open' : ''}><summary class="sub" style="cursor:pointer">Colar o texto da redação (opcional, o Claude lê quando você pedir análise)</summary><textarea id="f-texto" rows="8" style="margin-top:10px" placeholder="Cole o texto aqui">${esc(cur ? cur.texto : '')}</textarea></details>
       <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar redação</button></div></form>`, { wide: true });
   const tot = () => { const v = $$('[data-c]', box).map(s => +s.value); $('#f-tot', box).textContent = `Nota total: ${v.reduce((a, b) => a + b, 0)} de 1000`; };
   box.addEventListener('change', e => { if (e.target.matches('[data-c]')) tot(); if (e.target.id === 'f-tipo') $('#f-de-w', box).hidden = e.target.value !== 'reescrita'; }); tot();
+  const AX = { keep: cur ? anxList(cur.id) : [], add: [], del: [] };
+  const axRender = () => {
+    const rows = [...AX.keep.map(a => ({ ...a, k: 'keep' })), ...AX.add.map(a => ({ ...a, k: 'add' }))];
+    $('#anx-l', box).innerHTML = rows.map(a => `<div class="anx-i"><span class="anx-th">${a.mime === 'application/pdf' ? `<span class="anx-pdf">${ic('file', 20)}</span>` : (a.dataUrl || a.ok) ? `<img src="${a.dataUrl || anxUrl(a)}" alt="">` : ''}</span><span class="anx-m"><b>${esc(trunc(a.nome, 40))}</b><small>${fmtSize(a.tam)}${a.k === 'add' ? ' · novo' : ''}</small></span><button type="button" class="btn sm" data-ax-rm="${esc(a.aid)}" data-ax-k="${a.k}">Remover</button></div>`).join('');
+  };
+  axRender();
   box.addEventListener('click', e => {
     if (e.target.closest('[data-x=cancel]')) { closeModal(); return; }
+    if (e.target.closest('#anx-add')) { $('#anx-in', box).click(); return; }
+    const rm = e.target.closest('[data-ax-rm]');
+    if (rm) { const id = rm.dataset.axRm; if (rm.dataset.axK === 'add') AX.add = AX.add.filter(a => a.aid !== id); else { const a = AX.keep.find(x => x.aid === id); AX.keep = AX.keep.filter(x => x.aid !== id); if (a) AX.del.push(a); } axRender(); }
+  });
+  $('#anx-in', box).addEventListener('change', async e => {
+    const files = [...e.target.files]; e.target.value = '';
+    for (const f of files) { try { const p = await anxPrepare(f); AX.add.push({ aid: uid(), ...p }); axRender(); } catch (err) { toast(err.message, 'err'); } }
   });
   $('#f', box).onsubmit = async e => {
     e.preventDefault(); const tipo = $('#f-tipo', box).value;
     const doc = { ...(cur ? strip(cur) : { ts: Date.now() }), tema: $('#f-tema', box).value.trim(), data: cur ? cur.data : TODAY_ISO, tipo, de: tipo === 'reescrita' ? $('#f-de', box).value : '', c: $$('[data-c]', box).map(s => +s.value), linhas: num($('#f-lin', box).value) || 0, obs: $('#f-obs', box).value.trim(), texto: $('#f-texto', box).value.trim() };
-    try { await dbSet('red', cur ? cur.id : uid(), doc); closeModal(); toast('Redação salva.'); } catch (e2) { }
+    const rid = cur ? cur.id : uid(), btn = $('#f button[type=submit]', box);
+    try {
+      if (btn) { btn.disabled = true; btn.textContent = AX.add.length ? 'Enviando anexos…' : 'Salvando…'; }
+      await redSaveAt(rid, doc, num($('#f-pos', box).value), !cur);
+      let ax = true; try { await anxDelete(AX.del); await anxSave(rid, AX.add); } catch (e3) { ax = false; }
+      closeModal(); if (ax) toast('Redação salva.'); else toast('A redação foi salva, mas algum anexo não foi enviado. Abra a redação e tente de novo.', 'err');
+    } catch (e2) { if (btn) { btn.disabled = false; btn.textContent = 'Salvar redação'; } }
   };
 }
 function redDetail(id) {
@@ -1736,14 +1825,16 @@ function redDetail(id) {
     ${barRows(COMPS.map((c, i) => ({ n: `${c} · ${COMP_NOMES[i]}`, pct: (+r.c[i] || 0) / 200 * 100, v: String(r.c[i]), color: SER[i] })))}
     ${(r.marcas || []).length ? `<div class="chips" style="margin-top:16px">${r.marcas.map(m => `<span class="tag">${esc(m)}</span>`).join('')}</div>` : ''}
     ${r.obs ? `<p style="margin-top:16px;color:var(--ink-2);white-space:pre-wrap">${esc(r.obs)}</p>` : ''}
+    ${(() => { const ax = anxList(r.id); return ax.length ? `<div class="anx-sec"><div class="lbl">Anexos</div><div class="anx-g">${ax.map(anxTile).join('')}</div></div>` : ''; })()}
     ${r.texto ? `<details style="margin-top:14px"><summary class="sub" style="cursor:pointer">Ver texto</summary><div class="q-txt" style="margin-top:10px">${esc(r.texto)}</div></details>` : ''}
     <div class="foot" style="justify-content:space-between"><button class="btn danger" data-x="del">${ic('trash', 14)} Excluir</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-x="edit">Editar</button><button class="btn" data-x="ask">Comentar</button><button class="btn primary" data-x="an" ${aiAttr()}>Pedir análise deste texto</button></div></div>`, { wide: true });
   box.addEventListener('click', async e => {
+    const tl = e.target.closest('[data-anx]'); if (tl) { anxOpen(id, tl.dataset.anx); return; }
     const x = e.target.closest('[data-x]'); if (!x) return; const k = x.dataset.x;
     if (k === 'edit') { closeModal(); redForm(id); }
     else if (k === 'ask') { closeModal(); threadModal({ k: 'red', id }, '', false); }
     else if (k === 'an') { closeModal(); createThread({ ctx: { k: 'red', id }, text: 'Analise esta redação pela Cartilha do Participante ENEM 2026 e pela minha estrutura. O que mais pesou na nota de cada competência e o que eu mudo no próximo texto?', ask: true }); }
-    else if (k === 'del') { closeModal(); const ok = await confirmBox({ title: 'Excluir esta redação?', text: 'Não dá para desfazer.', ok: 'Excluir', danger: true }); if (ok) { try { await dbDel('red', id); toast('Redação excluída.'); } catch (e2) { } } }
+    else if (k === 'del') { closeModal(); const ok = await confirmBox({ title: 'Excluir esta redação?', text: 'Não dá para desfazer.', ok: 'Excluir', danger: true }); if (ok) { try { await anxDelete(anxList(id)).catch(() => { }); await dbDel('red', id); toast('Redação excluída.'); } catch (e2) { } } }
   });
 }
 
@@ -1978,7 +2069,7 @@ function tutorialForm() {
     ['Simulados completos', `<p>Junta o Dia 1 e o Dia 2 de cada grupo e mostra o total. Se faltar um dos dias, o painel avisa qual falta.</p>`],
     ['Evolução', `<p>Mostra cada área ao longo dos simulados, a variação no último simulado e o <b>mapa de calor</b>, em que o azul mais forte indica acerto maior.</p>`],
     ['Conclusões', LITE ? `<p>A aba <b>Conclusões</b> mostra a área que mais melhorou, a que mais caiu e a em que você mais erra. É tudo cálculo sobre os seus simulados.</p><p>Melhorou e caiu comparam a média dos simulados mais recentes (até 3) com a dos anteriores. Os botões Todos, Últimos 3 e Último mudam só a contagem de erros. Embaixo você vê a redação por competência.</p>` : `<p>Em <b>Plano e conclusões</b> você vê onde mais erra por área, matéria e assunto, e pode pedir análises ao Claude. Conforme você acerta mais de um assunto, ele desce no ranking.</p>`],
-    ['Redação', `<p>Em <b>Textos</b>, lance o tema, se é escrita ou reescrita e a nota de cada uma das 5 competências (0 a 200, em degraus de 40). O total vai até 1000.</p><p>O filtro <b>Todas / Escritas / Reescritas</b> vale para a lista e para os gráficos. Em <b>Competências</b> você vê a evolução de cada competência, a média e o <b>efeito da reescrita</b>, que compara a reescrita com o texto original.</p>`],
+    ['Redação', `<p>Em <b>Textos</b>, lance o tema, se é escrita ou reescrita, anexe uma foto ou PDF se quiser, e a nota de cada uma das 5 competências (0 a 200, em degraus de 40). O total vai até 1000.</p><p>O filtro <b>Todas / Escritas / Reescritas</b> vale para a lista e para os gráficos. Em <b>Competências</b> você vê a evolução de cada competência, a média e o <b>efeito da reescrita</b>, que compara a reescrita com o texto original.</p>`],
     ['Metas, provas e contagem regressiva', `<p>Em <b>Configurações</b> você define a meta padrão, o <b>piso</b> (abaixo dele uma área aparece como crítica) e a meta de redação.</p><p>Em <b>Provas e datas</b>, cadastre quantas provas quiser, com nome, data, horário opcional e a cor do quadrado. Cada prova ganha um quadrado colorido na Visão geral (você escolhe a cor), com dias, horas, minutos e segundos.</p>`],
     ['Aparência e dados de exemplo', `<p>Em Configurações, <b>Aparência</b> troca entre escuro e claro. <b>Ver dados de exemplo</b> mostra o painel com números fictícios; eles não são salvos e os seus dados reais ficam guardados. Para sair, use o botão do aviso no topo ou lance um simulado.</p>`],
     LITE ? ['Seus dados e backup', FB_CFG ? `<p>Ao entrar com a sua conta Google, os seus simulados, redações e configurações ficam salvos na nuvem e aparecem em qualquer aparelho em que você entrar. Em <b>Configurações > Conta</b> você vê com qual conta está conectado e pode sair.</p><p>Se você usou o painel antes sem entrar, o painel oferece enviar esses dados para a conta na primeira vez. <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta.</p>` : `<p>Nesta versão, os dados ficam só no navegador que você está usando. Se limpar os dados do navegador, eles somem.</p><p>Em Configurações, <b>Exportar dados</b> baixa um arquivo de backup e <b>Importar dados</b> carrega esse arquivo de volta. É assim que você leva tudo para outro aparelho.</p>`]
@@ -2025,10 +2116,11 @@ function tourSteps() {
     { r: 'sim-evolucao', s: '#main .view > section.card', t: 'Evolução geral', x: 'A linha do aproveitamento ao longo dos simulados. Troque entre % e acertos nos botões do canto.' },
     { r: 'sim-evolucao', s: cardWith('Mapa de calor'), t: 'Mapa de calor', x: 'As linhas são áreas e as colunas são simulados: quanto mais forte o azul, maior o acerto. Dá para ver de relance onde você melhorou.' },
     { r: 'sim-conjuntos', s: '#main .view > section.card', t: 'Simulados completos', x: 'Junta o Dia 1 e o Dia 2 de cada grupo e mostra o total. Se faltar um dos dias, o painel avisa qual.' },
-    { r: 'red-textos', s: '[data-act=redNew]', t: 'Lançar uma redação', x: 'Cadastre o tema, se é escrita ou reescrita e a nota de cada competência (de 0 a 200, em degraus de 40). Anotações e datas entram nos comentários.' },
+    { r: 'red-textos', s: '[data-act=redNew]', t: 'Lançar uma redação', x: 'Cadastre o tema, se é escrita ou reescrita, anexe uma foto ou PDF da redação se quiser, e a nota de cada competência (de 0 a 200, em degraus de 40). Anotações e datas entram nos comentários. Depois, arraste a alça ⋮⋮ da linha para mudar a posição (#) do texto.' },
     { r: 'red-competencias', s: cardWith('Média por competência'), t: 'Competências e reescrita', x: 'A média de cada competência e o efeito da reescrita: quantos pontos, em média, a reescrita ganha em relação ao texto original.' },
     L ? { r: 'conclusoes', s: '#main .view > .g-3', t: 'Conclusões', x: 'A área que mais melhorou, a que mais caiu e a em que você mais erra, comparando os simulados recentes (até 3) com os anteriores. Embaixo, a redação por competência.' }
       : { r: 'plano', s: cardWith('Onde mais erro'), t: 'Onde mais erro', x: 'O ranking do que você mais erra, por área, matéria e assunto. Conforme você acerta mais, o assunto desce na lista.' },
+    { r: 'raiox', s: '.rx-bar', t: 'Raio-X ENEM', x: 'Os assuntos mais cobrados no ENEM de 2009 a 2025, por matéria. Troque a área nos botões, busque um assunto no campo de cima e veja, no quadro acima, onde o seu desempenho pede prioridade e o que pode esperar.' },
     { r: 'visao', s: '[data-act=cfg]', t: 'Configurações', x: 'Aqui ficam as metas, as provas e datas da contagem regressiva, o tema claro ou escuro, os dados de exemplo e a conta. Para rever este passeio, abra Configurações > Tour guiado.', side: 'bottom', last: 1 }
   ];
 }
@@ -2149,6 +2241,96 @@ function confetti(host, cols) {
   };
   _cf.raf = requestAnimationFrame(step);
 }
+
+/* ============ anexos das redações (imagem ou PDF) ============ */
+/* Cada arquivo vira um ou mais documentos na coleção 'anx' (pedaços de até ~650 KB em texto), ligados à redação por "red". */
+const ANX_CHUNK = 650000, ANX_MAX = 3 * 1024 * 1024, ANX_PX = 1600;
+const fmtSize = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB';
+function anxList(redId) {
+  const g = {};
+  (S.anx || []).filter(c => c.red === redId).forEach(c => { const a = g[c.aid] = g[c.aid] || { aid: c.aid, nome: c.nome, mime: c.mime, tam: c.tam, n: c.n, ts: c.ts || 0, parts: [] }; a.parts[c.i] = c; });
+  return Object.values(g).sort((a, b) => a.ts - b.ts).map(a => ({ ...a, ok: a.parts.filter(Boolean).length === a.n }));
+}
+const anxUrl = a => a.parts.map(p => p.d).join('');
+const anxIsPdf = a => a.mime === 'application/pdf';
+const anxRead = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => no(new Error('não consegui ler o arquivo')); r.readAsDataURL(f); });
+async function anxImage(file) {
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const k = Math.min(1, ANX_PX / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(bmp, 0, 0, w, h); if (bmp.close) bmp.close();
+  let q = .8, blob; do { blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', q)); q -= .12; } while (blob && blob.size > 700000 && q > .3);
+  if (!blob) throw new Error('não consegui converter a imagem');
+  return { dataUrl: await anxRead(blob), tam: blob.size, nome: file.name.replace(/\.[^.]+$/, '') + '.jpg', mime: 'image/jpeg' };
+}
+async function anxPrepare(file) {
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+    if (file.size > ANX_MAX) throw new Error(`${file.name}: o PDF passa de ${fmtSize(ANX_MAX)} (tem ${fmtSize(file.size)}). Tire uma foto da página ou reduza o PDF.`);
+    return { dataUrl: await anxRead(file), tam: file.size, nome: file.name, mime: 'application/pdf' };
+  }
+  if (/^image\//.test(file.type)) { try { return await anxImage(file); } catch (e) { throw new Error(`${file.name}: não consegui abrir essa imagem (${e.message}). Tente JPG ou PNG.`); } }
+  throw new Error(`${file.name}: só aceito imagem ou PDF.`);
+}
+async function anxSave(redId, add) {
+  for (const a of add) {
+    const n = Math.ceil(a.dataUrl.length / ANX_CHUNK), ts = Date.now();
+    for (let i = 0; i < n; i++) await dbSet('anx', `${redId}_${a.aid}_${i}`, { red: redId, aid: a.aid, nome: a.nome, mime: a.mime, tam: a.tam, i, n, ts, d: a.dataUrl.slice(i * ANX_CHUNK, (i + 1) * ANX_CHUNK) });
+  }
+}
+async function anxDelete(list) { for (const a of list) for (const p of a.parts.filter(Boolean)) await dbDel('anx', p.id); }
+
+/* visualizador: imagem em tela cheia ou PDF embutido */
+async function anxOpen(redId, aid) {
+  const a = anxList(redId).find(x => x.aid === aid); if (!a || !a.ok) { toast('Esse anexo ainda não terminou de carregar.', 'err'); return; }
+  const url = anxUrl(a); let src = url, rev = null;
+  if (anxIsPdf(a)) { try { rev = src = URL.createObjectURL(await (await fetch(url)).blob()); } catch (e) { src = url; } }
+  const d = document.createElement('div'); d.className = 'lb'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.innerHTML = `<div class="lb-bar"><span class="lb-n">${esc(a.nome)}</span><span class="lb-act"><a class="btn sm" href="${src}" download="${esc(a.nome)}" target="_blank" rel="noopener">Baixar</a><button type="button" class="btn sm" data-lb="x">Fechar</button></span></div><div class="lb-body">${anxIsPdf(a) ? `<iframe src="${src}" title="${esc(a.nome)}"></iframe>` : `<img src="${src}" alt="${esc(a.nome)}">`}</div>`;
+  document.body.appendChild(d);
+  const close = () => { document.removeEventListener('keydown', key, true); d.remove(); if (rev) URL.revokeObjectURL(rev); };
+  const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+  document.addEventListener('keydown', key, true);
+  d.addEventListener('click', e => { if (e.target.closest('[data-lb=x]') || e.target.classList.contains('lb-body') || e.target === d) close(); });
+}
+const anxTile = a => `<button type="button" class="anx-t" data-anx="${esc(a.aid)}" title="${esc(a.nome)}" ${a.ok ? '' : 'disabled'}>${anxIsPdf(a) ? `<span class="anx-pdf">${ic('file', 26)}<b>PDF</b></span>` : a.ok ? `<img src="${anxUrl(a)}" alt="">` : '<span class="anx-pdf">…</span>'}<span class="anx-tn">${esc(trunc(a.nome, 26))}</span><small>${fmtSize(a.tam)}${a.ok ? '' : ' · carregando'}</small></button>`;
+ICONS.clip = '<path d="m21 11-8.5 8.5a5 5 0 0 1-7-7l9-9a3.3 3.3 0 0 1 4.7 4.7l-9 9a1.7 1.7 0 0 1-2.4-2.4l8.3-8.3"/>';
+
+/* ============ ordem das redações: arrastar na lista ou escolher a posição no formulário ============ */
+ICONS.grip = '<circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/>';
+async function redWriteOrder(ids) {
+  const by = new Map(S.reds.map(r => [r.id, r]));
+  for (let i = 0; i < ids.length; i++) { const r = by.get(ids[i]); if (r && r.ord !== i + 1) await dbSet('red', r.id, { ...strip(r), ord: i + 1 }); }
+}
+/* salva a redação (nova ou editada) já na posição pedida (1 = mais antiga) */
+async function redSaveAt(rid, doc, pos, isNew) {
+  const all = redsSorted(), others = all.filter(r => r.id !== rid), total = others.length + 1;
+  const curIdx = isNew ? total - 1 : all.findIndex(r => r.id === rid), want = pos ? Math.min(Math.max(1, Math.round(pos)), total) - 1 : curIdx;
+  if (want === curIdx) { if (isNew && all.some(r => r.ord != null)) doc.ord = Math.max(...all.map(r => r.ord || 0)) + 1; await dbSet('red', rid, doc); return; }
+  const order = others.map(r => r.id); order.splice(want, 0, rid);
+  const by = new Map(S.reds.map(r => [r.id, r]));
+  for (let i = 0; i < order.length; i++) { if (order[i] === rid) await dbSet('red', rid, { ...doc, ord: i + 1 }); else { const r = by.get(order[i]); if (r && r.ord !== i + 1) await dbSet('red', r.id, { ...strip(r), ord: i + 1 }); } }
+}
+let _rd = null, _rdT = null;
+const rdClear = () => { $$('.rd-over,.rd-above,.rd-below,.rd-drag').forEach(x => x.classList.remove('rd-over', 'rd-above', 'rd-below', 'rd-drag')); };
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('.rd-h')) e.stopPropagation(); }, true);
+document.addEventListener('dragstart', e => {
+  const h = e.target.closest && e.target.closest('.rd-h'); if (!h) return;
+  if (S.demo) { e.preventDefault(); toast('Estes são dados de exemplo. Lance a sua redação para poder reordenar.'); return; }
+  _rd = h.dataset.id; _rdT = null; const tr = h.closest('tr'); tr.classList.add('rd-drag');
+  e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', _rd); e.dataTransfer.setDragImage(tr, 24, 20); } catch (x) { }
+});
+document.addEventListener('dragover', e => {
+  if (!_rd) return; const tr = e.target.closest && e.target.closest('tr[data-id]'); if (!tr || tr.dataset.id === _rd) return;
+  e.preventDefault(); const r = tr.getBoundingClientRect(), above = e.clientY < r.top + r.height / 2;
+  $$('.rd-over').forEach(x => x.classList.remove('rd-over', 'rd-above', 'rd-below')); tr.classList.add('rd-over', above ? 'rd-above' : 'rd-below'); _rdT = { id: tr.dataset.id, above };
+});
+document.addEventListener('drop', async e => {
+  if (!_rd || !_rdT) return; e.preventDefault(); const src = _rd, t = _rdT; _rd = _rdT = null; rdClear();
+  /* a lista mostra o maior número no topo: soltar "acima" de um texto = ficar depois dele na ordem crescente */
+  const asc = redsSorted().map(r => r.id).filter(x => x !== src), ti = asc.indexOf(t.id); if (ti < 0) return;
+  asc.splice(t.above ? ti + 1 : ti, 0, src);
+  try { await redWriteOrder(asc); toast(`Redação movida para #${asc.indexOf(src) + 1}.`); } catch (x) { }
+});
+document.addEventListener('dragend', () => { _rd = _rdT = null; rdClear(); });
 
 /* ============ ações, eventos e início ============ */
 function setQDoc(sid, doc) {
@@ -2317,7 +2499,7 @@ function liteAreas() {
 }
 function liteComps() {
   const reds = redsSorted().filter(redOk); const rows = [];
-  for (let i = 0; i < 5; i++) { const v = reds.map(r => (r.c || [])[i]).filter(x => x != null); if (!v.length) continue; const t = trendOf(v); rows.push({ n: 'C' + (i + 1), v, t, d: t ? t.now - t.before : null, avg: meanOf(v), last: v.at(-1) }); }
+  for (let i = 0; i < 5; i++) { const v = reds.map(r => (r.c || [])[i]).filter(x => x != null); if (!v.length) continue; const t0 = trendOf(v), t = t0 ? { before: stepN(t0.before), now: stepN(t0.now) } : null; rows.push({ n: 'C' + (i + 1), v, t, d: t ? t.now - t.before : null, dRaw: t0 ? t0.now - t0.before : null, avg: stepN(meanOf(v)), avgRaw: meanOf(v), last: v.at(-1) }); }
   return rows;
 }
 const sgn = (d, u) => d == null ? '—' : (d >= 0 ? '+' : '−') + nf(Math.abs(d), u === 'pts' ? 0 : 1) + (u === 'pts' ? ' pts' : ' p.p.');
@@ -2366,7 +2548,7 @@ const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return 
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
 const lsDel = k => { try { localStorage.removeItem(k); } catch (e) { } };
 const FB_VER = '10.14.1';
-const CLOUD_COLS = ['sim', 'simq', 'red', 'cad', 'ans', 'config'];
+const CLOUD_COLS = ['sim', 'simq', 'red', 'cad', 'ans', 'anx', 'config'];
 function fbLoad(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('falha ao carregar ' + src)); document.head.appendChild(s); }); }
 async function fbBoot() {
   const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
@@ -2429,8 +2611,130 @@ function loginHTML() {
 function liteData() {
   if (!S.cloud) return liteLoad();
   const m = a => Object.fromEntries(a.map(({ id, ...r }) => [id, r]));
-  return { sim: m(S.sims), simq: { ...S.simq }, red: m(S.reds), cad: m(S.cad), ans: m(S.ans), config: { geral: { ...S.cfg } } };
+  return { sim: m(S.sims), simq: { ...S.simq }, red: m(S.reds), cad: m(S.cad), ans: m(S.ans), anx: m(S.anx), config: { geral: { ...S.cfg } } };
 }
+
+/* ============ Raio-X ENEM: assuntos mais cobrados (2009–2025) e cruzamento com os seus erros ============ */
+/* Fonte: SAS Educação, "Raio X ENEM 2009–2025". a = [assunto, frequência]; it = itens analisados da matéria. */
+const RAIOX = [{"id":"lin","curto":"Linguagens","nome":"Linguagens, Códigos e suas Tecnologias","mats":[{"n":"Arte","it":26,"a":[["Idade Contemporânea - compreensão do papel social da arte e a análise de contextos históricos culturais",8],["Culturas que aparecem em tempos variados",6],["Arte e comunicação - linguagem, estética e impacto sociocultural",4],["Artes Integradas - articulação entre linguagens na construção de sentidos estéticos e culturais",3],["Arte e identidade - relações entre produções artísticas e a construção de identidades visuais e coletivas",2],["Arte e resistência - arte como forma de resistência cultural, social e política em diferentes contextos",2],["Arte e meio ambiente - relação entre arte, natureza e sustentabilidade",1]]},{"n":"Educação Física","it":21,"a":[["Conceituação de jogos, brincadeiras e esporte",3],["Corpo e cultura de movimento",3],["Conceituação de saúde e atividade física",3],["Fatores de risco à saúde",2],["Promoção da saúde nas várias faixas etárias",2],["Esporte e mídia",2],["Luta - manifestação cultural corporal",2],["Esporte e espetáculo",1],["Padrões e estereótipos de beleza corporal",1],["Alimentação, exercício físico e obesidade",1],["Esporte e inclusão social",1]]},{"n":"Espanhol","it":120,"a":[["Apreensão de sentido",55],["Definição, reconhecimento e interpretação de estruturas linguísticas e aspectos discursivos em textos",21],["Habilidades de leitura",18],["Identificação de pontos de vista do autor",7],["Variedades linguísticas",7],["Expresiones idiomáticas/Frases hechas",5],["Publicitário",2],["Verbos",2],["Equivalencia de vocablos",1],["Número",1],["Poesia",1]]},{"n":"Inglês","it":137,"a":[["Definição, reconhecimento e interpretação de estruturas linguísticas e aspectos discursivos em textos",58],["Habilidades de leitura",33],["Apreensão de sentido",20],["Apreensão de sentidos globais e específicos em textos de Língua Inglesa",13],["Leitura e interpretação de dados, articulando informações verbais e não verbais",5],["Vocabulário - reconhecimento e compreensão em contexto",5],["Advérbios",1],["Marcadores discursivos na construção de sentidos do texto",1],["Significado de expressões em contexto com uso linguístico adequado",1]]},{"n":"Português","it":1233,"a":[["Competência leitora",570],["Apreensão de sentido",139],["Definição, reconhecimento e interpretação de estruturas linguísticas e aspectos discursivos em textos",82],["Competência linguística",56],["Elementos da comunicação",52],["Estratégias de convencimento",51],["Habilidades de leitura",51],["Gêneros textuais - estrutura, finalidade e contexto de produção",31],["Impacto e função das Tecnologias da Informação e Comunicação",24],["Literatura brasileira",19]]}]},{"id":"hum","curto":"Humanas","nome":"Ciências Humanas e suas Tecnologias","mats":[{"n":"Filosofia","it":188,"a":[["Filosofia política",24],["Moral e ética",15],["Aristóteles",10],["Origens da modernidade",8],["Descartes",8],["Filosofia medieval",8],["Naturalistas ou filósofos de Physis",8],["Cultura e sociedade",7],["Epistemologia",7],["Filosofia antiga",7],["Filosofia contemporânea",7],["Kant",7]]},{"n":"Geografia","it":501,"a":[["Urbanização",34],["Agropecuária",32],["Ruralidade",26],["Desenvolvimento Econômico",24],["Geopolítica e relações internacionais",21],["Geomorfologia",19],["Migrações",19],["Interpretação de Mapas",18],["Climatologia",18],["Geologia",14]]},{"n":"História","it":514,"a":[["Brasil colonial",46],["Primeira República",31],["Era Vargas",26],["Brasil Império: Segundo reinado",23],["História Pública",22],["Ditadura Civil-Militar no Brasil",21],["Civilizações da Antiguidade Clássica",13],["Revolução Industrial",13],["Abolição da Escravidão",12],["Absolutismo monárquico",9],["República Nova",9],["Trabalho escravo",9],["América Latina no século XX",9]]},{"n":"Sociologia","it":237,"a":[["Direito, cidadania e movimentos sociais",48],["Cultura e sociedade",27],["Identidade e diversidade",25],["Política e Estado",23],["Trabalho e sociedade",21],["Meios de comunicação",14],["Desigualdade",11],["Patrimônio cultural",8],["Estrutura social e desigualdade",8],["Dilemas da sociedade contemporânea",7],["Violência",7]]}]},{"id":"nat","curto":"Natureza","nome":"Ciências da Natureza e suas Tecnologias","mats":[{"n":"Biologia","it":551,"a":[["Desequilíbrio em ecossistemas",64],["Doenças causadas por vírus (viroses)",23],["DNA – material genético e genética do funcionamento dos genes",22],["Bioquímica",18],["Biologia celular",18],["Ciclos biogeoquímicos",17],["Relações ecológicas",16],["Cadeias e teias alimentares",15],["Doenças causadas por protozoários (protozooses)",13],["Doenças causadas por bactérias (bacterioses)",12],["Relações Interespecíficas",12],["Saúde",12]]},{"n":"Física","it":482,"a":[["Calorimetria",36],["Circuitos Elétricos",32],["Termodinâmica",24],["Forças e movimento",24],["Consumo de energia elétrica",17],["Reflexão e Refração",15],["Trabalho, energia e os teoremas",13],["Propriedades Físicas do Som",13],["Aplicações das Propriedades das Ondas",13],["Lançamento Vertical, Horizontal e Oblíquo",11]]},{"n":"Química","it":599,"a":[["Funções orgânicas",36],["Reações orgânicas",28],["Aplicações da Cinética Química",25],["Pilhas",19],["Processos de separação de misturas",19],["Tecnologias Ambientais",18],["Controle de Poluição",17],["Concentração de soluções",17],["Poluição da Água",16],["Tipos de Reações Químicas",15]]}]},{"id":"mat","curto":"Matemática","nome":"Matemática e suas Tecnologias","mats":[{"n":"Matemática","it":1507,"a":[["Proporcionalidade Direta e Indireta",223],["Estatística",190],["Geometria Plana",111],["Geometria Espacial",99],["Probabilidade",83],["Funções",81],["Razão",57],["Volume",56],["Análise combinatória",56],["Unidades de medida",49]]}]}];
+const RX_FONTE = 'SAS Educação · Raio X ENEM 2009–2025';
+const rxNrm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const RX_ALIAS = { 'lingua portuguesa': 'Português', portugues: 'Português', literatura: 'Português', gramatica: 'Português', 'lingua inglesa': 'Inglês', ingles: 'Inglês', 'lingua espanhola': 'Espanhol', espanhol: 'Espanhol', matematica: 'Matemática', fisica: 'Física', quimica: 'Química', biologia: 'Biologia', historia: 'História', geografia: 'Geografia', filosofia: 'Filosofia', sociologia: 'Sociologia', arte: 'Arte', artes: 'Arte', 'educacao fisica': 'Educação Física' };
+const rxAreaTot = a => a.mats.reduce((s, m) => s + m.it, 0);
+const rxArea = id => RAIOX.find(a => a.id === id);
+const rxFind = nome => { const k = rxNrm(nome), t = RX_ALIAS[k] || nome; for (const a of RAIOX) { const m = a.mats.find(x => rxNrm(x.n) === rxNrm(t)); if (m) return { a, m }; } return null; };
+/* devolve a matéria do Raio-X que corresponde ao nome usado nos simulados (ou null). "Filosofia e Sociologia" vira uma só. */
+function rxMat(nome) {
+  const parts = String(nome || '').split(/\s+e\s+|\s*\+\s*|\s*\/\s*/).map(s => s.trim()).filter(Boolean);
+  const hits = (parts.length > 1 ? parts : [nome]).map(rxFind);
+  if (!hits.length || hits.some(h => !h)) return null;
+  const a = hits[0].a; if (hits.some(h => h.a !== a)) return null;
+  const ms = hits.map(h => h.m), it = ms.reduce((s, m) => s + m.it, 0), tot = rxAreaTot(a), share = it / tot;
+  const as = ms.length === 1 ? ms[0].a : ms.flatMap(m => m.a.map(([n, f]) => [n, f, m.n])).sort((x, y) => y[1] - x[1]).slice(0, 12);
+  return { n: ms.map(m => m.n).join(' e '), area: a, it, share, cls: rxCls(share), q: share * 45, a: as, ms };
+}
+const rxCls = sh => sh >= .25 ? 'alta' : sh >= .05 ? 'media' : 'baixa';
+const RX_CLS = { alta: 'Incidência alta', media: 'Incidência média', baixa: 'Incidência baixa' };
+const rxQ = q => q < .95 ? '≈ 1 questão' : q < 1.5 ? '≈ 1 questão' : `≈ ${nf(q, 0)} questões`;
+/* assunto digitado pelo aluno -> assunto do Raio-X (por palavras em comum); null se não bater */
+function rxAssunto(rx, texto) {
+  const tk = s => new Set(rxNrm(s).split(' ').filter(w => w.length > 3));
+  const A = tk(texto); if (!A.size || !rx) return null; let best = null, bs = 0;
+  rx.a.forEach(([n, f]) => { const B = tk(n); if (!B.size) return; let c = 0; A.forEach(w => { if (B.has(w) || [...B].some(b => b.startsWith(w) || w.startsWith(b))) c++; }); const sc = c / Math.min(A.size, B.size); if (sc > bs) { bs = sc; best = { n, f }; } });
+  if (!best || bs < .75) return null;
+  return { ...best, p: best.f / rx.it * 100 };
+}
+const rxCorte = rx => rx.a.length ? rx.a[rx.a.length - 1][1] / rx.it * 100 : 0;
+
+/* desempenho por matéria (todos os simulados) cruzado com o peso no ENEM */
+function rxCross() {
+  const meta = +S.cfg.metaAcerto || 75, by = {};
+  simsAllSorted().forEach(s => matRows(s).forEach(r => {
+    const t = +r.t; if (!(t > 0)) return; const rx = rxMat(r.m); if (!rx) return;
+    (by[rx.n] = by[rx.n] || { rx, h: [] }).h.push({ d: s.data, a: +r.a || 0, t });
+  }));
+  const rows = Object.values(by).map(({ rx, h }) => {
+    const rec = h.slice(-3), acc = rec.reduce((s, x) => s + x.a, 0) / rec.reduce((s, x) => s + x.t, 0) * 100;
+    return { rx, acc, n: h.length, weak: acc < meta, score: (meta - acc) * rx.share, top: rx.a.slice(0, 3).map(x => x[0]) };
+  });
+  const prior = rows.filter(r => r.weak && r.rx.cls !== 'baixa').sort((a, b) => b.score - a.score);
+  const wait = rows.filter(r => r.weak && r.rx.cls === 'baixa');
+  const ok = rows.filter(r => !r.weak);
+  rows.forEach(r => { r.st = !r.weak ? 'ok' : r.rx.cls === 'baixa' ? 'wait' : 'prior'; });
+  return { meta, rows: [...prior, ...wait, ...ok], prior, wait, ok };
+}
+function rxText(r, X) {
+  const nm = r.rx.n, sh = nf(r.rx.share * 100, 0) + '%', p = nf(r.acc, 0) + '%';
+  if (r.st === 'prior') return `Você acerta ${p} (meta ${nf(X.meta, 0)}%) e ${nm} pesa cerca de ${sh} da área (${rxQ(r.rx.q)}). Vale priorizar. Comece por: ${r.top.join(', ')}.`;
+  if (r.st === 'wait') { const alt = X.prior[0]; return `Você acerta ${p}, mas ${nm} pesa só ${nf(r.rx.share * 100, 1)}% da área (${rxQ(r.rx.q)}). Pode esperar${alt ? `: o tempo rende mais em ${alt.rx.n}` : ''}.`; }
+  return `Acima da meta (${p}). Só manter o ritmo${r.rx.cls === 'baixa' ? '' : `; ${nm} tem peso ${r.rx.cls === 'alta' ? 'alto' : 'médio'} no ENEM`}.`;
+}
+/* assuntos em que o aluno mais erra (só quando há questões marcadas) x frequência no Raio-X */
+function rxAssCross() {
+  const out = [];
+  errRank(9999).ass.slice(0, 40).forEach(x => {
+    const rx = rxMat(x.m); if (!rx) return; const hit = rxAssunto(rx, x.n);
+    out.push({ ...x, rx, hit, corte: rxCorte(rx) });
+  });
+  return out.slice(0, 12);
+}
+
+/* texto para o Claude (versão com IA) */
+function rxPack() {
+  const L = ['\nRAIO-X ENEM (assuntos mais cobrados, 2009–2025, fonte SAS Educação). "peso" = itens da matéria ÷ itens da área; cada assunto traz a % dos itens da própria matéria. Só os assuntos mais cobrados estão listados: o que não aparece tem frequência menor que a do último da lista.'];
+  RAIOX.forEach(a => { const tot = rxAreaTot(a); a.mats.forEach(m => { L.push(`- ${m.n} (${a.curto}): ${m.it} itens, peso ${nf(m.it / tot * 100, 1)}% da área (${rxQ(m.it / tot * 45)} de 45), incidência ${rxCls(m.it / tot)}. Assuntos: ${m.a.slice(0, 8).map(([n, f]) => `${trunc(n, 48)} ${nf(f / m.it * 100, 1)}%`).join('; ')}`); }); });
+  const X = rxCross();
+  L.push('\nCRUZAMENTO DOS MEUS RESULTADOS COM O RAIO-X (calculado pelo painel; acerto = últimos 3 simulados com a matéria):');
+  if (!X.rows.length) L.push('(sem notas por matéria que casem com o Raio-X)'); X.rows.forEach(r => L.push(`- ${r.rx.n}: ${nf(r.acc, 0)}% de acerto, peso ${nf(r.rx.share * 100, 1)}% (${r.rx.cls}) → ${r.st === 'prior' ? 'PRIORIZAR' : r.st === 'wait' ? 'PODE ESPERAR (erro alto em matéria de pouco peso)' : 'em dia'}`));
+  const A = rxAssCross();
+  if (A.length) { L.push('ASSUNTOS EM QUE MAIS ERRO x RAIO-X:'); A.forEach(x => L.push(`- ${x.n} (${x.m}): ${x.err} erros/chutes em ${x.t} (${nf(x.p, 0)}%) → ${x.hit ? `aparece ${x.hit.f}x no Raio-X (${nf(x.hit.p, 1)}% dos itens de ${x.rx.n})` : `fora dos assuntos mais cobrados de ${x.rx.n} (menos de ${nf(x.corte, 1)}% dos itens)`}`)); }
+  return L.join('\n');
+}
+
+/* ---- página ---- */
+HELP_PAGE['Raio-X ENEM'] = 'raiox';
+HELP.raiox = ['Raio-X ENEM', `<p>Mostra, por matéria, os assuntos que mais caíram no ENEM de 2009 a 2025 (fonte: SAS Educação). O número ao lado de cada assunto é a quantidade de questões e a % dos itens daquela matéria.</p><p><b>Incidência</b> é o peso da matéria dentro da sua área: alta (25% ou mais), média (5% a 25%) ou baixa (menos de 5%). A estimativa de questões por prova é só uma ordem de grandeza.</p><p>O quadro <b>Seu desempenho × peso no ENEM</b> cruza as suas notas por matéria com esse peso: erro alto em matéria de peso alto é prioridade; erro alto em matéria de pouco peso pode esperar. Para aparecer, lance as notas por matéria (Biologia, Física…) nos simulados.</p>`];
+const rxBadge = c => `<span class="rx-badge ${c}">${RX_CLS[c]}</span>`;
+function rxCard(a, m) {
+  const sh = m.it / rxAreaTot(a), cls = rxCls(sh), mx = m.a[0][1];
+  const mine = new Set(rxAssCross().filter(x => x.hit && x.rx.ms[0].n === m.n).map(x => x.hit.n));
+  return `<section class="card rx-card" data-m="${esc(rxNrm(m.n))}"><div class="rx-top"><div><h3>${esc(m.n)}</h3><div class="rx-sub">${nf(m.it)} itens · ${nf(sh * 100, 1)}% da área · ${rxQ(sh * 45)}</div></div>${rxBadge(cls)}</div>
+    <div class="rx-rows">${m.a.map(([n, f]) => `<div class="rx-r${mine.has(n) ? ' mine' : ''}" data-t="${esc(rxNrm(n + ' ' + m.n))}"><span class="rx-n" title="${esc(n)}">${esc(n)}</span><span class="rx-b"><i style="width:${(f / mx * 100).toFixed(1)}%"></i></span><span class="rx-v"><b>${nf(f / m.it * 100, 1)}%</b><small>${nf(f)}</small></span></div>`).join('')}</div>
+    <div class="rx-foot">Assuntos mais cobrados · % dos itens de ${esc(m.n)}${mine.size ? ' · <span class="rx-mine">destacado: onde você mais erra</span>' : ''}</div></section>`;
+}
+function rxCrossCard(compact) {
+  const X = rxCross();
+  if (!X.rows.length) return compact ? '' : `<section class="card"><div class="lbl">Seu desempenho × peso no ENEM</div><div class="empty" style="padding:18px 0 6px"><b>Ainda sem notas por matéria</b>Lance as notas por matéria (Biologia, Física, História…) nos simulados e o painel diz onde vale gastar tempo e o que pode esperar.</div></section>`;
+  const rows = (compact ? X.rows.slice(0, 6) : X.rows).map(r => `<div class="rx-x"><div class="rx-xm"><b>${esc(r.rx.n)}</b><small>${rxBadge(r.rx.cls)}</small></div><div class="rx-xa"><b>${nf(r.acc, 0)}%</b><small>acerto</small></div><div class="rx-xt"><span class="rx-st ${r.st}">${{ prior: 'Priorizar', wait: 'Pode esperar', ok: 'Em dia' }[r.st]}</span><p>${esc(rxText(r, X))}</p></div></div>`).join('');
+  const ac = compact ? [] : rxAssCross();
+  const ass = ac.length ? `<div class="lbl" style="margin-top:22px">Assuntos em que você mais erra × Raio-X</div><div class="rx-as">${ac.map(x => `<div class="rx-x"><div class="rx-xm"><b>${esc(trunc(x.n, 60))}</b><small>${esc(x.m)} · ${x.err} erro${x.err === 1 ? '' : 's'} em ${x.t}</small></div><div class="rx-xt"><p>${x.hit ? `Aparece <b>${x.hit.f}</b> vez${x.hit.f === 1 ? '' : 'es'} no Raio-X: ${nf(x.hit.p, 1)}% dos itens de ${esc(x.rx.n)}.` : `Fora dos assuntos mais cobrados de ${esc(x.rx.n)} (menos de ${nf(x.corte, 1)}% dos itens). Pode esperar.`}</p></div></div>`).join('')}</div>` : '';
+  return `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Seu desempenho × peso no ENEM${helpBtn('raiox')}</span>${compact ? `<button class="btn sm" style="margin-left:auto" data-act="go" data-id="raiox">Abrir Raio-X</button>` : ''}</div>
+    <div class="rx-xl">${rows}</div>${ass}<div class="rx-note">Acerto = últimos 3 simulados com a matéria. Meta: ${nf(X.meta, 0)}%. O peso vem do Raio-X, não do seu caderno de erros.</div></section>`;
+}
+S.ui.rxArea = S.ui.rxArea || 'todas';
+VIEWS.raiox = function () {
+  const A = S.ui.rxArea, areas = RAIOX.filter(a => A === 'todas' || a.id === A);
+  const chips = `<div class="chips">${[['todas', 'Todas'], ...RAIOX.map(a => [a.id, a.curto])].map(([k, l]) => `<button class="pill" data-act="rxArea" data-k="${k}" aria-pressed="${A === k}">${l}</button>`).join('')}</div>`;
+  return head('Raio-X ENEM', 'Os assuntos mais cobrados de 2009 a 2025, por matéria. Use para decidir onde vale gastar tempo.', `<input id="rx-q" class="rx-q" type="search" placeholder="Buscar assunto…" autocomplete="off" aria-label="Buscar assunto">`) +
+    rxCrossCard(false) +
+    `<div class="rx-bar">${chips}</div><div id="rx-none" class="empty" hidden><b>Nenhum assunto encontrado</b>Tente outra palavra.</div>` +
+    areas.map(a => `<div class="rx-area" data-a="${a.id}"><h2 class="rx-ah">${esc(a.nome)}</h2><div class="rx-grid">${a.mats.map(m => rxCard(a, m)).join('')}</div></div>`).join('') +
+    `<div class="rx-note" style="margin:6px 4px 24px">Fonte: ${RX_FONTE}. Itens analisados de 2009 a 2025; cada % é a parte dos itens da matéria. Português considera só a lista de assuntos mais cobrados.</div>`;
+};
+function rxFilter(q) {
+  q = rxNrm(q); let any = false;
+  $$('.rx-card').forEach(c => { const rows = $$('.rx-r', c); let n = 0; rows.forEach(r => { const hit = !q || r.dataset.t.includes(q); r.hidden = !hit; if (hit) n++; }); const nameHit = q && c.dataset.m.includes(q); if (nameHit) rows.forEach(r => { r.hidden = false; }); c.hidden = !!q && !n && !nameHit; if (!c.hidden) any = true; });
+  $$('.rx-area').forEach(a => { a.hidden = !$$('.rx-card', a).some(c => !c.hidden); });
+  const none = $('#rx-none'); if (none) none.hidden = any || !q;
+}
+document.addEventListener('input', e => { if (e.target && e.target.id === 'rx-q') rxFilter(e.target.value); });
+ACT.rxArea = el => { S.ui.rxArea = el.dataset.k; render(true); };
+
+/* menu e rotas */
+if (LITE) { NAV.push({ id: 'raiox', label: 'Raio-X ENEM', icon: 'radar' }); ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n])); }
+else { NAV.find(n => n.g === 'ESTUDO').items.push({ id: 'raiox', label: 'Raio-X ENEM', icon: 'radar' }); ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n]), { id: 'sim-questoes', label: 'Notas' }); }
+ICONS.radar = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/><path d="M12 12 19 5"/>';
+if (LITE) { const _c = VIEWS.conclusoes; VIEWS.conclusoes = function () { return _c.apply(this, arguments) + rxCrossCard(true); }; }
 
 document.addEventListener('click', e => { if (e.target.closest('button,[data-act],svg') && !e.target.closest('input,textarea,select')) { const g = getSelection(); if (g && g.type !== 'None') g.removeAllRanges(); } }, true);
 init();
