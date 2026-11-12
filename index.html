@@ -1335,6 +1335,8 @@ function redDelta(r, asc) {
   if (r.tipo === 'reescrita' && r.de) { const o = asc.find(x => x.id === r.de); return o ? t - redTotal(o) : null; }
   const prev = asc.slice(0, i).reverse().find(x => x.tipo !== 'reescrita'); return prev ? t - redTotal(prev) : null;
 }
+/* filtro próprio do gráfico de competências (independente do filtro da página) */
+const compTipo = () => ['original', 'reescrita'].includes(S.ui.compTipo) ? S.ui.compTipo : 'todas';
 const redFilt = () => ({ original: 'Só escritas', reescrita: 'Só reescritas' }[S.ui.redTipo] ? S.ui.redTipo : 'todas');
 const redOk = r => redFilt() === 'todas' || (redFilt() === 'reescrita') === (r.tipo === 'reescrita');
 const redTipoChips = () => `<div class="chips">${[['todas', 'Todas'], ['original', 'Escritas'], ['reescrita', 'Reescritas']].map(([k, l]) => `<button class="pill" data-act="redTipo" data-k="${k}" aria-pressed="${redFilt() === k}">${l}</button>`).join('')}</div>`;
@@ -1361,13 +1363,13 @@ const compTicks = reds => { const m = compMin(reds), t = []; for (let v = m; v <
 VIEWS['red-competencias'] = function () {
   const allReds = redsSorted(), reds = allReds.filter(redOk), cfg = S.cfg, cs = compStats(reds).filter(c => c.all != null);
   const tot = reds.map(redTotal);
-  const cols = redCols(reds);
+  const cols = redCols(reds), cReds = allReds.filter(r => compTipo() === 'todas' || (compTipo() === 'reescrita') === (r.tipo === 'reescrita'));
   const ax = redAxis(tot, cfg.metaRed);
   const pairs = allReds.filter(r => r.tipo === 'reescrita' && r.de).map(r => { const o = allReds.find(x => x.id === r.de); return o ? redTotal(r) - redTotal(o) : null; }).filter(x => x != null);
   const up = pairs.filter(x => x > 0).length;
   return head('Competências da redação', 'Nota por texto, evolução de C1 a C5 e efeito da reescrita.', `${redTipoChips()}${LITE ? '' : `<button class="btn" data-act="analisar" data-k="redacao" ${aiAttr()}>${ic('spark', 15)} Pedir análise ao Claude</button>`}`) +
     `<section class="card"><div class="lbl">Nota por texto</div><div style="margin-top:14px">${lineChart('c-red', { connect: true, labels: cols.map(colLbl), full: cols.map(colFull), series: [{ name: 'Escritas', color: SER[0], values: cols.map(c => c.o ? redTotal(c.o) : null) }, { name: 'Reescritas', color: SER[2], values: cols.map(c => c.r ? redTotal(c.r) : null), dash: true }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, goalLabel: 'meta ' + nf(cfg.metaRed), fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'O gráfico aparece com o primeiro texto corrigido.', aria: 'Nota total das redações originais e reescritas' })}</div></section>
-    <section class="card"><div class="lbl">Competências ao longo dos textos · máximo 200</div><div style="margin-top:14px">${lineChart('c-comp', { h: 270, labels: reds.map(r => '#' + redNo(r)), full: reds.map(r => `#${redNo(r)} · ${r.tema}`), series: COMPS.map((c, i) => ({ name: `${c} · ${COMP_NOMES[i]}`, color: SER[i], values: reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null) })), min: compMin(reds), max: 200, ticks: compTicks(reds), fmt: v => nf(v), emptyT: 'Sem textos ainda', empty: '', aria: 'Nota de cada competência por texto' })}</div></section>
+    <section class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div class="lbl">Competências ao longo dos textos · máximo 200</div><div class="chips" role="group" aria-label="Textos do gráfico">${[['todas', 'Todas'], ['original', 'Escritas'], ['reescrita', 'Reescritas']].map(([k, l]) => `<button class="pill" data-act="compTipo" data-k="${k}" aria-pressed="${compTipo() === k}">${l}</button>`).join('')}</div></div><div style="margin-top:14px">${lineChart('c-comp', { h: 270, labels: cReds.map(r => '#' + redNo(r)), full: cReds.map(r => `#${redNo(r)} · ${r.tema}`), series: COMPS.map((c, i) => ({ name: `${c} · ${COMP_NOMES[i]}`, color: SER[i], values: cReds.map(r => r.c && r.c[i] != null ? +r.c[i] : null) })), min: compMin(cReds), max: 200, ticks: compTicks(cReds), fmt: v => nf(v), emptyT: 'Sem textos ainda', empty: '', aria: 'Nota de cada competência por texto' })}</div></section>
     <div class="g-2">
       <section class="card"><div class="lbl">Média por competência</div><div style="margin-top:16px">${barRows(cs.map((c, i) => ({ n: `${c.c} · ${c.nome}`, pct: c.all / 200 * 100, v: nf(c.all, 0), color: SER[COMPS.indexOf(c.c)] })))}</div></section>
       <section class="card"><div class="lbl">Efeito da reescrita${helpBtn('reescrita')}</div>${pairs.length ? `<div class="big" style="margin-top:10px">${avg(pairs) >= 0 ? '+' : '−'}${nf(Math.abs(avg(pairs)), 0)}<small>pts</small></div><p class="sub" style="margin-top:8px">média de ${pairs.length} ${pairs.length === 1 ? 'reescrita ligada' : 'reescritas ligadas'} ao texto escrito. ${up} de ${pairs.length} subiram.</p>` : '<p class="sub" style="margin-top:12px">Ao lançar uma reescrita, escolha o texto escrito no campo "Reescrita de" para medir o ganho.</p>'}</section>
@@ -2430,6 +2432,7 @@ const ACT = {
   simQ: el => { const id = el.dataset.id; if (S.simq[id] || D().simq[id]) { S.ui.simSel = id; go('sim-questoes'); } else pdfModal(id); },
   simNew: () => simForm(), simNewG: el => simForm(null, { grupo: el.dataset.g, modelo: el.dataset.m, data: el.dataset.d }), simOpen: el => { const id = el.dataset.id; if (String(id).startsWith('demo-')) { simDetail(id); return; } S.ui.simSel = id; S.ui.qMat = 'todas'; S.ui.qSt = 'todas'; S.ui.qSearch = ''; go('sim-questoes'); },
   notasMod: el => { S.ui.notasMod = el.dataset.k; render(true); },
+  compTipo: el => { S.ui.compTipo = el.dataset.k; render(true); },
   redTipo: el => { S.ui.redTipo = el.dataset.k; render(true); },
   errScope: el => { S.ui.errScope = el.dataset.k; render(true); },
   simEdit: el => simForm(el.dataset.id), simAsk: el => threadModal({ k: 'sim', id: el.dataset.id }, '', false), simDel: el => simDel(el.dataset.id),
