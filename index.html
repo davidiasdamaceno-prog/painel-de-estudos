@@ -1102,8 +1102,8 @@ VIEWS.visao = function () {
     const rt = fr.length ? redTotal(fr.at(-1)) : null, rtPrev = fr.length > 1 ? redTotal(fr.at(-2)) : null;
     lblTop = 'REDAÇÃO · ' + tp; big = rt == null ? '—' : nf(rt); unit = 'pts';
     subline = rt == null ? 'sem redações lançadas' : rtPrev == null ? 'primeiro texto registrado' : `${rt - rtPrev >= 0 ? '+' : '−'}${Math.abs(rt - rtPrev)} pts em relação ao texto anterior`;
-    const vals = redsR.map(redTotal), ax = redAxis(vals, cfg.metaRed);
-    chart = lineChart('c-main', { labels: redsR.map(r => '#' + redNo(r)), full: redsR.map(r => `#${redNo(r)} · ${r.tema}`), series: [{ name: 'Nota', color: 'var(--ink)', values: vals }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'A evolução da nota aparece quando houver um texto corrigido.', aria: 'Nota total de cada redação' });
+    const pair = redFilt() === 'todas' && fr.some(r => r.tipo === 'reescrita' && r.de), colsR = pair ? take(redCols(fr)) : null, vals = pair ? colsR.flatMap(c => [c.o, c.r]).filter(Boolean).map(redTotal) : redsR.map(redTotal), ax = redAxis(vals, cfg.metaRed);
+    chart = lineChart('c-main', { connect: pair, labels: pair ? colsR.map(colLbl) : redsR.map(r => '#' + redNo(r)), full: pair ? colsR.map(colFull) : redsR.map(r => `#${redNo(r)} · ${r.tema}`), series: pair ? [{ name: 'Escritas', color: SER[0], values: colsR.map(c => c.o ? redTotal(c.o) : null) }, { name: 'Reescritas', color: SER[2], values: colsR.map(c => c.r ? redTotal(c.r) : null), dash: true }] : [{ name: 'Nota', color: 'var(--ink)', values: vals }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'A evolução da nota aparece quando houver um texto corrigido.', aria: 'Nota total de cada redação' });
     side = ['SIMULADOS', sp == null ? '—' : nf(sp, 0) + '%'];
   } else if (metric === 'mat') {
     lblTop = 'SIMULADOS · POR MATÉRIA'; big = sp == null ? '—' : nf(sp, 1); unit = '%';
@@ -1320,16 +1320,25 @@ VIEWS['red-textos'] = function () {
 
 /* ---------- Redação: competências ---------- */
 const compMin = reds => { const v = reds.flatMap(r => (r.c || []).map(Number)); return v.length ? Math.max(0, Math.floor((Math.min(...v) - 40) / 40) * 40) : 0; };
+/* escrita e reescrita do mesmo tema ficam na mesma posição (coluna) do gráfico */
+const redCols = list => {
+  const ids = new Set(list.map(r => r.id)), cols = [], colOf = {}, pend = [];
+  list.forEach(r => { if (r.tipo === 'reescrita' && r.de && ids.has(r.de)) pend.push(r); else { const c = r.tipo === 'reescrita' ? { r } : { o: r }; colOf[r.id] = c; cols.push(c); } });
+  pend.forEach(r => { const c = colOf[r.de]; if (c && !c.r) c.r = r; else cols.splice(cols.indexOf(c) + 1, 0, { r }); });
+  return cols;
+};
+const colLbl = c => c.o && c.r ? `#${redNo(c.o)}/#${redNo(c.r)}` : '#' + redNo(c.o || c.r);
+const colFull = c => c.o && c.r ? `#${redNo(c.o)} → #${redNo(c.r)} · ${c.o.tema}` : `#${redNo(c.o || c.r)} · ${(c.o || c.r).tema}`;
 const compTicks = reds => { const m = compMin(reds), t = []; for (let v = m; v <= 200; v += 40) t.push(v); return t.length > 5 ? t.filter((x, i) => i % 2 === 0 || x === 200) : t; };
 VIEWS['red-competencias'] = function () {
   const allReds = redsSorted(), reds = allReds.filter(redOk), cfg = S.cfg, cs = compStats(reds).filter(c => c.all != null);
   const tot = reds.map(redTotal);
-  const orig = reds.map(r => r.tipo !== 'reescrita' ? redTotal(r) : null), resc = reds.map(r => r.tipo === 'reescrita' ? redTotal(r) : null);
+  const cols = redCols(reds);
   const ax = redAxis(tot, cfg.metaRed);
   const pairs = allReds.filter(r => r.tipo === 'reescrita' && r.de).map(r => { const o = allReds.find(x => x.id === r.de); return o ? redTotal(r) - redTotal(o) : null; }).filter(x => x != null);
   const up = pairs.filter(x => x > 0).length;
   return head('Competências da redação', 'Nota por texto, evolução de C1 a C5 e efeito da reescrita.', `${redTipoChips()}${LITE ? '' : `<button class="btn" data-act="analisar" data-k="redacao" ${aiAttr()}>${ic('spark', 15)} Pedir análise ao Claude</button>`}`) +
-    `<section class="card"><div class="lbl">Nota por texto</div><div style="margin-top:14px">${lineChart('c-red', { connect: true, labels: reds.map(r => '#' + redNo(r)), full: reds.map(r => `#${redNo(r)} · ${r.tema}`), series: [{ name: 'Escritas', color: SER[0], values: orig }, { name: 'Reescritas', color: SER[2], values: resc, dash: true }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, goalLabel: 'meta ' + nf(cfg.metaRed), fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'O gráfico aparece com o primeiro texto corrigido.', aria: 'Nota total das redações originais e reescritas' })}</div></section>
+    `<section class="card"><div class="lbl">Nota por texto</div><div style="margin-top:14px">${lineChart('c-red', { connect: true, labels: cols.map(colLbl), full: cols.map(colFull), series: [{ name: 'Escritas', color: SER[0], values: cols.map(c => c.o ? redTotal(c.o) : null) }, { name: 'Reescritas', color: SER[2], values: cols.map(c => c.r ? redTotal(c.r) : null), dash: true }], min: ax.min, max: ax.max, ticks: ax.ticks, goal: cfg.metaRed, goalLabel: 'meta ' + nf(cfg.metaRed), fmt: v => nf(v), emptyT: 'Lance a primeira redação', empty: 'O gráfico aparece com o primeiro texto corrigido.', aria: 'Nota total das redações originais e reescritas' })}</div></section>
     <section class="card"><div class="lbl">Competências ao longo dos textos · máximo 200</div><div style="margin-top:14px">${lineChart('c-comp', { h: 270, labels: reds.map(r => '#' + redNo(r)), full: reds.map(r => `#${redNo(r)} · ${r.tema}`), series: COMPS.map((c, i) => ({ name: `${c} · ${COMP_NOMES[i]}`, color: SER[i], values: reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null) })), min: compMin(reds), max: 200, ticks: compTicks(reds), fmt: v => nf(v), emptyT: 'Sem textos ainda', empty: '', aria: 'Nota de cada competência por texto' })}</div></section>
     <div class="g-2">
       <section class="card"><div class="lbl">Média por competência</div><div style="margin-top:16px">${barRows(cs.map((c, i) => ({ n: `${c.c} · ${c.nome}`, pct: c.all / 200 * 100, v: nf(c.all, 0), color: SER[COMPS.indexOf(c.c)] })))}</div></section>
