@@ -505,10 +505,11 @@ tr.rd-drag{opacity:.45}
 tr.rd-above td{box-shadow:inset 0 2px 0 var(--accent,#6aa8ff)}
 tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 
-/* Raio-X: cartões centralizados, um embaixo do outro */
-.rx-area { max-width: 860px; margin-left: auto; margin-right: auto; }
-.rx-grid { grid-template-columns: minmax(0, 1fr); max-width: 860px; margin: 0 auto; }
+/* Raio-X: cartões da mesma área lado a lado, centralizados */
+.rx-area { max-width: 1180px; margin-left: auto; margin-right: auto; }
+.rx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 1180px; margin: 0 auto; align-items: start; }
 .rx-area > .rx-ah { text-align: center; }
+@media (max-width: 900px) { .rx-grid { grid-template-columns: minmax(0, 1fr); } }
 
 </style>
 </head>
