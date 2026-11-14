@@ -505,10 +505,10 @@ tr.rd-drag{opacity:.45}
 tr.rd-above td{box-shadow:inset 0 2px 0 var(--accent,#6aa8ff)}
 tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 
-/* Raio-X: um cartão embaixo do outro */
-.rx-grid { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
-.rx-info { max-width: 860px; margin-top: 18px; line-height: 1.6; color: var(--ink-2); }
-.rx-info p { margin: 12px 0; font-size: 14px; } .rx-info ul { margin: 6px 0 0; padding-left: 20px; font-size: 14px; } .rx-info ul ul { margin: 4px 0 8px; list-style: none; padding-left: 8px; } .rx-info li { margin: 3px 0; } .rx-info a { color: var(--pri, #6aa8ff); word-break: break-all; }
+/* Raio-X: cartões centralizados, um embaixo do outro */
+.rx-area { max-width: 860px; margin-left: auto; margin-right: auto; }
+.rx-grid { grid-template-columns: minmax(0, 1fr); max-width: 860px; margin: 0 auto; }
+.rx-area > .rx-ah { text-align: center; }
 
 </style>
 </head>
@@ -2806,13 +2806,6 @@ function rxCard(a, m) {
     <div class="rx-rows">${m.a.map(([n, f]) => `<div class="rx-r${mine.has(n) ? ' mine' : ''}" data-t="${esc(rxNrm(n + ' ' + m.n))}"><span class="rx-n" title="${esc(n)}">${esc(n)}</span><span class="rx-b"><i style="width:${(f / mx * 100).toFixed(1)}%"></i></span><span class="rx-v"><b>${nf(f / m.it * 100, 1)}%</b><small>${nf(f)}</small></span></div>`).join('')}</div>
     <div class="rx-foot">Assuntos mais cobrados · % dos itens de ${esc(m.n)}${mine.size ? ' · <span class="rx-mine">destacado: onde você mais erra</span>' : ''}</div></section>`;
 }
-const RX_INFO = `<p>O Exame Nacional do Ensino Médio (Enem) foi instituído em 1998, com o objetivo de avaliar o desempenho escolar dos estudantes ao término da educação básica. Em 2009, o exame aperfeiçoou sua metodologia e passou a ser utilizado como mecanismo de acesso à educação superior. As notas do Enem podem ser usadas para acesso ao Sistema de Seleção Unificada (Sisu) e ao Programa Universidade para Todos (ProUni). Elas também são aceitas em instituições de educação superior portuguesas que têm acordo com o Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira (Inep). Além disso, os participantes do Enem podem pleitear financiamento estudantil em programas do governo, como o Fundo de Financiamento Estudantil (Fies). Os resultados do Enem possibilitam, ainda, o desenvolvimento de estudos e indicadores educacionais e o uso dos resultados para obtenção do certificado de conclusão do Ensino Médio ou a declaração parcial de proficiência.</p>
-<p><b>Período de inscrição:</b><br>A inscrição para o processo seletivo pode ser feita online, por meio do portal GOV.</p>
-<p><b>Período de aplicação:</b><br>Aplicação anual, com aplicação única dividido em dois dias.</p>
-<p><b>Site oficial:</b><br><a href="https://www.gov.br/inep/pt-br/centrais-de-conteudo/legislacao/enem" target="_blank" rel="noopener">https://www.gov.br/inep/pt-br/centrais-de-conteudo/legislacao/enem</a></p>
-<p><b>Vagas:</b><br>Para o ingresso no ano de 2026 foram dispostas 261.779 oportunidades. Contemplando universidades de todo o país</p>
-<p><b>Como é o vestibular:</b><br>A prova é composta por 180 questões objetivas e uma proposta de redação. As perguntas objetivas são de múltipla escolha, com cinco alternativas de resposta para cada (representadas pelas letras A, B, C, D e E). O exame é aplicado em dois dias:</p>
-<ul><li><b>1º dia:</b><ul><li>45 questões de Linguagens, Códigos e suas Tecnologias;</li><li>45 questões de Ciências Humanas e suas Tecnologias;</li><li>Redação (Dissertativa-argumentativa).</li></ul></li><li><b>2º dia:</b><ul><li>45 questões de Ciências da Natureza e suas Tecnologias;</li><li>45 questões de Matemática e suas Tecnologias.</li></ul></li></ul>`;
 function rxCrossCard(compact) {
   const X = rxCross();
   if (!X.rows.length) return compact ? '' : `<section class="card"><div class="lbl">Seu desempenho × peso no ENEM</div><div class="empty" style="padding:18px 0 6px"><b>Ainda sem notas por matéria</b>Lance as notas por matéria (Biologia, Física, História…) nos simulados e o painel diz onde vale gastar tempo e o que pode esperar.</div></section>`;
@@ -2829,7 +2822,7 @@ VIEWS.raiox = function () {
   return head('Raio X ENEM 2009–2025', 'Assuntos mais cobrados no ENEM, organizados por disciplinas. Fonte: SAS Educação.', `<input id="rx-q" class="rx-q" type="search" placeholder="Buscar assunto…" autocomplete="off" aria-label="Buscar assunto">`) +
     (LITE ? '' : rxCrossCard(false)) +
     `<div class="rx-bar">${chips}</div>` +
-    (A === 'todas' ? `<section class="card rx-info"><div class="lbl">Informações gerais</div>${RX_INFO}</section>` : '') +
+    
     `<div id="rx-none" class="empty" hidden><b>Nenhum assunto encontrado</b>Tente outra palavra.</div>` +
     areas.map(a => `<div class="rx-area" data-a="${a.id}"><h2 class="rx-ah">${esc(a.nome)}</h2><div class="rx-grid">${a.mats.map(m => rxCard(a, m)).join('')}</div></div>`).join('') +
     `<div class="rx-note" style="margin:6px 4px 24px">Fonte: ${RX_FONTE}.</div>`;
