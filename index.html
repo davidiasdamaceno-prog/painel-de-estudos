@@ -2912,10 +2912,7 @@ if (LITE) { const _c = VIEWS.conclusoes; VIEWS.conclusoes = function () { return
 document.addEventListener('click', e => { if (e.target.closest('button,[data-act],svg') && !e.target.closest('input,textarea,select')) { const g = getSelection(); if (g && g.type !== 'None') g.removeAllRanges(); } }, true);
 init();
 
-/* ============ simulador de prova com etiquetas (fitinhas) que vão sendo retiradas ============
-   Ideia inspirada no TimerSim (https://timersim.com), projeto MIT:
-   Copyright (c) 2021-2023 Arthur Pilone Maia da Silva, Renan Fukamizu Della Barba and Fernando Gomes Alonso.
-   Implementação própria; nenhum código foi copiado. */
+/* ============ simulador de prova com etiquetas (fitinhas) que vão sendo retiradas ============ */
 ICONS.timer = '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6M12 2v3M19 5l1.5 1.5"/>';
 const TM_KEY = 'pe-timer';
 const TM_PRE = {
@@ -2977,7 +2974,7 @@ function tmTick() {
 setInterval(tmTick, 1000);
 
 HELP_PAGE['Simulador de prova'] = 'timer';
-HELP.timer = ['Simulador de prova', `<p>Treine como na prova de verdade, com <b>etiquetas</b> de tempo (as "fitinhas" do ENEM) que vão saindo conforme o tempo passa: de 30 em 30 minutos e, na última hora, aos 45, 30 e 15 minutos. Cada vez que uma sai, toca um sinal, e o fim da prova tem alarme.</p><p>Escolha <b>ENEM Dia 1</b> (5h30) ou <b>Dia 2</b> (5h), ambos às 13h30 no horário de Brasília, ou monte sua prova em <b>Personalizada</b> com as horas e minutos que quiser. Use <b>Começar: Agora</b> ou marque um horário para ver os mesmos horários da prova real.</p><p><b>Fiscal realista</b> atrasa algumas etiquetas, como acontece de verdade. <b>Sem timer</b> esconde o relógio e você só tem as etiquetas. Sem essa opção, o relógio fica escondido e você revela quando quiser em <b>Revelar tempo de prova</b>. Os <b>marcos oficiais</b> do ENEM também são avisados: saída liberada depois de 2h e, nos últimos 30 minutos, a liberação para levar o caderno.</p><p>O tempo usa a hora do computador, então continua certo se você recarregar a página. Quando acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p><p><b>Cronômetro:</b> a segunda aba conta o tempo para cima. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta.</p><p class="sub">Ideia das etiquetas inspirada no TimerSim (MIT, © 2021-2023 Arthur Pilone Maia da Silva, Renan Fukamizu Della Barba e Fernando Gomes Alonso).</p>`];
+HELP.timer = ['Simulador de prova', `<p>Treine como na prova de verdade, com <b>etiquetas</b> de tempo (as "fitinhas" do ENEM) que vão saindo conforme o tempo passa: de 30 em 30 minutos e, na última hora, aos 45, 30 e 15 minutos. Cada vez que uma sai, toca um sinal, e o fim da prova tem alarme.</p><p>Escolha <b>ENEM Dia 1</b> (5h30) ou <b>Dia 2</b> (5h), ambos às 13h30 no horário de Brasília, ou monte sua prova em <b>Personalizada</b> com as horas e minutos que quiser. Use <b>Começar: Agora</b> ou marque um horário para ver os mesmos horários da prova real.</p><p><b>Fiscal realista</b> atrasa algumas etiquetas, como acontece de verdade. <b>Sem timer</b> esconde o relógio e você só tem as etiquetas. Sem essa opção, o relógio fica escondido e você revela quando quiser em <b>Revelar tempo de prova</b>. Os <b>marcos oficiais</b> do ENEM também são avisados: saída liberada depois de 2h e, nos últimos 30 minutos, a liberação para levar o caderno.</p><p>O tempo usa a hora do computador, então continua certo se você recarregar a página. Quando acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p><p><b>Cronômetro:</b> a segunda aba conta o tempo para cima. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta.</p>`];
 
 const tmTagsHtml = (vals, c) => `<div class="tm-tags" style="--cols:${Math.ceil(vals.length / 2)}">${vals.map((v, i) => `<div class="tm-slot"><span class="tm-tag${c && tmGone(c, i) ? ' out' : ''}" id="tg${i}">${tmTagLbl(v)}</span></div>`).join('')}</div>`;
 function tmSetup() {
