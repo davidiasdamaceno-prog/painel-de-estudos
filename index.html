@@ -513,6 +513,32 @@ tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 .rx-grid > .rx-card:last-child:nth-child(odd) { grid-column: 1 / -1; width: calc(50% - 7px); justify-self: center; }
 @media (max-width: 900px) { .rx-grid { grid-template-columns: minmax(0, 1fr); } .rx-grid > .rx-card:last-child:nth-child(odd) { width: auto; } }
 
+/* simulador de prova */
+.tm-edit { display: grid; gap: 8px; margin-top: 12px; max-width: 640px; }
+.tm-erow { display: grid; grid-template-columns: 26px minmax(0, 1fr) 84px auto 40px; gap: 10px; align-items: center; }
+.tm-erow input { width: 100%; }
+.tm-erow .btn { padding: 8px 0; }
+.tm-n { color: var(--muted); font-family: var(--mono); font-size: 12px; text-align: center; }
+.tm-run { max-width: 760px; margin: 0 auto; }
+.tm-clock { font-size: 13px; color: var(--ink-2); }
+.tm-st { margin-top: 26px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); text-align: center; }
+.tm-big { font-size: clamp(52px, 12vw, 112px); font-weight: 600; letter-spacing: -.02em; text-align: center; line-height: 1.1; margin: 6px 0 18px; font-variant-numeric: tabular-nums; }
+.tm-track { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.tm-track.sm { height: 5px; margin-top: 8px; }
+.tm-track > span { display: block; height: 100%; background: var(--ink); border-radius: 999px; transition: width .9s linear; }
+.tm-cur { display: flex; justify-content: space-between; gap: 16px; margin-top: 26px; align-items: flex-end; }
+.tm-cn { font-size: 20px; font-weight: 600; margin-top: 2px; }
+.tm-list { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 2px; border-top: 1px solid var(--line); }
+.tm-list li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto 64px; gap: 12px; align-items: center; padding: 11px 2px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+.tm-list li .sub.mono { text-align: right; }
+.tm-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--muted); }
+.tm-list li.now { color: var(--ink); font-weight: 600; } .tm-list li.now .tm-dot { background: var(--ink); border-color: var(--ink); }
+.tm-list li.done { color: var(--muted); } .tm-list li.done .tm-ln { text-decoration: line-through; } .tm-list li.done .tm-dot { background: var(--muted); }
+.tm-msg { text-align: center; color: var(--ink-2); margin: 20px 0 0; }
+.tm-fim .tm-big { color: var(--bad); }
+.tm-run:fullscreen { max-width: none; border-radius: 0; display: flex; flex-direction: column; justify-content: center; padding: 6vh 8vw; overflow: auto; background: var(--bg); }
+@media (max-width: 600px) { .tm-erow { grid-template-columns: 22px minmax(0, 1fr) 70px 40px; } .tm-erow .sub { display: none; } .tm-list li { grid-template-columns: 14px minmax(0, 1fr) 58px; } .tm-list li > .sub:not(.mono) { display: none; } }
+
 </style>
 </head>
 <body>
@@ -1727,7 +1753,7 @@ function simForm(id, pre) {
   const box = modal(`<h2>${cur ? 'Editar simulado' : 'Novo simulado'}</h2><p class="lead">Preencha só o que apareceu. ${LITE ? '' : 'Se preferir, deixe os acertos em branco: depois de adicionar o PDF e marcar as questões, o painel calcula os acertos por área sozinho. '}Cada modelo traz as suas áreas e o número de questões (edite em “Editar modelos…”, no topo).</p>
     <form class="form" id="f">
       <label class="field"><span>Simulado completo · o conjunto (use o mesmo nome no Dia 1 e no Dia 2)</span><input type="text" id="f-grupo" list="f-grupos" value="${esc(cur ? cur.grupo || '' : (pre && pre.grupo) || '')}" placeholder="Ex.: 5º Simulado SAS 2026"><datalist id="f-grupos">${grupos.map(g => `<option value="${esc(g)}">`).join('')}</datalist></label>
-      <div class="row"><label class="field" style="flex:2 1 220px"><span>Nome desta parte (opcional)</span><input type="text" id="f-nome" value="${esc(cur ? cur.nome : '')}" placeholder="Ex.: Dia 1"></label>
+      <div class="row"><label class="field" style="flex:2 1 220px"><span>Nome desta parte (opcional)</span><input type="text" id="f-nome" value="${esc(cur ? cur.nome : (pre && pre.nome) || '')}" placeholder="Ex.: Dia 1"></label>
         <label class="field" style="flex:1 1 150px"><span>Data</span><input type="date" id="f-data" required value="${cur ? cur.data : (pre && pre.data) || TODAY_ISO}"></label>
         <label class="field" style="flex:1 1 150px"><span>Modelo de prova</span><select id="f-banca">${selOpts(allM.map(m => [m.id, m.nome]), M0.id)}</select></label></div>
       <div><div class="row" style="align-items:center;margin-bottom:10px"><span class="lbl" id="f-lbl">Acertos por matéria</span><div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex:none"><span class="sub" id="f-qlbl">questões por matéria</span><input type="number" id="f-qpm" min="1" style="width:76px" aria-label="Questões por matéria"><button type="button" class="btn sm" id="f-apply">Aplicar a todas</button></div></div>
@@ -2852,6 +2878,125 @@ if (LITE) { const _c = VIEWS.conclusoes; VIEWS.conclusoes = function () { return
 
 document.addEventListener('click', e => { if (e.target.closest('button,[data-act],svg') && !e.target.closest('input,textarea,select')) { const g = getSelection(); if (g && g.type !== 'None') g.removeAllRanges(); } }, true);
 init();
+
+/* ============ simulador de prova: relógio da prova com etapas e avisos ============ */
+ICONS.timer = '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6M12 2v3M19 5l1.5 1.5"/>';
+const TM_KEY = 'pe-timer', TM_AVISOS = [120, 60, 30, 15, 5];
+const TM_PRE = {
+  d1: { nome: 'ENEM · Dia 1', et: [['Linguagens', 90], ['Ciências Humanas', 90], ['Redação', 90], ['Cartão-resposta e revisão', 60]] },
+  d2: { nome: 'ENEM · Dia 2', et: [['Ciências da Natureza', 150], ['Matemática', 120], ['Cartão-resposta e revisão', 30]] },
+  livre: { nome: 'Simulado', et: [['Prova', 180]] },
+};
+const tmMk = k => ({ pre: k, nome: TM_PRE[k].nome, et: TM_PRE[k].et.map(([n, min]) => ({ n, min })), modo: 'agora', hora: '13:30', avisos: [60, 30, 15, 5], som: true });
+let tmDraft = tmMk('d1'), tm = (() => { try { const j = JSON.parse(lsGet(TM_KEY) || 'null'); return j && j.start ? j : null; } catch (e) { return null; } })();
+const tmSave = () => lsSet(TM_KEY, tm ? JSON.stringify(tm) : '');
+const tmTotMin = et => et.reduce((a, e) => a + (+e.min || 0), 0);
+const tmHM = min => { min = Math.round(min); const h = Math.floor(min / 60), m = min % 60; return h ? (m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`) : `${m} min`; };
+const tmHMS = ms => { ms = Math.max(0, Math.ceil(ms / 1000)); const h = Math.floor(ms / 3600), m = Math.floor(ms % 3600 / 60), s = ms % 60; return [h, m, s].map(x => String(x).padStart(2, '0')).join(':'); };
+const tmClock = ts => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+let _tmAc = null;
+function tmBeep(n = 1, hi = false, on = true) {
+  try { navigator.vibrate && navigator.vibrate(n > 1 ? [250, 120, 250] : 250); } catch (e) { }
+  if (!on) return;
+  try {
+    _tmAc = _tmAc || new (window.AudioContext || window.webkitAudioContext)(); if (_tmAc.state === 'suspended') _tmAc.resume();
+    for (let i = 0; i < n; i++) { const o = _tmAc.createOscillator(), g = _tmAc.createGain(), t = _tmAc.currentTime + i * .38; o.frequency.value = hi ? 988 : 740; o.connect(g); g.connect(_tmAc.destination); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.3, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .3); o.start(t); o.stop(t + .32); }
+  } catch (e) { }
+}
+/* estado calculado a partir dos horários (sobrevive a recarregar a página) */
+function tmCalc(now = Date.now()) {
+  const t0 = tm.start + (tm.shift || 0), eff = tm.pausedAt || now; let acc = t0; const et = tm.et.map(e => { const a = acc; acc += e.min * 60000; return { ...e, a, b: acc }; });
+  const end = acc, ph = eff < t0 ? 'espera' : eff >= end ? 'fim' : 'prova', idx = ph === 'prova' ? et.findIndex(e => eff < e.b) : -1;
+  return { t0, end, eff, et, ph, idx, tot: end - t0 };
+}
+function tmFire(key, when, fn) {
+  tm.fired = tm.fired || {}; if (tm.fired[key] || !(tm.pausedAt ? false : Date.now() >= when)) return;
+  tm.fired[key] = 1; if (Date.now() - when < 20000) fn(); /* avisos muito atrasados passam em silêncio */
+}
+function tmTick() {
+  if (!tm) return; const c = tmCalc(), on = tm.som !== false;
+  if (!tm.pausedAt) {
+    (tm.avisos || []).forEach(m => { if (m * 60000 < c.tot) tmFire('a' + m, c.end - m * 60000, () => { toast(`Faltam ${tmHM(m)} para o fim da prova.`); tmBeep(1, false, on); }); });
+    c.et.forEach((e, i) => { if (i < c.et.length - 1) tmFire('e' + i, e.b, () => { toast(`Fim de "${e.n}". Agora: ${c.et[i + 1].n}.`); tmBeep(2, true, on); }); });
+    tmFire('fim', c.end, () => { toast('Tempo esgotado! Largue a caneta.'); tmBeep(3, true, on); });
+    tmFire('ini', c.t0, () => { toast('Prova iniciada. Bom trabalho!'); tmBeep(2, true, on); });
+  }
+  tmSave();
+  if (S.route !== 'timer') return;
+  const ph = c.ph + ':' + c.idx + ':' + (tm.pausedAt ? 'p' : '');
+  if (ph !== tm._ph) { tm._ph = ph; render(true); return; }
+  const set = (id, t) => { const el = document.getElementById(id); if (el && el.textContent !== t) el.textContent = t; };
+  if (c.ph === 'espera') set('tm-big', tmHMS(c.t0 - c.eff));
+  else if (c.ph === 'prova') { set('tm-big', tmHMS(c.end - c.eff)); set('tm-el', tmHMS(c.et[c.idx].b - c.eff)); const w = (c.eff - c.t0) / c.tot * 100, e = c.et[c.idx], we = (c.eff - e.a) / (e.b - e.a) * 100; const b = $('#tm-bar'), b2 = $('#tm-ebar'); if (b) b.style.width = w + '%'; if (b2) b2.style.width = we + '%'; set('tm-pct', Math.floor(w) + '%'); }
+  set('tm-clock', new Date().toLocaleTimeString('pt-BR'));
+}
+setInterval(tmTick, 1000);
+
+HELP_PAGE['Simulador de prova'] = 'timer';
+HELP.timer = ['Simulador de prova', `<p>Treine com o relógio da prova. Escolha <b>ENEM Dia 1</b>, <b>Dia 2</b> ou monte a sua; as etapas (matéria e minutos) são sugestões e você pode editar, adicionar ou remover.</p><p>Inicie <b>agora</b> ou marque um <b>horário</b>, como 13h30. O painel mostra o tempo que falta, a etapa atual e o horário de fim de cada etapa, e dá um aviso sonoro nas horas que você marcar (2h, 1h, 30, 15 e 5 min antes do fim) e na troca de etapa.</p><p>O relógio usa a hora do computador, então continua certo se você recarregar a página. Use <b>Pausar</b> só em imprevistos e <b>Tela cheia</b> para simular melhor. Quando o tempo acaba, o botão <b>Lançar resultado</b> abre o formulário do simulado.</p>`];
+
+function tmSetup() {
+  const d = tmDraft, tot = tmTotMin(d.et);
+  const chip = (k, l) => `<button class="pill" data-act="tmPre" data-k="${k}" aria-pressed="${d.pre === k}">${l}</button>`;
+  const ini = d.modo === 'hora' ? `<label class="field" style="flex:0 1 150px"><span>Horário de início</span><input type="time" id="tm-hora" value="${esc(d.hora)}"></label>` : '';
+  return `<section class="card"><div class="lbl">Prova</div>
+    <div class="chips" style="margin-top:14px">${chip('d1', 'ENEM · Dia 1')}${chip('d2', 'ENEM · Dia 2')}${chip('livre', 'Personalizada')}</div>
+    <div class="row" style="margin-top:18px;align-items:flex-end"><label class="field" style="flex:2 1 240px"><span>Nome do simulado</span><input type="text" id="tm-nome" value="${esc(d.nome)}"></label>
+      <div class="field" style="flex:0 1 auto"><span>Começar</span><div class="chips"><button class="pill" data-act="tmModo" data-k="agora" aria-pressed="${d.modo === 'agora'}">Agora</button><button class="pill" data-act="tmModo" data-k="hora" aria-pressed="${d.modo === 'hora'}">Marcar horário</button></div></div>${ini}</div>
+    <div class="lbl" style="margin-top:26px">Etapas · ${'<span id="tm-tot">' + tmHM(tot) + '</span>'} no total</div>
+    <div class="tm-edit">${d.et.map((e, i) => `<div class="tm-erow"><span class="tm-n">${i + 1}</span><input type="text" class="tm-en" data-i="${i}" value="${esc(e.n)}" aria-label="Nome da etapa"><input type="number" class="tm-em" data-i="${i}" min="1" max="600" value="${e.min}" aria-label="Minutos"><span class="sub">min</span><button class="btn" data-act="tmDel" data-i="${i}" aria-label="Remover etapa" ${d.et.length < 2 ? 'disabled' : ''}>×</button></div>`).join('')}</div>
+    <button class="btn" data-act="tmAdd" style="margin-top:10px">${ic('plus', 14)} Adicionar etapa</button>
+    <div class="lbl" style="margin-top:26px">Avisos antes do fim</div>
+    <div class="chips" style="margin-top:12px">${TM_AVISOS.map(m => `<button class="pill" data-act="tmAviso" data-m="${m}" aria-pressed="${d.avisos.includes(m)}">${tmHM(m)}</button>`).join('')}<button class="pill" data-act="tmSom" aria-pressed="${d.som}">${d.som ? 'Som ligado' : 'Som desligado'}</button></div>
+    <div style="margin-top:28px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn primary" data-act="tmStart">Iniciar simulado</button><span class="sub">As etapas são sugestões, edite como preferir.</span></div></section>`;
+}
+function tmRun() {
+  const c = tmCalc(), fim = c.ph === 'fim', esp = c.ph === 'espera', pa = !!tm.pausedAt;
+  const status = fim ? 'Tempo esgotado' : esp ? 'Começa em' : pa ? 'Pausado' : 'Tempo restante';
+  const big = fim ? '00:00:00' : esp ? tmHMS(c.t0 - c.eff) : tmHMS(c.end - c.eff), cur = c.idx >= 0 ? c.et[c.idx] : null;
+  const w = fim ? 100 : esp ? 0 : (c.eff - c.t0) / c.tot * 100;
+  const list = c.et.map((e, i) => `<li class="${fim || (c.idx > i) ? 'done' : c.idx === i ? 'now' : ''}"><span class="tm-dot"></span><span class="tm-ln">${esc(e.n)}</span><span class="sub">${tmClock(e.a)} → ${tmClock(e.b)}</span><span class="sub mono">${tmHM((e.b - e.a) / 60000)}</span></li>`).join('');
+  return `<section class="card tm-run${fim ? ' tm-fim' : ''}" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div><div class="lbl">${esc(tm.nome)}</div><div class="sub" style="margin-top:4px">${tmClock(c.t0)} → ${tmClock(c.end)} · ${tmHM(c.tot / 60000)}</div></div><div class="tm-clock mono" id="tm-clock">${new Date().toLocaleTimeString('pt-BR')}</div></div>
+    <div class="tm-st">${status}</div><div class="tm-big mono" id="tm-big">${big}</div>
+    <div class="tm-track" aria-hidden="true"><span id="tm-bar" style="width:${w}%"></span></div><div class="sub" style="margin-top:6px"><span id="tm-pct">${Math.floor(w)}%</span> da prova</div>
+    ${cur ? `<div class="tm-cur"><div><div class="sub">Etapa atual</div><div class="tm-cn">${esc(cur.n)}</div></div><div style="text-align:right"><div class="sub">Falta nesta etapa</div><div class="tm-cn mono" id="tm-el">${tmHMS(cur.b - c.eff)}</div></div></div><div class="tm-track sm" aria-hidden="true"><span id="tm-ebar" style="width:${(c.eff - cur.a) / (cur.b - cur.a) * 100}%"></span></div>` : ''}
+    ${fim ? `<p class="tm-msg">Largue a caneta. Confira o cartão-resposta e lance o resultado enquanto está fresco.</p>` : ''}
+    <ol class="tm-list">${list}</ol>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:22px">${fim ? `<button class="btn primary" data-act="tmLancar">Lançar resultado deste simulado</button><button class="btn" data-act="tmReset">Novo simulado</button>` : `${esp ? '' : `<button class="btn" data-act="tmPause">${pa ? 'Retomar' : 'Pausar'}</button>`}<button class="btn" data-act="tmFull">Tela cheia</button><button class="btn" data-act="tmEnd">Encerrar</button>`}</div></section>`;
+}
+VIEWS.timer = function () {
+  return head('Simulador de prova', 'Treine com o relógio da prova: o tempo corre, avisa nas horas combinadas e, no fim, você lança o resultado.') + (tm ? tmRun() : tmSetup());
+};
+Object.assign(ACT, {
+  tmPre: el => { const k = el.dataset.k, keep = tmDraft; tmDraft = { ...tmMk(k), modo: keep.modo, hora: keep.hora, avisos: keep.avisos, som: keep.som }; render(true); },
+  tmModo: el => { tmDraft.modo = el.dataset.k; render(true); },
+  tmAviso: el => { const m = +el.dataset.m, a = tmDraft.avisos; tmDraft.avisos = a.includes(m) ? a.filter(x => x !== m) : [...a, m].sort((x, y) => y - x); render(true); },
+  tmSom: () => { tmDraft.som = !tmDraft.som; if (tmDraft.som) tmBeep(1, false, true); render(true); },
+  tmAdd: () => { tmDraft.et.push({ n: 'Etapa ' + (tmDraft.et.length + 1), min: 60 }); render(true); },
+  tmDel: el => { if (tmDraft.et.length > 1) tmDraft.et.splice(+el.dataset.i, 1); render(true); },
+  tmStart: () => {
+    const d = tmDraft; if (tmTotMin(d.et) <= 0) { toast('Defina o tempo das etapas.', 'err'); return; }
+    let start = Date.now();
+    if (d.modo === 'hora') { const [h, m] = (d.hora || '').split(':').map(Number); if (isNaN(h)) { toast('Escolha o horário de início.', 'err'); return; } const t = new Date(); t.setHours(h, m, 0, 0); if (t.getTime() < Date.now() - 60000) { toast('Esse horário de hoje já passou. Escolha um horário à frente ou comece agora.', 'err'); return; } start = Math.max(t.getTime(), Date.now()); }
+    tm = { pre: d.pre, nome: (d.nome || 'Simulado').trim(), et: d.et.map(e => ({ n: (e.n || 'Etapa').trim(), min: Math.max(1, +e.min || 1) })), start, shift: 0, pausedAt: null, avisos: [...d.avisos], som: d.som, fired: {} };
+    tmBeep(1, true, d.som); try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => { }); } catch (e) { } tmSave(); render(true);
+  },
+  tmPause: () => { if (tm.pausedAt) { tm.shift = (tm.shift || 0) + Date.now() - tm.pausedAt; tm.pausedAt = null; } else tm.pausedAt = Date.now(); tmSave(); render(true); },
+  tmFull: () => { const el = document.getElementById('tm-card'); try { document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen(); } catch (e) { } },
+  tmEnd: async () => { if (await confirmBox({ title: 'Encerrar o simulado?', text: 'O relógio para e o progresso desta prova é descartado.', ok: 'Encerrar', danger: true })) { tm = null; tmSave(); try { document.fullscreenElement && document.exitFullscreen(); } catch (e) { } render(true); } },
+  tmReset: () => { tm = null; tmSave(); render(true); },
+  tmLancar: () => { const p = tm.pre, mod = p === 'd1' || p === 'd2' ? modelosAll().find(m => m.id === 'enem-' + p) : null; simForm(null, { data: TODAY_ISO, nome: p === 'd1' ? 'Dia 1' : p === 'd2' ? 'Dia 2' : tm.nome, ...(mod ? { modelo: mod.id } : {}) }); },
+});
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.closest || S.route !== 'timer' || tm) return;
+  if (t.id === 'tm-nome') tmDraft.nome = t.value; else if (t.id === 'tm-hora') tmDraft.hora = t.value;
+  else if (t.classList.contains('tm-en')) tmDraft.et[+t.dataset.i].n = t.value;
+  else if (t.classList.contains('tm-em')) { tmDraft.et[+t.dataset.i].min = +t.value || 0; const el = document.getElementById('tm-tot'); if (el) el.textContent = tmHM(tmTotMin(tmDraft.et)); }
+});
+{
+  const nav = NAV.find(n => n.g === 'SIMULADOS'); nav.items.push({ id: 'timer', label: 'Simulador de prova', icon: 'timer' });
+  ROUTES.splice(0, ROUTES.length, ...NAV.flatMap(n => n.g ? n.items : [n]), ...(LITE ? [] : [{ id: 'sim-questoes', label: 'Notas' }]));
+}
 
 </script>
 <script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});</script>
