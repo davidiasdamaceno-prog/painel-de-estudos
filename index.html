@@ -99,7 +99,7 @@ h1, h2, h3 { text-wrap: balance; }
 .big { font: 600 34px/1.1 var(--mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .big small { font-size: 26px; font-weight: 500; margin-left: 6px; color: var(--ink-2); }
 .g-top { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; }
-.g-bot { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.g-bot { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .g-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
 .hero-side { text-align: right; }
@@ -1196,7 +1196,7 @@ VIEWS.visao = function () {
       ${chart}${chips}
     </section>
     ${analysisCard(ms, sims, reds)}</div>`;
-  return grainNote(sims) + top + tableCard(ms, reds) + `<div class="g-bot">${goalCard(sims)}${eventsCard(sims, reds)}${healthCard(sims, reds, ms)}</div>`;
+  return grainNote(sims) + top + tableCard(ms, reds) + `<div class="g-bot">${goalCard(sims)}${eventsCard(sims, reds)}</div>`;
 };
 
 function analysisCard(ms, sims, reds) {
@@ -1262,20 +1262,6 @@ function eventsCard(sims, reds) {
   ev.sort((a, b) => b.d.localeCompare(a.d));
   return `<section class="card"><div class="h-card">Eventos recentes</div>${ev.length ? `<div class="events">${ev.slice(0, 7).map(e => `<div class="ev"><span class="ic">${ic(e.ic, 15)}</span><div><div class="t">${esc(trunc(e.t, 40))}</div><div class="s">${esc(e.s)}</div></div><span class="d">${fd(e.d)}</span></div>`).join('')}</div>` : '<p class="sub" style="margin-top:10px">Nada ainda. Simulados, redações e conversas do caderno aparecem aqui.</p>'}</section>`;
 }
-function healthCard(sims, reds, ms) {
-  const cfg = S.cfg, ls = sims.at(-1), lr = reds.at(-1);
-  const dS = ls ? daysBetween(ls.data, TODAY_ISO) : null, dR = lr ? daysBetween(lr.data, TODAY_ISO) : null;
-  const low = ms.filter(x => x.last != null && x.last < cfg.piso);
-  const rt = lr ? redTotal(lr) : null;
-  const items = [
-    { ok: dS != null && dS <= 14, t: 'Simulado nos últimos 14 dias', s: ls ? `Último em ${fd(ls.data, true)}, há ${dS} ${dS === 1 ? 'dia' : 'dias'}.` : 'Nenhum simulado lançado.' },
-    { ok: dR != null && dR <= 7, t: 'Redação nos últimos 7 dias', s: lr ? `Último texto lançado em ${fd(lr.data, true)}, há ${dR} ${dR === 1 ? 'dia' : 'dias'}.` : 'Nenhuma redação lançada.' },
-    { ok: !!ls && !low.length, t: `Nenhuma matéria abaixo de ${cfg.piso}%`, s: !ls ? 'Sem simulados para avaliar.' : low.length ? 'Abaixo: ' + low.map(x => `${x.m} ${nf(x.last, 0)}%`).join(', ') + '.' : 'Todas acima do piso no último simulado.' },
-    { ok: rt != null && rt >= cfg.metaRed, t: 'Redação na meta', s: rt == null ? 'Sem nota de redação.' : `${nf(rt)} de ${nf(cfg.metaRed)} pontos no último texto.` }
-  ];
-  return `<section class="card"><div class="h-card">Saúde do estudo${helpBtn('saude')}</div><div class="checks" style="margin-top:16px">${items.map(i => `<div class="check"><span class="chk ${i.ok ? 'on' : 'off'}">${ic(i.ok ? 'check' : 'x', 14)}</span><div><div class="t">${i.t}</div><div class="s">${esc(i.s)}</div></div></div>`).join('')}</div></section>`;
-}
-
 /* ---------- Simulados: notas ---------- */
 VIEWS['sim-notas'] = function () {
   const all = simsAllSorted(), mods = modelosAll(); /* todo modelo cadastrado vira um filtro, mesmo antes do primeiro simulado dele */
@@ -2126,7 +2112,6 @@ function modelosForm() {
 const HELP = {
   grafico: ['Gráfico principal', ['Mostra como você evolui nos simulados do modelo escolhido no topo.', 'Últ. 3, Últ. 6 e Tudo escolhem quantos simulados entram. “%” mostra o aproveitamento e “Acertos” mostra o número de questões certas.', 'Aproveitamento junta tudo numa linha, Áreas separa uma linha por área e Redação troca para as notas dos textos. A linha tracejada é a sua meta.']],
   meta: ['Meta de acertos', ['Compara a média dos seus últimos simulados com a meta do modelo (você define em Configurações > Editar modelos de prova).', 'O ponteiro do anel marca a meta. Se o anel passou dele, você está acima da meta.']],
-  saude: ['Saúde do estudo', ['Lista de verificação simples: se você fez simulado e redação recentemente e se está dentro das metas. Serve de lembrete de constância, não de nota.']],
   contagem: ['Contagem regressiva', ['Mostra quanto falta para cada prova que você cadastrou em Configurações > Provas e datas. Cada prova tem o seu quadrado, com a cor que você escolher, e o relógio mostra dias, horas, minutos e segundos correndo ao vivo. No dia da prova, aparece “É hoje”. A contagem só aparece na Visão geral.']],
   'p-sim': ['Simulados (Notas)', ['Lista dos simulados do modelo escolhido, do mais novo para o mais antigo. “Melhor/pior” mostra a área em que você foi melhor e pior, e a seta mostra a variação em relação ao simulado anterior.', 'Clique numa linha para ver os detalhes, editar ou excluir. Para lançar um novo, use o botão de novo simulado.']],
   'p-notas': ['Notas do simulado', ['Aqui você vê as notas de um simulado e confere as questões que marcou. Os acertos lançados na lista de simulados são os valores oficiais; se a contagem das questões não bater, o painel avisa.']],
