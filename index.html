@@ -2900,7 +2900,7 @@ const TM_PRE = {
   d2: { nome: 'ENEM · Dia 2', total: 300, div: 30, h: '13:30', marcos: [[120, 'Saída definitiva liberada (permanência mínima de 2h)'], [270, 'Já pode sair levando o caderno de questões']], et: [['Ciências da Natureza', 150], ['Matemática', 120], ['Cartão-resposta e revisão', 30]] },
   livre: { nome: 'Simulado', total: 180, div: 0, h: '13:30', marcos: [], et: [['Prova', 180]] },
 };
-const tmMk = k => { const p = TM_PRE[k]; return { pre: k, nome: p.nome, total: p.total, div: p.div, et: p.et.map(([n, min]) => ({ n, min })), marcos: p.marcos.map(([min, n]) => ({ min, n })), modo: 'agora', hora: p.h, cada30: true, avisos: [15, 5], som: true }; };
+const tmMk = k => { const p = TM_PRE[k]; return { pre: k, nome: p.nome, total: p.total, div: p.div, et: p.et.map(([n, min]) => ({ n, min })), marcos: p.marcos.map(([min, n]) => ({ min, n })), modo: 'agora', hora: p.h, avisos: [60, 30, 15], som: true }; };
 const tmBlocos = (total, d) => { const o = []; for (let a = 0, i = 1; a < total; a += d, i++) o.push({ n: 'Bloco ' + i, min: Math.min(d, total - a) }); return o; };
 const tmEtapasOf = d => d.div > 0 ? tmBlocos(Math.max(1, +d.total || 0), d.div) : d.et.map(e => ({ n: (e.n || 'Etapa').trim(), min: Math.max(1, +e.min || 1) }));
 let tmDraft = tmMk('d1'), tm = (() => { try { const j = JSON.parse(lsGet(TM_KEY) || 'null'); return j && j.start ? j : null; } catch (e) { return null; } })();
@@ -2949,14 +2949,14 @@ function tmTick() {
 setInterval(tmTick, 1000);
 
 HELP_PAGE['Simulador de prova'] = 'timer';
-HELP.timer = ['Simulador de prova', `<p><b>Cronômetro:</b> a segunda aba conta o tempo para cima, sem limite. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta. Ele continua certo se você recarregar a página.</p><p>Treine com o relógio do ENEM. <b>Dia 1</b> tem 5h30 e <b>Dia 2</b> tem 5h, começando às 13h30 (horário de Brasília). Escolha <b>Agora</b> para treinar a qualquer hora, ou <b>Marcar horário</b> (como 13h30) para ver os mesmos horários da prova real.</p><p>A prova é cortada em <b>blocos de 30 minutos</b> (você pode trocar para 15 ou 60), e o painel avisa a cada 30 minutos quanto falta. Os <b>marcos oficiais</b> também são avisados: saída liberada depois de 2h e, nos últimos 30 minutos, a liberação para levar o caderno de questões. Se preferir dividir por matéria, escolha <b>Etapas próprias</b>.</p><p>O relógio usa a hora do computador, então continua certo se você recarregar a página. Use <b>Pausar</b> só em imprevistos e <b>Tela cheia</b> para simular melhor. Quando o tempo acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p>`];
+HELP.timer = ['Simulador de prova', `<p><b>Cronômetro:</b> a segunda aba conta o tempo para cima, sem limite. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta. Ele continua certo se você recarregar a página.</p><p>Treine com o relógio do ENEM. <b>Dia 1</b> tem 5h30 e <b>Dia 2</b> tem 5h, começando às 13h30 (horário de Brasília). Escolha <b>Agora</b> para treinar a qualquer hora, ou <b>Marcar horário</b> (como 13h30) para ver os mesmos horários da prova real.</p><p>A prova é cortada em <b>blocos de 30 minutos</b> (você pode trocar para 15 ou 60) para acompanhar o ritmo, e o painel avisa quanto falta só na <b>última hora</b>: 1 hora, 30 minutos e 15 minutos. Os <b>marcos oficiais</b> também são avisados: saída liberada depois de 2h e, nos últimos 30 minutos, a liberação para levar o caderno de questões. Se preferir dividir por matéria, escolha <b>Etapas próprias</b>.</p><p>O relógio usa a hora do computador, então continua certo se você recarregar a página. Use <b>Pausar</b> só em imprevistos e <b>Tela cheia</b> para simular melhor. Quando o tempo acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p>`];
 
 function tmSetup() {
   const d = tmDraft, blocos = d.div > 0, tot = blocos ? +d.total || 0 : tmTotMin(d.et);
   const chip = (k, l) => `<button class="pill" data-act="tmPre" data-k="${k}" aria-pressed="${d.pre === k}">${l}</button>`;
   const dv = (v, l) => `<button class="pill" data-act="tmDiv" data-k="${v}" aria-pressed="${d.div === v}">${l}</button>`;
   const ini = d.modo === 'hora' ? `<label class="field" style="flex:0 1 150px"><span>Horário de início</span><input type="time" id="tm-hora" value="${esc(d.hora)}"></label>` : '';
-  const avs = [15, 5].map(m => `<button class="pill" data-act="tmAviso" data-m="${m}" aria-pressed="${d.avisos.includes(m)}">${m} min antes do fim</button>`).join('');
+  const avs = [[60, 'Falta 1h'], [30, 'Faltam 30 min'], [15, 'Faltam 15 min']].map(([m, l]) => `<button class="pill" data-act="tmAviso" data-m="${m}" aria-pressed="${d.avisos.includes(m)}">${l}</button>`).join('');
   const marc = d.marcos.length ? `<div class="sub" style="margin-top:12px">Marcos oficiais avisados: ${d.marcos.map(m => `${tmHM(m.min)} (${esc(m.n.toLowerCase())})`).join(' · ')}.</div>` : '';
   const edit = blocos ? `<div class="row" style="margin-top:14px;align-items:flex-end"><label class="field" style="flex:0 1 180px"><span>Duração total (min)</span><input type="number" id="tm-total" min="10" max="900" step="5" value="${d.total}"></label><span class="sub" style="padding-bottom:12px">= <span id="tm-tot">${tmHM(tot)}</span> · ${Math.ceil(tot / d.div)} blocos de ${d.div} min</span></div>${marc}`
     : `<div class="lbl" style="margin-top:22px">Etapas · <span id="tm-tot">${tmHM(tot)}</span> no total</div><div class="tm-edit">${d.et.map((e, i) => `<div class="tm-erow"><span class="tm-n">${i + 1}</span><input type="text" class="tm-en" data-i="${i}" value="${esc(e.n)}" aria-label="Nome da etapa"><input type="number" class="tm-em" data-i="${i}" min="1" max="600" value="${e.min}" aria-label="Minutos"><span class="sub">min</span><button class="btn" data-act="tmDel" data-i="${i}" aria-label="Remover etapa" ${d.et.length < 2 ? 'disabled' : ''}>×</button></div>`).join('')}</div><button class="btn" data-act="tmAdd" style="margin-top:10px">${ic('plus', 14)} Adicionar etapa</button>${marc}`;
@@ -2967,8 +2967,8 @@ function tmSetup() {
     <div class="lbl" style="margin-top:26px">Divisão do tempo</div>
     <div class="chips" style="margin-top:12px">${dv(30, 'Blocos de 30 min')}${dv(15, '15 min')}${dv(60, '60 min')}${dv(0, 'Etapas próprias')}</div>
     ${edit}
-    <div class="lbl" style="margin-top:26px">Avisos</div>
-    <div class="chips" style="margin-top:12px"><button class="pill" data-act="tmCada30" aria-pressed="${d.cada30}">A cada 30 min</button>${avs}<button class="pill" data-act="tmSom" aria-pressed="${d.som}">${d.som ? 'Som ligado' : 'Som desligado'}</button></div>
+    <div class="lbl" style="margin-top:26px">Avisos de tempo restante · só na última hora</div>
+    <div class="chips" style="margin-top:12px">${avs}<button class="pill" data-act="tmSom" aria-pressed="${d.som}">${d.som ? 'Som ligado' : 'Som desligado'}</button></div>
     <div style="margin-top:28px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn primary" data-act="tmStart">Iniciar simulado</button><span class="sub">No ENEM você administra o tempo entre as provas; os blocos só marcam o ritmo.</span></div></section>`;
 }
 function tmRun() {
@@ -3011,10 +3011,9 @@ Object.assign(ACT, {
   crToggle: () => { if (cr.t0) { cr.acc += Date.now() - cr.t0; cr.t0 = null; } else { cr.t0 = Date.now(); try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => { }); } catch (e) { } } crSave(); render(true); },
   crLap: () => { if (!cr.t0) return; cr.laps.push(crNow()); crSave(); render(true); },
   crReset: () => { cr = { acc: 0, t0: null, laps: [] }; crSave(); render(true); },
-  tmPre: el => { const k = el.dataset.k, keep = tmDraft; tmDraft = { ...tmMk(k), modo: keep.modo, hora: keep.modo === 'hora' ? keep.hora : TM_PRE[k].h, cada30: keep.cada30, avisos: keep.avisos, som: keep.som }; render(true); },
+  tmPre: el => { const k = el.dataset.k, keep = tmDraft; tmDraft = { ...tmMk(k), modo: keep.modo, hora: keep.modo === 'hora' ? keep.hora : TM_PRE[k].h, avisos: keep.avisos, som: keep.som }; render(true); },
   tmModo: el => { tmDraft.modo = el.dataset.k; render(true); },
   tmAviso: el => { const m = +el.dataset.m, a = tmDraft.avisos; tmDraft.avisos = a.includes(m) ? a.filter(x => x !== m) : [...a, m].sort((x, y) => y - x); render(true); },
-  tmCada30: () => { tmDraft.cada30 = !tmDraft.cada30; render(true); },
   tmDiv: el => { tmDraft.div = +el.dataset.k; if (!tmDraft.div) tmDraft.total = tmTotMin(tmDraft.et); else if (!(+tmDraft.total > 0)) tmDraft.total = 180; render(true); },
   tmSom: () => { tmDraft.som = !tmDraft.som; if (tmDraft.som) tmBeep(1, false, true); render(true); },
   tmAdd: () => { tmDraft.et.push({ n: 'Etapa ' + (tmDraft.et.length + 1), min: 60 }); render(true); },
@@ -3023,7 +3022,7 @@ Object.assign(ACT, {
     const d = tmDraft, et = tmEtapasOf(d), total = tmTotMin(et); if (total <= 0) { toast('Defina o tempo da prova.', 'err'); return; }
     let start = Date.now();
     if (d.modo === 'hora') { const [h, m] = (d.hora || '').split(':').map(Number); if (isNaN(h)) { toast('Escolha o horário de início.', 'err'); return; } const t = new Date(); t.setHours(h, m, 0, 0); if (t.getTime() < Date.now() - 60000) { toast('Esse horário de hoje já passou. Escolha um horário à frente ou comece agora.', 'err'); return; } start = Math.max(t.getTime(), Date.now()); }
-    const av = new Set(d.avisos); if (d.cada30) for (let m = 30; m < total; m += 30) av.add(m);
+    const av = new Set(d.avisos.filter(m => m <= 60));
     tm = { pre: d.pre, nome: (d.nome || 'Simulado').trim(), et, blocos: d.div > 0, marcos: d.marcos.filter(m => m.min < total), start, shift: 0, pausedAt: null, avisos: [...av].sort((a, b) => b - a), som: d.som, fired: {} };
     tmBeep(1, true, d.som); try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => { }); } catch (e) { } tmSave(); render(true);
   },
