@@ -1178,8 +1178,10 @@ function tableCard(ms, reds) {
     <td>${spark(x.series)}</td><td class="num">${pct0(x.last)}</td><td class="num">${pct0(x.all)}</td><td>${deltaHTML(x.delta)}</td><td>${statusOf(x.last, modPct(activeModelo(), x.m), cfg.piso)}</td><td class="go">${ic('arrow', 16)}</td></tr>`).join('');
   let red = '';
   if (reds.length) {
-    const tot = reds.map(redTotal), last = tot.at(-1), prev = tot.at(-2);
-    red = `<tr class="click" data-act="go" data-id="red-competencias"><td><div class="cell-name"><span class="ico">${ic('pen', 17)}</span><div><div class="t">Redação ENEM</div><div class="s">${esc(trunc(reds.at(-1).tema, 34))} · ${reds.length} ${reds.length === 1 ? 'texto' : 'textos'}</div></div></div></td>
+    /* a evolução usa só os textos escritos: reescrita é sempre mais alta e criava um zigue-zague falso */
+    const base = reds.some(r => r.tipo !== 'reescrita') ? reds.filter(r => r.tipo !== 'reescrita') : reds, nResc = reds.length - base.length;
+    const tot = base.map(redTotal), last = tot.at(-1), prev = tot.at(-2);
+    red = `<tr class="click" data-act="go" data-id="red-competencias"><td><div class="cell-name"><span class="ico">${ic('pen', 17)}</span><div><div class="t">Redação ENEM</div><div class="s">${esc(trunc(base.at(-1).tema, 34))} · ${base.length} ${base.length === 1 ? 'texto' : 'textos'}${nResc ? ` + ${nResc} ${nResc === 1 ? 'reescrita' : 'reescritas'}` : ''}</div></div></div></td>
       <td>${spark(tot)}</td><td class="num">${nf(last)} pts</td><td class="num">${nf(stepN(avg(tot), 1000))} pts</td><td>${deltaHTML(prev != null ? last - prev : null, ' pts', 0)}</td><td>${statusOf(last, cfg.metaRed, null)}</td><td class="go">${ic('arrow', 16)}</td></tr>`;
   }
   return `<section class="card" aria-label="Por matéria"><div class="scroll-x"><table class="tbl"><thead><tr><th>Componente · mais fraca primeiro</th><th>Tendência</th><th>Último</th><th>Média</th><th>Variação</th><th>Situação</th><th></th></tr></thead><tbody>${body || ''}${red}</tbody></table></div>
