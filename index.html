@@ -2983,7 +2983,7 @@ function tmSetup() {
   const chip = (k, l) => `<button class="pill" data-act="tmPre" data-k="${k}" aria-pressed="${d.pre === k}">${l}</button>`;
   const livre = d.pre === 'livre', dis = livre ? '' : 'disabled';
   const ini = d.modo === 'hora' ? `<label class="field" style="flex:0 1 150px"><span>Horário de início</span><input type="time" id="tm-hora" value="${esc(d.hora)}"></label>` : '';
-  const marc = d.marcos.filter(m => m.min < tot).length ? `<div class="sub" style="margin-top:12px;text-align:center">Marcos oficiais avisados: ${d.marcos.filter(m => m.min < tot).map(m => `${tmHM(m.min)} (${esc(m.n.toLowerCase())})`).join(' · ')}.</div>` : '';
+  const marc = '';
   const ck = (k, t, s) => `<label class="tm-ck"><input type="checkbox" data-act="tmOpt" data-k="${k}" ${d[k] ? 'checked' : ''}><span><b>${t}</b><span class="sub">${s}</span></span></label>`;
   return `<section class="card"><div class="lbl">Prova</div>
     <div class="chips" style="margin-top:14px">${chip('d1', 'ENEM · Dia 1 · 5h30')}${chip('d2', 'ENEM · Dia 2 · 5h')}${chip('livre', 'Personalizada')}</div>
