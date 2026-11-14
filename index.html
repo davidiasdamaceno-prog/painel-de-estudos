@@ -571,6 +571,9 @@ tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 .tm-box .tm-st { margin-top: 14px; } .tm-box .tm-big { margin-bottom: 8px; }
 .tm-run:fullscreen .tm-tags { max-width: 90vw; } .tm-run:fullscreen .tm-tag { font-size: clamp(13px, 1.8vw, 22px); padding: 14px 2px; }
 @media (max-width: 600px) { .tm-tag { font-size: 11px; padding: 9px 0; } .tm-tags { gap: 8px 5px; } }
+.tm-cust { margin: 22px auto 0; max-width: 640px; border: 1px solid var(--line-2); border-radius: 14px; padding: 16px 18px; background: var(--card-2); }
+.tm-tag { position: relative; }
+.tm-x { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1px solid var(--line-2); background: var(--card); color: var(--ink-2); font: 12px/1 var(--mono); cursor: pointer; display: grid; place-items: center; } .tm-x:hover { color: var(--bad); border-color: var(--bad); }
 
 </style>
 </head>
@@ -2920,9 +2923,14 @@ const TM_PRE = {
   d2: { nome: 'ENEM · Dia 2', total: 300, h: '13:30', marcos: [[120, 'Saída definitiva liberada (permanência mínima de 2h)'], [270, 'Já pode sair levando o caderno de questões']] },
   livre: { nome: 'Simulado', total: 180, h: '13:30', marcos: [] },
 };
-const tmMk = k => { const p = TM_PRE[k]; return { pre: k, nome: p.nome, total: p.total, marcos: p.marcos.map(([min, n]) => ({ min, n })), modo: 'agora', hora: p.h, som: true, fiscal: false, sem: false }; };
+const tmMk = k => { const p = TM_PRE[k]; return { pre: k, nome: p.nome, total: p.total, marcos: p.marcos.map(([min, n]) => ({ min, n })), modo: 'agora', hora: p.h, som: true, fiscal: false, sem: false, int: 30, ult: true, add: [], rm: [] }; };
 /* etiquetas: a duração inteira, de 30 em 30 min, e na última hora 45, 30, 15 e 0 (como nas fitas do ENEM) */
-const tmTags = total => { const o = [total]; for (let v = Math.floor((total - 1) / 30) * 30; v > 60; v -= 30) o.push(v); [60, 45, 30, 15, 0].forEach(v => { if (v < total && !o.includes(v)) o.push(v); }); return o; };
+const tmTags = (total, it = 30, ult = true, add = [], rm = []) => {
+  const o = [total]; for (let v = Math.floor((total - 1) / it) * it; v > (ult ? 60 : 0); v -= it) o.push(v);
+  (ult ? [60, 45, 30, 15, 0] : [0]).forEach(v => { if (v < total) o.push(v); }); add.forEach(v => { if (v > 0 && v < total) o.push(v); });
+  return [...new Set(o)].filter(v => v === total || v === 0 || !rm.includes(v)).sort((a, b) => b - a);
+};
+const tmDraftTags = d => { const t = Math.round(+d.total || 0); return t >= 10 && t <= 900 ? (d.pre === 'livre' ? tmTags(t, d.int, d.ult, d.add, d.rm) : tmTags(t)) : []; };
 const tmTagLbl = v => `${Math.floor(v / 60)}h${String(v % 60).padStart(2, '0')}m`;
 let tmDraft = tmMk('d1'), tm = (() => { try { const j = JSON.parse(lsGet(TM_KEY) || 'null'); return j && j.tags ? j : null; } catch (e) { return null; } })();
 const tmSave = () => lsSet(TM_KEY, tm ? JSON.stringify(tm) : '');
@@ -2976,21 +2984,32 @@ setInterval(tmTick, 1000);
 HELP_PAGE['Simulador de prova'] = 'timer';
 HELP.timer = ['Simulador de prova', `<p>Treine como na prova de verdade, com <b>etiquetas</b> de tempo (as "fitinhas" do ENEM) que vão saindo conforme o tempo passa: de 30 em 30 minutos e, na última hora, aos 45, 30 e 15 minutos. Cada vez que uma sai, toca um sinal, e o fim da prova tem alarme.</p><p>Escolha <b>ENEM Dia 1</b> (5h30) ou <b>Dia 2</b> (5h), ambos às 13h30 no horário de Brasília, ou monte sua prova em <b>Personalizada</b> com as horas e minutos que quiser. Use <b>Começar: Agora</b> ou marque um horário para ver os mesmos horários da prova real.</p><p><b>Fiscal realista</b> atrasa algumas etiquetas, como acontece de verdade. <b>Sem timer</b> esconde o relógio e você só tem as etiquetas. Sem essa opção, o relógio fica escondido e você revela quando quiser em <b>Revelar tempo de prova</b>. Os <b>marcos oficiais</b> do ENEM também são avisados: saída liberada depois de 2h e, nos últimos 30 minutos, a liberação para levar o caderno.</p><p>O tempo usa a hora do computador, então continua certo se você recarregar a página. Quando acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p><p><b>Cronômetro:</b> a segunda aba conta o tempo para cima. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta.</p>`];
 
-const tmTagsHtml = (vals, c) => `<div class="tm-tags" style="--cols:${Math.ceil(vals.length / 2)}">${vals.map((v, i) => `<div class="tm-slot"><span class="tm-tag${c && tmGone(c, i) ? ' out' : ''}" id="tg${i}">${tmTagLbl(v)}</span></div>`).join('')}</div>`;
+const tmTagsHtml = (vals, c, edit) => `<div class="tm-tags" style="--cols:${Math.ceil(vals.length / 2)}">${vals.map((v, i) => `<div class="tm-slot"><span class="tm-tag${c && tmGone(c, i) ? ' out' : ''}" id="tg${i}">${tmTagLbl(v)}${edit && i > 0 && v > 0 ? `<button class="tm-x" data-act="tmTagDel" data-v="${v}" aria-label="Remover etiqueta ${tmTagLbl(v)}" title="Remover etiqueta">×</button>` : ''}</span></div>`).join('')}</div>`;
+function tmCustom(d) {
+  const it = [15, 30, 45, 60].map(m => `<button class="pill" data-act="tmInt" data-m="${m}" aria-pressed="${d.int === m}">${m} min</button>`).join('');
+  return `<div class="tm-cust"><div class="lbl">Personalizar etiquetas</div>
+    <div class="row" style="margin-top:12px;align-items:flex-end;gap:18px"><div class="field" style="flex:0 1 auto"><span>Uma etiqueta a cada</span><div class="chips">${it}</div></div>
+      <label class="tm-ck" style="max-width:340px"><input type="checkbox" data-act="tmOpt" data-k="ult" ${d.ult ? 'checked' : ''}><span><b>Detalhar a última hora</b><span class="sub">Etiquetas de 45, 30 e 15 minutos, como no ENEM</span></span></label></div>
+    <div class="row" style="margin-top:14px;align-items:flex-end;gap:10px"><label class="field" style="flex:0 1 190px"><span>Adicionar etiqueta (minutos restantes)</span><input type="number" id="tm-add" min="1" max="899" placeholder="ex.: 10"></label><button class="btn" data-act="tmTagAdd">${ic('plus', 14)} Adicionar</button>${d.add.length || d.rm.length ? '<button class="btn" data-act="tmTagReset">Restaurar padrão</button>' : ''}</div>
+    <div class="sub" style="margin-top:8px">Toque no × de uma etiqueta abaixo para removê-la. A primeira (início) e a 0h00m (fim) ficam sempre.</div></div>`;
+}
 function tmSetup() {
   const d = tmDraft, tot = +d.total || 0;
   const chip = (k, l) => `<button class="pill" data-act="tmPre" data-k="${k}" aria-pressed="${d.pre === k}">${l}</button>`;
+  const livre = d.pre === 'livre', dis = livre ? '' : 'disabled';
   const ini = d.modo === 'hora' ? `<label class="field" style="flex:0 1 150px"><span>Horário de início</span><input type="time" id="tm-hora" value="${esc(d.hora)}"></label>` : '';
   const marc = d.marcos.filter(m => m.min < tot).length ? `<div class="sub" style="margin-top:12px;text-align:center">Marcos oficiais avisados: ${d.marcos.filter(m => m.min < tot).map(m => `${tmHM(m.min)} (${esc(m.n.toLowerCase())})`).join(' · ')}.</div>` : '';
   const ck = (k, t, s) => `<label class="tm-ck"><input type="checkbox" data-act="tmOpt" data-k="${k}" ${d[k] ? 'checked' : ''}><span><b>${t}</b><span class="sub">${s}</span></span></label>`;
   return `<section class="card"><div class="lbl">Prova</div>
     <div class="chips" style="margin-top:14px">${chip('d1', 'ENEM · Dia 1 · 5h30')}${chip('d2', 'ENEM · Dia 2 · 5h')}${chip('livre', 'Personalizada')}</div>
-    <div class="tm-time"><div class="lbl">Tempo de prova</div><div class="tm-hm"><input type="number" id="tm-h" min="0" max="15" value="${Math.floor(tot / 60)}" aria-label="Horas"><span class="sub">horas</span><input type="number" id="tm-m" min="0" max="59" value="${tot % 60}" aria-label="Minutos"><span class="sub">minutos</span></div></div>${marc}
+    <div class="tm-time"><div class="lbl">Tempo de prova</div><div class="tm-hm"><input type="number" id="tm-h" min="0" max="15" value="${Math.floor(tot / 60)}" aria-label="Horas" ${dis}><span class="sub">horas</span><input type="number" id="tm-m" min="0" max="59" value="${tot % 60}" aria-label="Minutos" ${dis}><span class="sub">minutos</span></div>${livre ? '' : '<div class="sub" style="margin-top:10px">Duração oficial. Para mudar, escolha Personalizada.</div>'}</div>${marc}
+    ${livre ? tmCustom(d) : ''}
     <div class="row" style="margin-top:22px;align-items:flex-end"><label class="field" style="flex:2 1 240px"><span>Nome do simulado</span><input type="text" id="tm-nome" value="${esc(d.nome)}"></label>
-      <div class="field" style="flex:0 1 auto"><span>Começar</span><div class="chips"><button class="pill" data-act="tmModo" data-k="agora" aria-pressed="${d.modo === 'agora'}">Agora</button><button class="pill" data-act="tmModo" data-k="hora" aria-pressed="${d.modo === 'hora'}">Marcar horário</button></div></div>${ini}</div>
+      <div class="field" style="flex:0 1 auto"><span>Quando começa</span><div class="chips"><button class="pill" data-act="tmModo" data-k="agora" aria-pressed="${d.modo === 'agora'}">Quando eu clicar</button><button class="pill" data-act="tmModo" data-k="hora" aria-pressed="${d.modo === 'hora'}">Em um horário</button></div></div>${ini}</div>
+    <div class="sub" style="margin-top:8px">${d.modo === 'hora' ? 'A prova começa sozinha no horário escolhido (no ENEM real é 13:30). Até lá você vê a contagem para o início.' : 'Você aperta "Começar prova" quando estiver pronto.'}</div>
     <div class="tm-opts">${ck('fiscal', 'Fiscal realista', 'Não retira as etiquetas com tanta precisão')}${ck('sem', 'Sem timer', 'Você só terá as etiquetas para se orientar')}${ck('som', 'Efeitos sonoros', 'Ativa sons de quando etiquetas são retiradas e alarme de fim de prova')}</div>
-    <div class="lbl" style="margin-top:26px">Suas etiquetas · <span id="tm-nt">${tot > 0 ? tmTags(tot).length : 0}</span></div>
-    <div id="tm-prev">${tot > 0 ? tmTagsHtml(tmTags(tot)) : ''}</div>
+    <div class="lbl" style="margin-top:26px">Suas etiquetas · <span id="tm-nt">${tmDraftTags(d).length}</span></div>
+    <div id="tm-prev">${tmTagsHtml(tmDraftTags(d), null, livre)}</div>
     <div style="margin-top:26px;text-align:center"><button class="btn primary" data-act="tmStart">Para a prova!</button></div></section>`;
 }
 function tmRun() {
@@ -3037,14 +3056,18 @@ Object.assign(ACT, {
   crToggle: () => { if (cr.t0) { cr.acc += Date.now() - cr.t0; cr.t0 = null; } else { cr.t0 = Date.now(); tmWake(); } crSave(); render(true); },
   crLap: () => { if (!cr.t0) return; cr.laps.push(crNow()); crSave(); render(true); },
   crReset: () => { cr = { acc: 0, t0: null, laps: [] }; crSave(); render(true); },
-  tmPre: el => { const k = el.dataset.k, keep = tmDraft; tmDraft = { ...tmMk(k), modo: keep.modo, hora: keep.modo === 'hora' ? keep.hora : TM_PRE[k].h, som: keep.som, fiscal: keep.fiscal, sem: keep.sem }; render(true); },
+  tmInt: el => { tmDraft.int = +el.dataset.m; tmDraft.add = []; tmDraft.rm = []; render(true); },
+  tmTagDel: el => { const v = +el.dataset.v; if (!tmDraft.rm.includes(v)) tmDraft.rm.push(v); tmDraft.add = tmDraft.add.filter(x => x !== v); render(true); },
+  tmTagAdd: () => { const i = document.getElementById('tm-add'), v = Math.round(+i.value || 0); if (v < 1 || v >= (+tmDraft.total || 0)) { toast('Informe os minutos restantes, menor que a duração da prova.', 'err'); return; } tmDraft.rm = tmDraft.rm.filter(x => x !== v); if (!tmDraft.add.includes(v)) tmDraft.add.push(v); render(true); },
+  tmTagReset: () => { tmDraft.add = []; tmDraft.rm = []; render(true); },
+  tmPre: el => { const k = el.dataset.k, keep = tmDraft; tmDraft = { ...tmMk(k), modo: keep.modo, hora: keep.modo === 'hora' ? keep.hora : TM_PRE[k].h, som: keep.som, fiscal: keep.fiscal, sem: keep.sem, int: keep.int, ult: keep.ult }; render(true); },
   tmModo: el => { tmDraft.modo = el.dataset.k; render(true); },
-  tmOpt: el => { const k = el.dataset.k; tmDraft[k] = !!el.checked; if (k === 'som' && el.checked) tmBeep(1, false, true); },
+  tmOpt: el => { const k = el.dataset.k; tmDraft[k] = !!el.checked; if (k === 'som' && el.checked) tmBeep(1, false, true); if (k === 'ult') { tmDraft.add = []; tmDraft.rm = []; } render(true); },
   tmStart: () => {
     const d = tmDraft, total = Math.round(+d.total || 0); if (total < 10) { toast('Defina o tempo da prova (mínimo 10 minutos).', 'err'); return; }
     let start = null;
     if (d.modo === 'hora') { const [h, m] = (d.hora || '').split(':').map(Number); if (isNaN(h)) { toast('Escolha o horário de início.', 'err'); return; } const t = new Date(); t.setHours(h, m, 0, 0); if (t.getTime() < Date.now() - 60000) { toast('Esse horário de hoje já passou. Escolha um horário à frente ou comece agora.', 'err'); return; } start = Math.max(t.getTime(), Date.now()); }
-    const tags = tmTags(total), delays = tags.map((v, i) => d.fiscal && i > 0 && v > 0 ? Math.round((20 + Math.random() * 130) * 1000) : 0);
+    const tags = tmDraftTags(d), delays = tags.map((v, i) => d.fiscal && i > 0 && v > 0 ? Math.round((20 + Math.random() * 130) * 1000) : 0);
     tm = { pre: d.pre, nome: (d.nome || 'Simulado').trim(), total, tags, delays, marcos: d.marcos.filter(m => m.min < total), start, shift: 0, pausedAt: null, som: d.som, sem: d.sem, fiscal: d.fiscal, show: false, fired: {} };
     if (start) tmWake(); tmSave(); render(true);
   },
@@ -3062,8 +3085,8 @@ document.addEventListener('input', e => {
   if (t.id === 'tm-nome') tmDraft.nome = t.value; else if (t.id === 'tm-hora') tmDraft.hora = t.value;
   else if (t.id === 'tm-h' || t.id === 'tm-m') {
     const h = Math.max(0, +document.getElementById('tm-h').value || 0), m = Math.max(0, +document.getElementById('tm-m').value || 0); tmDraft.total = h * 60 + m;
-    const pv = document.getElementById('tm-prev'), nt = document.getElementById('tm-nt'), tot = tmDraft.total;
-    if (pv) pv.innerHTML = tot > 0 && tot <= 900 ? tmTagsHtml(tmTags(tot)) : ''; if (nt) nt.textContent = tot > 0 && tot <= 900 ? tmTags(tot).length : 0;
+    const pv = document.getElementById('tm-prev'), nt = document.getElementById('tm-nt'), tg = tmDraftTags(tmDraft);
+    if (pv) pv.innerHTML = tmTagsHtml(tg, null, true); if (nt) nt.textContent = tg.length;
   }
 });
 {
