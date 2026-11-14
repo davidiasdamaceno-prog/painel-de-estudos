@@ -1237,16 +1237,16 @@ function tableCard(ms, reds) {
   const cfg = S.cfg; const rows = [...ms].sort((a, b) => (a.recent ?? 999) - (b.recent ?? 999));
   const body = rows.map(x => `<tr class="click" data-act="verMat" data-m="${esc(x.m)}">
     <td><div class="cell-name"><span class="ico">${ic('book', 17)}</span><div><div class="t">${esc(x.m)}</div><div class="s">${x.lastRaw ? `último ${x.lastRaw.a}/${x.lastRaw.t}` : ''} · ${x.pts.length} ${x.pts.length === 1 ? 'simulado' : 'simulados'}</div></div></div></td>
-    <td>${spark(x.series)}</td><td class="num">${pct0(x.last)}</td><td class="num">${pct0(x.all)}</td><td>${deltaHTML(x.delta)}</td><td>${statusOf(x.last, modPct(activeModelo(), x.m), cfg.piso)}</td><td class="go">${ic('arrow', 16)}</td></tr>`).join('');
+    <td class="num">${pct0(x.last)}</td><td class="num">${pct0(x.all)}</td><td>${deltaHTML(x.delta)}</td><td>${statusOf(x.last, modPct(activeModelo(), x.m), cfg.piso)}</td><td class="go">${ic('arrow', 16)}</td></tr>`).join('');
   let red = '';
   if (reds.length) {
     /* a evolução usa só os textos escritos: reescrita é sempre mais alta e criava um zigue-zague falso */
     const base = reds.some(r => r.tipo !== 'reescrita') ? reds.filter(r => r.tipo !== 'reescrita') : reds, nResc = reds.length - base.length;
     const tot = base.map(redTotal), last = tot.at(-1), prev = tot.at(-2);
     red = `<tr class="click" data-act="go" data-id="red-competencias"><td><div class="cell-name"><span class="ico">${ic('pen', 17)}</span><div><div class="t">Redação ENEM</div><div class="s">${esc(trunc(base.at(-1).tema, 34))} · ${base.length} ${base.length === 1 ? 'texto' : 'textos'}${nResc ? ` + ${nResc} ${nResc === 1 ? 'reescrita' : 'reescritas'}` : ''}</div></div></div></td>
-      <td>${spark(tot)}</td><td class="num">${nf(last)} pts</td><td class="num">${nf(stepN(avg(tot), 1000))} pts</td><td>${deltaHTML(prev != null ? last - prev : null, ' pts', 0)}</td><td>${statusOf(last, cfg.metaRed, null)}</td><td class="go">${ic('arrow', 16)}</td></tr>`;
+      <td class="num">${nf(last)} pts</td><td class="num">${nf(stepN(avg(tot), 1000))} pts</td><td>${deltaHTML(prev != null ? last - prev : null, ' pts', 0)}</td><td>${statusOf(last, cfg.metaRed, null)}</td><td class="go">${ic('arrow', 16)}</td></tr>`;
   }
-  return `<section class="card" aria-label="Por matéria"><div class="scroll-x"><table class="tbl"><thead><tr><th>Componente · mais fraca primeiro</th><th>Tendência</th><th>Último</th><th>Média</th><th>Variação</th><th>Situação</th><th></th></tr></thead><tbody>${body || ''}${red}</tbody></table></div>
+  return `<section class="card" aria-label="Por matéria"><div class="scroll-x"><table class="tbl"><thead><tr><th>Componente · mais fraca primeiro</th><th>Último</th><th>Média</th><th>Variação</th><th>Situação</th><th></th></tr></thead><tbody>${body || ''}${red}</tbody></table></div>
     ${!rows.length && !reds.length ? '<div class="empty" style="margin-top:6px"><b>Nada por aqui ainda</b>Lance um simulado ou uma redação e este quadro se monta sozinho.</div>' : ''}</section>`;
 }
 function goalCard(sims) {
@@ -2993,7 +2993,7 @@ function tmSetup() {
       <div class="field" style="flex:0 1 auto"><span>Quando começa</span><div class="chips"><button class="pill" data-act="tmModo" data-k="agora" aria-pressed="${d.modo === 'agora'}">Quando eu clicar</button><button class="pill" data-act="tmModo" data-k="hora" aria-pressed="${d.modo === 'hora'}">Em um horário</button></div></div>${ini}</div>
     <div class="sub" style="margin-top:8px">${d.modo === 'hora' ? 'A prova começa sozinha no horário escolhido (no ENEM real é 13:30). Até lá você vê a contagem para o início.' : 'Você aperta "Começar prova" quando estiver pronto.'}</div>
     <div class="tm-opts">${ck('fiscal', 'Fiscal realista', 'Não retira as etiquetas com tanta precisão')}${ck('sem', 'Sem timer', 'Você só terá as etiquetas para se orientar')}${ck('som', 'Efeitos sonoros', 'Ativa sons de quando etiquetas são retiradas e alarme de fim de prova')}</div>
-    <div class="lbl" style="margin-top:26px">Suas etiquetas · <span id="tm-nt">${tmDraftTags(d).length}</span></div>
+    <div style="margin-top:26px"></div>
     <div id="tm-prev">${tmTagsHtml(tmDraftTags(d), null, livre)}</div>
     <div style="margin-top:26px;text-align:center"><button class="btn primary" data-act="tmStart">Para a prova!</button></div></section>`;
 }
@@ -3033,7 +3033,7 @@ setInterval(() => { if (cr.t0 && S.route === 'timer' && S.ui.tmTab === 'cron') {
 VIEWS.timer = function () {
   const tab = S.ui.tmTab === 'cron' ? 'cron' : 'sim', tb = (k, l) => `<button class="pill" data-act="tmTab" data-k="${k}" aria-pressed="${tab === k}">${l}</button>`;
   return head('Simulador de prova', 'Faça seu simulado de forma imersiva, com etiquetas de tempo como as do ENEM, ou use o cronômetro livre. No fim, você lança o resultado.') +
-    `<div class="chips" style="margin-bottom:18px">${tb('sim', 'Simulador (etiquetas)')}${tb('cron', 'Cronômetro')}</div>` + (tab === 'cron' ? crView() : tm ? tmRun() : tmSetup());
+    `<div class="chips" style="margin-bottom:18px">${tb('sim', 'Simulador')}${tb('cron', 'Cronômetro')}</div>` + (tab === 'cron' ? crView() : tm ? tmRun() : tmSetup());
 };
 const tmWake = () => { try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => { }); } catch (e) { } };
 Object.assign(ACT, {
