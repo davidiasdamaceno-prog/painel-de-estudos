@@ -3047,7 +3047,7 @@ function tmSetup() {
     ${livre ? tmCustom(d) : ''}
     <div class="row" style="margin-top:22px;align-items:flex-end"><label class="field" style="flex:2 1 240px"><span>Nome do simulado</span><input type="text" id="tm-nome" value="${esc(d.nome)}"></label>
       <div class="field" style="flex:0 1 auto"><span>Quando começa</span><div class="chips"><button class="pill" data-act="tmModo" data-k="agora" aria-pressed="${d.modo === 'agora'}">Quando eu clicar</button><button class="pill" data-act="tmModo" data-k="hora" aria-pressed="${d.modo === 'hora'}">Em um horário</button></div></div>${ini}</div>
-    <div class="sub" style="margin-top:8px">${d.modo === 'hora' ? 'A prova começa sozinha no horário escolhido (no ENEM real é 13:30). Até lá você vê a contagem para o início.' : 'Você aperta "Começar prova" quando estiver pronto.'}</div>
+    <div class="sub" style="margin-top:8px">${d.modo === 'hora' ? 'A prova começa sozinha no horário escolhido (no ENEM real é 13:30). Até lá você vê a contagem para o início.' : 'Você aperta "Começar" quando estiver pronto.'}</div>
     <div class="tm-opts">${ck('fiscal', 'Fiscal realista', 'Não retira as etiquetas com tanta precisão')}${ck('sem', 'Sem timer', 'Você só terá as etiquetas para se orientar')}${ck('som', 'Efeitos sonoros', 'Ativa sons de quando etiquetas são retiradas e alarme de fim de prova')}</div>
     <div style="margin-top:26px"></div>
     <div id="tm-prev">${tmTagsHtml(tmDraftTags(d), null, livre)}</div>
@@ -3060,9 +3060,9 @@ function tmRun() {
   const big = ant ? tmHMS(c.end - c.eff) : fim ? '00:00:00' : pro ? tmHMS(c.tot) : esp ? tmHMS(c.t0 - c.eff) : tmHMS(c.end - c.eff);
   const rev = !tm.sem ? `<div class="tm-revw"><button class="tm-rev" data-act="tmShow" id="tm-rev">${tm.show ? '^ Esconder' : 'v Revelar'} tempo de prova</button></div><div class="tm-box" id="tm-box" ${tm.show ? '' : 'hidden'}><div class="tm-st" id="tm-stt">${status}</div><div class="tm-big mono" id="tm-big">${big}</div></div>` : '';
   const btns = fim ? `<button class="btn primary" data-act="tmLancar">Lançar resultado deste simulado</button>`
-    : pro ? `<button class="btn primary" data-act="tmGo">Começar prova</button>`
+    : pro ? `<button class="btn primary" data-act="tmGo">Começar</button>`
     : esp ? `<button class="btn primary" data-act="tmGo">Começar agora</button>`
-    : `<button class="btn primary" data-act="tmPause">${pa ? 'Retomar prova' : 'Pausar prova'}</button><button class="btn" data-act="tmFin">Finalizar</button><button class="btn" data-act="tmRestart">Recomeçar prova</button>`;
+    : `<button class="btn primary" data-act="tmPause">${pa ? 'Retomar' : 'Pausar'}</button><button class="btn" data-act="tmFin">Finalizar</button><button class="btn" data-act="tmRestart">Recomeçar</button>`;
   return `<section class="card tm-run${fim ? ' tm-fim' : ''}" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div><div class="lbl">${esc(tm.nome)}</div><div class="sub" style="margin-top:4px">${c.t0 ? `${tmClock(c.t0)} → ${tmClock(c.end)} · ` : ''}${tmHM(tm.total)}</div></div></div>
     ${rev}
     <div class="tm-btns">${btns}${fim ? `<button class="btn" data-act="tmReset">Novo simulado</button>` : ''}</div>
@@ -3147,14 +3147,14 @@ Object.assign(ACT, {
   tmRestart: async () => { if (await confirmBox({ title: 'Recomeçar a prova?', text: 'O relógio volta ao início e as etiquetas voltam todas. O registro desta tentativa é apagado do histórico.', ok: 'Recomeçar', danger: true })) { if (tm.hid) dbDel('tmh', tm.hid).catch(() => { }); tm.hid = null; tm.fimOk = 0; tm.start = null; tm.shift = 0; tm.pausedAt = null; tm.fired = {}; tmSave(); render(true); } },
   tmFin: async () => {
     const c = tmCalc(); if (c.ph !== 'prova') return;
-    if (!(await confirmBox({ title: 'Finalizar a prova agora?', text: `Ainda faltam ${tmDur((c.end - c.eff) / 1000)}. O tempo usado fica registrado e você poderá lançar o resultado.`, ok: 'Finalizar prova' }))) return;
+    if (!(await confirmBox({ title: 'Finalizar a prova agora?', text: `Ainda faltam ${tmDur((c.end - c.eff) / 1000)}. O tempo usado fica registrado e você poderá lançar o resultado.`, ok: 'Finalizar' }))) return;
     tm.endedAt = tm.pausedAt || Date.now(); tm.how = 'antes'; tm.fimOk = 1; tmHist('finalizada'); toast('Prova finalizada.'); render(true);
   },
   tmResume: el => {
     const r = S.tmh.find(x => x.id === el.dataset.id); if (!r || !r.snap) return;
     if (tm && tmCalc().ph === 'prova') { toast('Já existe uma prova em andamento. Pause ou finalize antes de retomar outra.', 'err'); return; }
     tm = { ...r.snap, pre: r.pre, nome: r.nome, total: r.total, hid: r.id, ini: r.ini, pausedAt: r.snap.pausedAt || r.upd || Date.now(), fired: {}, show: false, how: null, fimOk: 0, simId: null };
-    tmSave(); S.ui.tmTab = 'sim'; render(true); toast('Prova retomada de onde parou. Aperte "Retomar prova" para o tempo voltar a correr.');
+    tmSave(); S.ui.tmTab = 'sim'; render(true); toast('Prova retomada de onde parou. Aperte "Retomar" para o tempo voltar a correr.');
   },
   tmDelRec: async el => { if (await confirmBox({ title: 'Excluir este registro?', text: 'Só o registro do tempo some. Um simulado já lançado continua nas notas.', ok: 'Excluir', danger: true })) dbDel('tmh', el.dataset.id).catch(() => { }); },
   tmLancarRec: el => { const r = S.tmh.find(x => x.id === el.dataset.id); if (r) tmLancarPre(r.nome, r.pre, r.ini, r.usado, r.total, r.how, r.id); },
