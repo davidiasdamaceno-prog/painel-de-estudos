@@ -584,6 +584,17 @@ tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 }
 @media (prefers-reduced-motion: reduce) { .shell, .side, body.side-off .side { transition: none !important; } }
 
+/* histórico do simulador */
+.tmh { margin-top: 14px; display: grid; }
+.tmh-r { display: grid; grid-template-columns: minmax(0, 1.6fr) auto minmax(110px, auto) auto; gap: 8px 18px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+.tmh-r:first-child { border-top: 0; }
+.tmh-main { display: grid; gap: 2px; min-width: 0; } .tmh-main b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tmh-t { display: grid; gap: 2px; text-align: right; }
+.tmh-a { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.tmh-st { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--ink-2); white-space: nowrap; }
+.tmh-st.ok { color: var(--good); border-color: var(--good); } .tmh-st.warn { color: var(--warn); border-color: var(--warn); } .tmh-st.run { color: var(--ink); border-color: var(--ink-2); }
+@media (max-width: 700px) { .tmh-r { grid-template-columns: minmax(0, 1fr) auto; } .tmh-t { text-align: left; } .tmh-a { justify-content: flex-start; grid-column: 1 / -1; } }
+
 </style>
 </head>
 <body>
@@ -708,7 +719,7 @@ const DEF_CFG = {
 /* ============ state ============ */
 const S = {
   route: 'visao', db: null, ai: null, assets: null,
-  sims: [], simq: {}, reds: [], cad: [], ans: [], anx: [], cfg: { ...DEF_CFG },
+  sims: [], simq: {}, reds: [], cad: [], ans: [], anx: [], tmh: [], cfg: { ...DEF_CFG },
   loaded: false, demo: false, demoOff: false, demoForce: false, dbErr: null, slow: false,
   ui: { modelo: (() => { try { return localStorage.getItem('pe-modelo') || null; } catch (e) { return null; } })(), range: 'all', metric: 'geral', matSel: null, simSel: null, qMat: 'todas', qSt: 'todas', qSearch: '', evSel: null, thread: null, openG: { SIMULADOS: true, 'REDAÇÃO': true, ESTUDO: true }, menu: false },
   draft: {}, stream: null, modal: null, pending: false, qDirty: {}, qTimers: {}
@@ -778,7 +789,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.modal &&
 /* ============ db layer ============ */
 const wq = {};
 const enqueue = (key, fn) => { const p = (wq[key] || Promise.resolve()).catch(() => { }).then(fn); wq[key] = p; return p; };
-const LISTS = { sim: 'sims', red: 'reds', cad: 'cad', ans: 'ans', anx: 'anx' };
+const LISTS = { sim: 'sims', red: 'reds', cad: 'cad', ans: 'ans', anx: 'anx', tmh: 'tmh' };
 function memSet(col, id, data) {
   if (col === 'simq') { S.simq[id] = data; return; }
   if (col === 'config') { S.cfg = { ...DEF_CFG, ...data }; return; }
@@ -802,7 +813,7 @@ function subscribe() {
   const done = k => { pend.delete(k); if (!pend.size) { S.loaded = true; S.slow = false; clearTimeout(S.loadTimer); } S.demo = calcDemo(); schedule(); };
   const fail = e => { S.dbErr = e && (e.message || e.code) || 'erro'; schedule(); };
   Object.entries(LISTS).forEach(([col, key]) => {
-    S.db.collection(col).onSnapshot(snap => { S[key] = snap.docs.map(d => ({ id: d.id, ...d.data() })); done(col); }, e => { fail(e); if (col === 'anx') done(col); });
+    S.db.collection(col).onSnapshot(snap => { S[key] = snap.docs.map(d => ({ id: d.id, ...d.data() })); done(col); }, e => { if (col !== 'tmh') fail(e); if (col === 'anx') done(col); });
   });
   S.db.collection('simq').onSnapshot(snap => {
     const m = {}; snap.docs.forEach(d => { m[d.id] = d.data(); });
@@ -1282,7 +1293,7 @@ VIEWS['sim-notas'] = function () {
     const mid = modeloOf(s).id, same = all.filter(x => modeloOf(x).id === mid), t = simStat(s), i = same.indexOf(s), prev = i > 0 ? simStat(same[i - 1]).p : null;
     const ranked = (s.mats || []).filter(m => m.t).map(m => ({ m: m.m, p: m.a / m.t * 100 })).sort((a, b) => b.p - a.p);
     const best = ranked[0], worst = ranked.length > 1 ? ranked.at(-1) : null;
-    return `<tr class="click" data-act="simOpen" data-id="${s.id}"><td class="num">${fd(s.data, true)}</td><td><div class="t">${esc(s.nome)}</div>${mods.length > 1 ? `<div class="s sub">${esc(modeloOf(s).nome)}</div>` : ''}${s.grupo ? `<div class="s sub">${esc(s.grupo)}</div>` : ''}${s.pdfNome ? `<div class="s sub">${ic('file', 12)} ${esc(trunc(s.pdfNome, 30))}</div>` : ''}</td><td class="num">${t.a}/${t.t}</td><td class="num">${pct0(t.p)}</td>
+    return `<tr class="click" data-act="simOpen" data-id="${s.id}"><td class="num">${fd(s.data, true)}</td><td><div class="t">${esc(s.nome)}</div>${mods.length > 1 ? `<div class="s sub">${esc(modeloOf(s).nome)}</div>` : ''}${s.grupo ? `<div class="s sub">${esc(s.grupo)}</div>` : ''}${s.pdfNome ? `<div class="s sub">${ic('file', 12)} ${esc(trunc(s.pdfNome, 30))}</div>` : ''}${s.tempo ? `<div class="s sub">⏱ ${esc(tmTempoTxt(s.tempo))}</div>` : ''}</td><td class="num">${t.a}/${t.t}</td><td class="num">${pct0(t.p)}</td>
       <td class="sub">${best ? `+ ${esc(best.m)} ${nf(best.p, 0)}%` : ''}${worst ? `<br>− ${esc(worst.m)} ${nf(worst.p, 0)}%` : ''}</td><td>${deltaHTML(prev != null && t.p != null ? t.p - prev : null)}</td><td class="go">${ic('chev', 16)}</td></tr>`;
   }).join('');
   return head('Simulados', 'Todos os simulados lançados. Filtre por prova (Dia 1, Dia 2…) e clique numa linha para ver os detalhes ou editar.', `${chipsN}<button class="btn primary" data-act="simNew">${ic('plus', 15)} Novo simulado</button>`) +
@@ -1473,7 +1484,7 @@ VIEWS['sim-questoes'] = function () {
   if (!sim) return head('Notas', 'Esse simulado não existe mais.', `<button class="btn" data-act="go" data-id="sim-notas">${ic('chev', 14)} Voltar às notas</button>`);
   const M = modeloOf(sim), t = simStat(sim);
   const acts = `<button class="btn" data-act="go" data-id="sim-notas">← Notas</button><button class="btn" data-act="simEdit" data-id="${sid}">Editar</button><button class="btn" data-act="simAsk" data-id="${sid}">Comentar</button><button class="btn danger" data-act="simDel" data-id="${sid}">${ic('trash', 14)}</button>`;
-  const h = head(sim.nome, `${fd(sim.data, true)} · ${esc(M.nome)}${sim.grupo ? ' · ' + esc(sim.grupo) : ''}`, acts);
+  const h = head(sim.nome, `${fd(sim.data, true)} · ${esc(M.nome)}${sim.grupo ? ' · ' + esc(sim.grupo) : ''}${sim.tempo ? ' · ⏱ ' + esc(tmTempoTxt(sim.tempo)) : ''}`, acts);
   const rows = (sim.mats || []).filter(m => m.t).map(m => ({ n: m.m, pct: m.a / m.t * 100, v: `${m.a}/${m.t}`, color: matColor(m.m), mk: modPct(M, areaDeMat(M, m.m)) })).sort((a, b) => b.pct - a.pct);
   const resumo = `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Acertos por ${hasAreas(M) ? 'área' : 'matéria'}</span>${t.t ? `<span class="mono" style="margin-left:auto">${t.a}/${t.t}${t.p != null ? ' · ' + nf(t.p, 1) + '%' : ''}</span>` : ''}</div>
     <div style="margin-top:14px">${rows.length ? barRows(rows) : `<p class="sub">Ainda sem acertos. Adicione o PDF abaixo e marque as questões: o painel calcula os acertos por área sozinho. Ou edite o simulado e preencha os números.</p>`}</div></section>`;
@@ -1819,9 +1830,10 @@ function simForm(id, pre) {
     if (!nome) { toast('Dê um nome ao simulado ou preencha o simulado completo.', 'err'); return; }
     const sid = cur ? cur.id : uid();
     const doc = { ...(cur ? strip(cur) : { ts: Date.now() }), nome, grupo, data: $('#f-data', box).value, modelo: curM().id, banca: curM().nome, mats, obs: $('#f-obs', box).value.trim() };
+    if (!cur && pre && pre.tempo) doc.tempo = pre.tempo; /* tempo só entra quando o lançamento vem direto do simulador */
     if (LITE && !mats.length) { toast('Preencha os acertos de pelo menos uma área.', 'err'); return; }
     if (!mats.length) doc.auto = true; else if (!(cur && cur.auto && JSON.stringify(mats) === JSON.stringify(cur.mats || []))) delete doc.auto;
-    try { await dbSet('sim', sid, doc); S.ui.modelo = doc.modelo; S.ui.matSel = null; try { localStorage.setItem('pe-modelo', doc.modelo); } catch (x) { } closeModal(); toast('Simulado salvo em ' + doc.banca + '.'); render(true); } catch (e2) { }
+    try { await dbSet('sim', sid, doc); if (!cur && pre && pre.hid) tmLink(pre.hid, sid); S.ui.modelo = doc.modelo; S.ui.matSel = null; try { localStorage.setItem('pe-modelo', doc.modelo); } catch (x) { } closeModal(); toast('Simulado salvo em ' + doc.banca + '.'); render(true); } catch (e2) { }
   };
 }
 async function simDel(id) {
@@ -1836,7 +1848,7 @@ function simDetail(id) {
   const asc = simsSorted(), i = asc.findIndex(x => x.id === id), t = simStat(s), prev = i > 0 ? simStat(asc[i - 1]).p : null;
   const rows = (s.mats || []).filter(m => m.t).map(m => ({ n: m.m, pct: m.a / m.t * 100, v: `${m.a}/${m.t}`, color: matColor(m.m), mk: modPct(M, areaDeMat(M, m.m)) })).sort((a, b) => b.pct - a.pct);
   const hasQ = !!S.simq[id];
-  const box = modal(`<h2>${esc(s.nome)}</h2><p class="lead">${fd(s.data, true)} · ${esc(M.nome)}${s.grupo ? ' · ' + esc(s.grupo) : ''}${s.pdfNome ? ' · ' + esc(s.pdfNome) : ''}</p>
+  const box = modal(`<h2>${esc(s.nome)}</h2><p class="lead">${fd(s.data, true)} · ${esc(M.nome)}${s.grupo ? ' · ' + esc(s.grupo) : ''}${s.pdfNome ? ' · ' + esc(s.pdfNome) : ''}${s.tempo ? ' · ⏱ ' + esc(tmTempoTxt(s.tempo)) : ''}</p>
     <div class="cols" style="margin-bottom:18px"><div class="mini" style="margin:0"><div><span>Acertos</span><span class="mono">${t.a}/${t.t}</span></div></div>${!M.legacy && M.metaTotal ? `<div class="mini" style="margin:0"><div><span>Meta</span><span class="mono">${t.a}/${M.metaTotal}</span></div></div>` : ''}<div class="mini" style="margin:0"><div><span>Aproveitamento</span><span class="mono">${pct0(t.p)}</span></div></div><div class="mini" style="margin:0"><div><span>Variação</span><span>${deltaHTML(prev != null && t.p != null ? t.p - prev : null)}</span></div></div></div>
     ${barRows(rows)}${(s.mm || []).length ? `<div class="lbl" style="margin:20px 0 10px">Por matéria · das questões marcadas</div>${barRows(s.mm.filter(m => m.t).map(m => ({ n: m.m, pct: m.a / m.t * 100, v: `${m.a}/${m.t}`, color: matColor(m.m), mk: modPct(M, areaDeMat(M, m.m)) })).sort((a, b) => b.pct - a.pct))}` : ''}${s.obs ? `<p class="md" style="margin-top:16px;color:var(--ink-2)">${esc(s.obs)}</p>` : ''}
     <div class="foot" style="justify-content:space-between"><button class="btn danger" data-x="del">${ic('trash', 14)} Excluir</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ${LITE ? 'primary' : ''}" data-x="edit">Editar</button>${LITE ? '' : `<button class="btn" data-x="q">${hasQ ? 'Ver questões e conferência' : 'Adicionar PDF da prova para análise'}</button><button class="btn primary" data-x="ask">Comentar com o Claude</button>`}</div></div>`, { wide: true });
@@ -2428,7 +2440,7 @@ function artImport() {
     const ok = await confirmBox({ title: 'Importar dados do site?', text: `O arquivo traz ${cnt('sim')} simulados, ${cnt('red')} redações, ${cnt('anx') ? cnt('anx') + ' anexos, ' : ''}e as configurações. Itens com o mesmo código são substituídos; o que você já tem aqui e não está no arquivo continua. Suas instruções para o Claude não mudam.`, ok: 'Importar' });
     if (!ok) return;
     let n = 0, bad = 0;
-    for (const col of ['sim', 'simq', 'red', 'cad', 'ans', 'anx']) {
+    for (const col of ['sim', 'simq', 'red', 'cad', 'ans', 'anx', 'tmh']) {
       for (const [id, v] of Object.entries(d[col] || {})) {
         if (!id || id.includes('/') || !v || typeof v !== 'object') continue;
         try { await dbSet(col, id, v); n++; } catch (e) { bad++; }
@@ -2722,7 +2734,7 @@ const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return 
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
 const lsDel = k => { try { localStorage.removeItem(k); } catch (e) { } };
 const FB_VER = '10.14.1';
-const CLOUD_COLS = ['sim', 'simq', 'red', 'cad', 'ans', 'anx', 'config'];
+const CLOUD_COLS = ['sim', 'simq', 'red', 'cad', 'ans', 'anx', 'tmh', 'config'];
 function fbLoad(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('falha ao carregar ' + src)); document.head.appendChild(s); }); }
 async function fbBoot() {
   const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
@@ -2785,7 +2797,7 @@ function loginHTML() {
 function liteData() {
   if (!S.cloud) return liteLoad();
   const m = a => Object.fromEntries(a.map(({ id, ...r }) => [id, r]));
-  return { sim: m(S.sims), simq: { ...S.simq }, red: m(S.reds), cad: m(S.cad), ans: m(S.ans), anx: m(S.anx), config: { geral: { ...S.cfg } } };
+  return { sim: m(S.sims), simq: { ...S.simq }, red: m(S.reds), cad: m(S.cad), ans: m(S.ans), anx: m(S.anx), tmh: m(S.tmh), config: { geral: { ...S.cfg } } };
 }
 
 /* ============ Raio-X ENEM: assuntos mais cobrados (2009–2025) e cruzamento com os seus erros ============ */
@@ -2937,7 +2949,31 @@ const tmDraftTags = d => { const t = Math.round(+d.total || 0); return t >= 10 &
 const tmTagLbl = v => `${Math.floor(v / 60)}h${String(v % 60).padStart(2, '0')}m`;
 let tmDraft = tmMk('d1'), tm = (() => { try { const j = JSON.parse(lsGet(TM_KEY) || 'null'); return j && j.tags ? j : null; } catch (e) { return null; } })();
 const tmSave = () => lsSet(TM_KEY, tm ? JSON.stringify(tm) : '');
-const tmHM = min => { min = Math.round(min); const h = Math.floor(min / 60), m = min % 60; return h ? (m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`) : `${m} min`; };
+function tmHM(min) { min = Math.round(min); const h = Math.floor(min / 60), m = min % 60; return h ? (m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`) : `${m} min`; }
+/* duração em segundos -> "4h12" ou "37 min" */
+function tmDur(sec) { sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? `${h}h${String(m).padStart(2, '0')}` : sec && !m ? '<1 min' : `${m} min`; }
+function tmTempoTxt(t) { return `${tmDur(t.usado)} de ${tmDur(t.total * 60)}${t.fim === 'antes' ? ' · finalizado antes' : ''}`; }
+/* grava o registro do tempo (histórico). Falhas avisam uma vez só, para não atrapalhar a prova */
+async function tmPut(id, data) {
+  const body = clone(data); if (!S.db) { memSet('tmh', id, body); schedule(); return; }
+  try { await enqueue('tmh/' + id, () => S.db.collection('tmh').doc(id).set(body)); }
+  catch (e) { if (!tmPut.avisou) { tmPut.avisou = 1; toast('Não consegui salvar o histórico do simulador: ' + (e && (e.message || e.code) || 'erro'), 'err'); } }
+}
+function tmHist(st) {
+  if (!tm) return; if (!tm.hid) { tm.hid = uid(); tm.ini = (tm.start ? tmCalc().t0 : 0) || Date.now(); }
+  const c = tmCalc(), usado = c.t0 ? Math.max(0, Math.round((Math.min(c.eff, c.end) - c.t0) / 1000)) : 0;
+  const rec = { nome: tm.nome, pre: tm.pre, total: tm.total, ini: tm.ini, st, usado, how: tm.how || null, simId: tm.simId || null, upd: Date.now() };
+  if (st !== 'finalizada') rec.snap = { tags: tm.tags, delays: tm.delays, som: tm.som !== false, sem: !!tm.sem, fiscal: !!tm.fiscal, start: tm.start, shift: tm.shift || 0, pausedAt: tm.pausedAt || null };
+  tmSave(); tmPut(tm.hid, rec);
+}
+function tmLink(hid, sid) {
+  if (tm && tm.hid === hid) { tm.simId = sid; tmHist(tmCalc().ph === 'fim' ? 'finalizada' : 'pausada'); return; }
+  const r = S.tmh.find(x => x.id === hid); if (r) { const { id, ...rest } = r; tmPut(hid, { ...rest, simId: sid }); }
+}
+function tmLancarPre(nome, pre, ini, usado, total, how, hid) {
+  const mod = pre === 'd1' || pre === 'd2' ? modelosAll().find(m => m.id === 'enem-' + pre) : null;
+  simForm(null, { data: isoOf(new Date(ini || Date.now())), nome: pre === 'd1' ? 'Dia 1' : pre === 'd2' ? 'Dia 2' : nome, ...(mod ? { modelo: mod.id } : {}), tempo: { usado, total, fim: how || 'tempo', hid }, hid });
+}
 const tmHMS = ms => { ms = Math.max(0, Math.ceil(ms / 1000)); const h = Math.floor(ms / 3600), m = Math.floor(ms % 3600 / 60), s = ms % 60; return [h, m, s].map(x => String(x).padStart(2, '0')).join(':'); };
 const tmClock = ts => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 let _tmAc = null;
@@ -2951,10 +2987,10 @@ function tmBeep(n = 1, hi = false, on = true) {
 }
 /* estado calculado a partir dos horários (sobrevive a recarregar a página) */
 function tmCalc(now = Date.now()) {
-  const tot = tm.total * 60000, eff = tm.pausedAt || now;
+  const tot = tm.total * 60000, eff = tm.endedAt || tm.pausedAt || now;
   if (!tm.start) return { ph: 'pronto', tot, eff, t0: null, end: null };
   const t0 = tm.start + (tm.shift || 0), end = t0 + tot;
-  return { t0, end, tot, eff, ph: eff < t0 ? 'espera' : eff >= end ? 'fim' : 'prova' };
+  return { t0, end, tot, eff, ph: tm.endedAt ? 'fim' : eff < t0 ? 'espera' : eff >= end ? 'fim' : 'prova' };
 }
 /* instante em que cada etiqueta sai (o fiscal "realista" atrasa algumas) */
 const tmTagAt = (c, i) => c.end - tm.tags[i] * 60000 + (tm.delays[i] || 0);
@@ -2965,7 +3001,11 @@ function tmFire(key, when, fn) {
 }
 function tmTick() {
   if (!tm) return; const c = tmCalc(), on = tm.som !== false;
-  if (tm.start && !tm.pausedAt) {
+  if (tm.start && c.ph !== 'espera') { /* registro no histórico: ao começar e ao esgotar o tempo */
+    if (!tm.hid) tmHist(tm.pausedAt ? 'pausada' : 'andamento');
+    if (c.ph === 'fim' && !tm.fimOk) { tm.fimOk = 1; tm.how = tm.how || 'tempo'; tmHist('finalizada'); }
+  }
+  if (tm.start && !tm.pausedAt && !tm.endedAt) {
     tm.tags.forEach((v, i) => {
       if (i === 0) tmFire('ini', c.t0, () => { toast('Prova iniciada. Bom trabalho!'); tmBeep(2, true, on); });
       else if (v === 0) tmFire('fim', c.end, () => { toast('Tempo esgotado! Largue a caneta.'); tmBeep(3, true, on); });
@@ -2983,7 +3023,7 @@ function tmTick() {
 setInterval(tmTick, 1000);
 
 HELP_PAGE['Simulador de prova'] = 'timer';
-HELP.timer = ['Simulador de prova', `<p>Treine como na prova de verdade, com <b>etiquetas</b> de tempo (as "fitinhas" do ENEM) que vão saindo conforme o tempo passa: de 30 em 30 minutos e, na última hora, aos 45, 30 e 15 minutos. Cada vez que uma sai, toca um sinal, e o fim da prova tem alarme.</p><p>Escolha <b>ENEM Dia 1</b> (5h30) ou <b>Dia 2</b> (5h), ambos às 13h30 no horário de Brasília, ou monte sua prova em <b>Personalizada</b> com as horas e minutos que quiser. Em <b>Quando começa</b>, escolha <b>Quando eu clicar</b> ou <b>Em um horário</b> (a prova começa sozinha na hora marcada, como o ENEM às 13:30).</p><p><b>Fiscal realista</b> atrasa algumas etiquetas, como acontece de verdade. <b>Sem timer</b> esconde o relógio e você só tem as etiquetas. Sem essa opção, o relógio fica escondido e você revela quando quiser em <b>Revelar tempo de prova</b>.</p><p>O tempo usa a hora do computador, então continua certo se você recarregar a página. Quando acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p><p><b>Cronômetro:</b> a segunda aba conta o tempo para cima. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta.</p>`];
+HELP.timer = ['Simulador de prova', `<p>Treine como na prova de verdade, com <b>etiquetas</b> de tempo (as "fitinhas" do ENEM) que vão saindo conforme o tempo passa: de 30 em 30 minutos e, na última hora, aos 45, 30 e 15 minutos. Cada vez que uma sai, toca um sinal, e o fim da prova tem alarme.</p><p>Escolha <b>ENEM Dia 1</b> (5h30) ou <b>Dia 2</b> (5h), ambos às 13h30 no horário de Brasília, ou monte sua prova em <b>Personalizada</b> com as horas e minutos que quiser. Em <b>Quando começa</b>, escolha <b>Quando eu clicar</b> ou <b>Em um horário</b> (a prova começa sozinha na hora marcada, como o ENEM às 13:30).</p><p><b>Fiscal realista</b> atrasa algumas etiquetas, como acontece de verdade. <b>Sem timer</b> esconde o relógio e você só tem as etiquetas. Sem essa opção, o relógio fica escondido e você revela quando quiser em <b>Revelar tempo de prova</b>.</p><p><b>Finalizar prova</b> encerra antes do tempo acabar: o tempo usado e o que sobrou ficam registrados. Pausar e sair deixa a prova salva como <b>pausada</b> (não finalizada), com o tempo que falta, e você retoma pelo <b>Histórico</b>. Toda prova que você começa aparece no Histórico, mesmo que você não lance o resultado. O tempo só vai para a nota do simulado se você lançar o resultado direto do simulador.</p><p>O tempo usa a hora do computador, então continua certo se você recarregar a página. Quando acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p><p><b>Cronômetro:</b> a segunda aba conta o tempo para cima. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta.</p>`];
 
 const tmTagsHtml = (vals, c, edit) => `<div class="tm-tags" style="--cols:${Math.ceil(vals.length / 2)}">${vals.map((v, i) => `<div class="tm-slot"><span class="tm-tag${c && tmGone(c, i) ? ' out' : ''}" id="tg${i}">${tmTagLbl(v)}${edit && i > 0 && v > 0 ? `<button class="tm-x" data-act="tmTagDel" data-v="${v}" aria-label="Remover etiqueta ${tmTagLbl(v)}" title="Remover etiqueta">×</button>` : ''}</span></div>`).join('')}</div>`;
 function tmCustom(d) {
@@ -3015,18 +3055,19 @@ function tmSetup() {
 }
 function tmRun() {
   const c = tmCalc(), fim = c.ph === 'fim', esp = c.ph === 'espera', pro = c.ph === 'pronto', pa = !!tm.pausedAt;
-  const status = fim ? 'Tempo esgotado' : esp ? 'Começa em' : pro ? 'Tempo de prova' : pa ? 'Pausado' : 'Tempo restante';
-  const big = fim ? '00:00:00' : pro ? tmHMS(c.tot) : esp ? tmHMS(c.t0 - c.eff) : tmHMS(c.end - c.eff);
+  const ant = fim && tm.how === 'antes';
+  const status = ant ? 'Sobraram' : fim ? 'Tempo esgotado' : esp ? 'Começa em' : pro ? 'Tempo de prova' : pa ? 'Pausado' : 'Tempo restante';
+  const big = ant ? tmHMS(c.end - c.eff) : fim ? '00:00:00' : pro ? tmHMS(c.tot) : esp ? tmHMS(c.t0 - c.eff) : tmHMS(c.end - c.eff);
   const rev = !tm.sem ? `<div class="tm-revw"><button class="tm-rev" data-act="tmShow" id="tm-rev">${tm.show ? '^ Esconder' : 'v Revelar'} tempo de prova</button></div><div class="tm-box" id="tm-box" ${tm.show ? '' : 'hidden'}><div class="tm-st" id="tm-stt">${status}</div><div class="tm-big mono" id="tm-big">${big}</div></div>` : '';
   const btns = fim ? `<button class="btn primary" data-act="tmLancar">Lançar resultado deste simulado</button>`
     : pro ? `<button class="btn primary" data-act="tmGo">Começar prova</button>`
     : esp ? `<button class="btn primary" data-act="tmGo">Começar agora</button>`
-    : `<button class="btn primary" data-act="tmPause">${pa ? 'Retomar prova' : 'Pausar prova'}</button><button class="btn" data-act="tmRestart">Recomeçar prova</button>`;
+    : `<button class="btn primary" data-act="tmPause">${pa ? 'Retomar prova' : 'Pausar prova'}</button><button class="btn" data-act="tmFin">Finalizar prova</button><button class="btn" data-act="tmRestart">Recomeçar prova</button>`;
   return `<section class="card tm-run${fim ? ' tm-fim' : ''}" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div><div class="lbl">${esc(tm.nome)}</div><div class="sub" style="margin-top:4px">${c.t0 ? `${tmClock(c.t0)} → ${tmClock(c.end)} · ` : ''}${tmHM(tm.total)}</div></div></div>
     ${rev}
     <div class="tm-btns">${btns}${fim ? `<button class="btn" data-act="tmReset">Novo simulado</button>` : ''}</div>
     ${tmTagsHtml(tm.tags, c)}
-    ${fim ? `<p class="tm-msg">Largue a caneta. Confira o cartão-resposta e lance o resultado enquanto está fresco.</p>` : ''}
+    ${fim ? (ant ? `<p class="tm-msg">Prova finalizada antes do tempo. Você usou ${tmDur((c.eff - c.t0) / 1000)} de ${tmDur(tm.total * 60)} e sobraram ${tmDur((c.end - c.eff) / 1000)}.</p>` : `<p class="tm-msg">Largue a caneta. Confira o cartão-resposta e lance o resultado enquanto está fresco.</p>`) : ''}
     <div class="tm-btns" style="margin-top:26px">${fim ? '' : `<button class="btn" data-act="tmFull">Tela cheia</button>`}<button class="btn" data-act="tmEnd">Escolher outra prova</button></div></section>`;
 }
 /* cronômetro livre (conta para cima, com voltas) */
@@ -3045,10 +3086,40 @@ function crView() {
     ${st}${L.length ? `<div class="lbl" style="margin-top:24px">Voltas</div><div class="cr-h sub"><span>#</span><span>Volta</span><span>Total</span></div><ul class="cr-laps">${rows}</ul>` : '<p class="sub" style="text-align:center;margin-top:22px">Use <b>Volta</b> para marcar o tempo de cada questão, redação ou bloco sem parar o cronômetro.</p>'}</section>`;
 }
 setInterval(() => { if (cr.t0 && S.route === 'timer' && S.ui.tmTab === 'cron') { const el = document.getElementById('cr-big'); if (el) el.innerHTML = crFmt(crNow()); } }, 100);
+function tmHistView() {
+  const c = tm && tm.hid ? tmCalc() : null;
+  const list = S.tmh.map(r => {
+    if (!(tm && tm.hid === r.id)) return r;
+    const usado = c.t0 ? Math.max(0, Math.round((Math.min(c.eff, c.end) - c.t0) / 1000)) : r.usado;
+    return { ...r, usado, st: c.ph === 'fim' ? 'finalizada' : tm.pausedAt ? 'pausada' : 'andamento', how: tm.how || r.how, simId: tm.simId || r.simId, ativa: true };
+  });
+  if (tm && tm.hid && !list.some(r => r.id === tm.hid)) list.push({ id: tm.hid, nome: tm.nome, pre: tm.pre, total: tm.total, ini: tm.ini, usado: c.t0 ? Math.round((Math.min(c.eff, c.end) - c.t0) / 1000) : 0, st: c.ph === 'fim' ? 'finalizada' : tm.pausedAt ? 'pausada' : 'andamento', how: tm.how, ativa: true });
+  list.sort((a, b) => (b.ini || 0) - (a.ini || 0));
+  if (!list.length) return `<section class="card"><div class="empty"><b>Nenhuma prova registrada ainda.</b><span class="sub">Toda prova que você começa no simulador entra aqui, finalizada ou pausada, com o tempo usado e o que faltou.</span></div></section>`;
+  const nF = list.filter(r => r.st === 'finalizada').length, nP = list.length - nF;
+  const row = r => {
+    const dt = new Date(r.ini || 0), tot = r.total * 60, rest = Math.max(0, tot - (r.usado || 0));
+    const fin = r.st === 'finalizada', ativa = !!r.ativa, pau = !fin && !ativa;
+    const chip = fin ? (r.how === 'antes' ? ['Finalizada antes do tempo', 'ok'] : ['Finalizada · tempo esgotado', 'ok']) : ativa ? [r.st === 'pausada' ? 'Pausada agora' : 'Em andamento', 'run'] : ['Pausada · não finalizada', 'warn'];
+    const falt = fin ? (r.how === 'antes' ? `sobraram ${tmDur(rest)}` : 'usou o tempo todo') : `faltam ${tmDur(rest)}`;
+    const sim = r.simId && S.sims.find(x => x.id === r.simId);
+    const acts = [
+      pau && r.snap ? `<button class="btn sm" data-act="tmResume" data-id="${r.id}">Retomar</button>` : '',
+      fin ? (sim ? `<button class="btn sm" data-act="simOpen" data-id="${sim.id}">Ver simulado</button>` : `<button class="btn sm" data-act="tmLancarRec" data-id="${r.id}">Lançar resultado</button>`) : '',
+      !ativa ? `<button class="icon-btn" data-act="tmDelRec" data-id="${r.id}" aria-label="Excluir registro" title="Excluir registro">${ic('trash', 15)}</button>` : ''].join('');
+    return `<div class="tmh-r"><div class="tmh-main"><b>${esc(r.nome)}</b><span class="sub">${dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} · ${tmClock(dt)}${sim ? ' · lançado: ' + esc(sim.nome) : ''}</span></div>
+      <span class="tmh-st ${chip[1]}">${chip[0]}</span>
+      <div class="tmh-t"><span class="mono">${tmDur(r.usado || 0)} de ${tmDur(tot)}</span><span class="sub">${falt}</span></div>
+      <div class="tmh-a">${acts}</div></div>`;
+  };
+  return `<section class="card"><div class="lbl">Histórico de provas · ${list.length} ${list.length === 1 ? 'registro' : 'registros'}${nP ? ` · ${nP} ${nP === 1 ? 'não finalizada' : 'não finalizadas'}` : ''}${nF ? ` · ${nF} ${nF === 1 ? 'finalizada' : 'finalizadas'}` : ''}</div>
+    <div class="tmh">${list.map(row).join('')}</div>
+    <div class="sub" style="margin-top:14px">Prova não finalizada é uma prova pausada: use Retomar para continuar de onde parou, com o tempo que faltava. O tempo só vai para as notas se você lançar o resultado a partir do simulador.</div></section>`;
+}
 VIEWS.timer = function () {
-  const tab = S.ui.tmTab === 'cron' ? 'cron' : 'sim', tb = (k, l) => `<button class="pill" data-act="tmTab" data-k="${k}" aria-pressed="${tab === k}">${l}</button>`;
+  const tab = S.ui.tmTab === 'cron' ? 'cron' : S.ui.tmTab === 'hist' ? 'hist' : 'sim', tb = (k, l) => `<button class="pill" data-act="tmTab" data-k="${k}" aria-pressed="${tab === k}">${l}</button>`;
   return head('Simulador de prova', 'Faça seu simulado de forma imersiva, com etiquetas de tempo como as do ENEM, ou use o cronômetro livre. No fim, você lança o resultado.') +
-    `<div class="chips" style="margin-bottom:18px">${tb('sim', 'Simulador')}${tb('cron', 'Cronômetro')}</div>` + (tab === 'cron' ? crView() : tm ? tmRun() : tmSetup());
+    `<div class="chips" style="margin-bottom:18px">${tb('sim', 'Simulador')}${tb('cron', 'Cronômetro')}${tb('hist', 'Histórico')}</div>` + (tab === 'cron' ? crView() : tab === 'hist' ? tmHistView() : tm ? tmRun() : tmSetup());
 };
 const tmWake = () => { try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => { }); } catch (e) { } };
 Object.assign(ACT, {
@@ -3071,14 +3142,34 @@ Object.assign(ACT, {
     tm = { pre: d.pre, nome: (d.nome || 'Simulado').trim(), total, tags, delays, start, shift: 0, pausedAt: null, som: d.som, sem: d.sem, fiscal: d.fiscal, show: false, fired: {} };
     if (start) tmWake(); tmSave(); render(true);
   },
-  tmGo: () => { tm.start = Date.now(); tm.shift = 0; tm.pausedAt = null; tm.fired = {}; tmBeep(1, true, tm.som !== false); tmWake(); tmSave(); render(true); tmTick(); },
+  tmGo: () => { tm.start = Date.now(); tm.shift = 0; tm.pausedAt = null; tm.fired = {}; tm.hid = null; tm.endedAt = null; tm.how = null; tm.fimOk = 0; tm.simId = null; tmBeep(1, true, tm.som !== false); tmWake(); tmSave(); render(true); tmTick(); },
   tmShow: () => { tm.show = !tm.show; tmSave(); const b = document.getElementById('tm-box'), r = document.getElementById('tm-rev'); if (b) b.hidden = !tm.show; if (r) r.textContent = (tm.show ? '^ Esconder' : 'v Revelar') + ' tempo de prova'; },
-  tmPause: () => { if (tm.pausedAt) { tm.shift = (tm.shift || 0) + Date.now() - tm.pausedAt; tm.pausedAt = null; } else tm.pausedAt = Date.now(); tmSave(); render(true); },
-  tmRestart: async () => { if (await confirmBox({ title: 'Recomeçar a prova?', text: 'O relógio volta ao início e as etiquetas voltam todas.', ok: 'Recomeçar', danger: true })) { tm.start = null; tm.shift = 0; tm.pausedAt = null; tm.fired = {}; tmSave(); render(true); } },
+  tmPause: () => { if (tm.pausedAt) { tm.shift = (tm.shift || 0) + Date.now() - tm.pausedAt; tm.pausedAt = null; } else tm.pausedAt = Date.now(); tmSave(); if (tm.start && tmCalc().ph === 'prova') tmHist(tm.pausedAt ? 'pausada' : 'andamento'); render(true); },
+  tmRestart: async () => { if (await confirmBox({ title: 'Recomeçar a prova?', text: 'O relógio volta ao início e as etiquetas voltam todas. O registro desta tentativa é apagado do histórico.', ok: 'Recomeçar', danger: true })) { if (tm.hid) dbDel('tmh', tm.hid).catch(() => { }); tm.hid = null; tm.fimOk = 0; tm.start = null; tm.shift = 0; tm.pausedAt = null; tm.fired = {}; tmSave(); render(true); } },
+  tmFin: async () => {
+    const c = tmCalc(); if (c.ph !== 'prova') return;
+    if (!(await confirmBox({ title: 'Finalizar a prova agora?', text: `Ainda faltam ${tmDur((c.end - c.eff) / 1000)}. O tempo usado fica registrado e você poderá lançar o resultado.`, ok: 'Finalizar prova' }))) return;
+    tm.endedAt = tm.pausedAt || Date.now(); tm.how = 'antes'; tm.fimOk = 1; tmHist('finalizada'); toast('Prova finalizada.'); render(true);
+  },
+  tmResume: el => {
+    const r = S.tmh.find(x => x.id === el.dataset.id); if (!r || !r.snap) return;
+    if (tm && tmCalc().ph === 'prova') { toast('Já existe uma prova em andamento. Pause ou finalize antes de retomar outra.', 'err'); return; }
+    tm = { ...r.snap, pre: r.pre, nome: r.nome, total: r.total, hid: r.id, ini: r.ini, pausedAt: r.snap.pausedAt || r.upd || Date.now(), fired: {}, show: false, how: null, fimOk: 0, simId: null };
+    tmSave(); S.ui.tmTab = 'sim'; render(true); toast('Prova retomada de onde parou. Aperte "Retomar prova" para o tempo voltar a correr.');
+  },
+  tmDelRec: async el => { if (await confirmBox({ title: 'Excluir este registro?', text: 'Só o registro do tempo some. Um simulado já lançado continua nas notas.', ok: 'Excluir', danger: true })) dbDel('tmh', el.dataset.id).catch(() => { }); },
+  tmLancarRec: el => { const r = S.tmh.find(x => x.id === el.dataset.id); if (r) tmLancarPre(r.nome, r.pre, r.ini, r.usado, r.total, r.how, r.id); },
   tmFull: () => { const el = document.getElementById('tm-card') || document.getElementById('cr-card'); try { document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen(); } catch (e) { } },
-  tmEnd: async () => { const c = tmCalc(); if (c.ph === 'fim' || c.ph === 'pronto' || await confirmBox({ title: 'Escolher outra prova?', text: 'O relógio para e o progresso desta prova é descartado.', ok: 'Escolher outra', danger: true })) { tm = null; tmSave(); try { document.fullscreenElement && document.exitFullscreen(); } catch (e) { } render(true); } },
+  tmEnd: async () => {
+    const c = tmCalc();
+    if (c.ph === 'prova') {
+      if (!(await confirmBox({ title: 'Sair desta prova?', text: 'Ela fica salva como pausada, com o tempo que falta, e você pode retomá-la depois pelo Histórico.', ok: 'Salvar como pausada' }))) return;
+      if (!tm.pausedAt) tm.pausedAt = Date.now(); tmHist('pausada');
+    } else if (c.ph === 'espera' && !(await confirmBox({ title: 'Escolher outra prova?', text: 'A prova marcada ainda não começou e será descartada.', ok: 'Escolher outra', danger: true }))) return;
+    tm = null; tmSave(); try { document.fullscreenElement && document.exitFullscreen(); } catch (e) { } render(true);
+  },
   tmReset: () => { tm = null; tmSave(); render(true); },
-  tmLancar: () => { const p = tm.pre, mod = p === 'd1' || p === 'd2' ? modelosAll().find(m => m.id === 'enem-' + p) : null; simForm(null, { data: TODAY_ISO, nome: p === 'd1' ? 'Dia 1' : p === 'd2' ? 'Dia 2' : tm.nome, ...(mod ? { modelo: mod.id } : {}) }); },
+  tmLancar: () => { const c = tmCalc(); if (!tm.hid) tmHist('finalizada'); tmLancarPre(tm.nome, tm.pre, tm.ini || c.t0, c.t0 ? Math.round((Math.min(c.eff, c.end) - c.t0) / 1000) : 0, tm.total, tm.how || 'tempo', tm.hid); },
 });
 document.addEventListener('input', e => {
   const t = e.target; if (!t.closest || S.route !== 'timer' || tm) return;
