@@ -2962,7 +2962,6 @@ function tmTick() {
   const set = (id, t) => { const el = document.getElementById(id); if (el && el.textContent !== t) el.textContent = t; };
   if (c.ph === 'espera') set('tm-big', tmHMS(c.t0 - c.eff)); else if (c.ph === 'prova') set('tm-big', tmHMS(c.end - c.eff));
   tm.tags.forEach((v, i) => { const el = document.getElementById('tg' + i); if (el) el.classList.toggle('out', tmGone(c, i)); });
-  set('tm-clock', new Date().toLocaleTimeString('pt-BR'));
 }
 setInterval(tmTick, 1000);
 
@@ -3006,7 +3005,7 @@ function tmRun() {
     : pro ? `<button class="btn primary" data-act="tmGo">Começar prova</button>`
     : esp ? `<button class="btn primary" data-act="tmGo">Começar agora</button>`
     : `<button class="btn primary" data-act="tmPause">${pa ? 'Retomar prova' : 'Pausar prova'}</button><button class="btn" data-act="tmRestart">Recomeçar prova</button>`;
-  return `<section class="card tm-run${fim ? ' tm-fim' : ''}" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div><div class="lbl">${esc(tm.nome)}</div><div class="sub" style="margin-top:4px">${c.t0 ? `${tmClock(c.t0)} → ${tmClock(c.end)} · ` : ''}${tmHM(tm.total)}</div></div><div class="tm-clock mono" id="tm-clock">${new Date().toLocaleTimeString('pt-BR')}</div></div>
+  return `<section class="card tm-run${fim ? ' tm-fim' : ''}" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div><div class="lbl">${esc(tm.nome)}</div><div class="sub" style="margin-top:4px">${c.t0 ? `${tmClock(c.t0)} → ${tmClock(c.end)} · ` : ''}${tmHM(tm.total)}</div></div></div>
     ${rev}
     <div class="tm-btns">${btns}${fim ? `<button class="btn" data-act="tmReset">Novo simulado</button>` : ''}</div>
     ${tmTagsHtml(tm.tags, c)}
@@ -3024,7 +3023,7 @@ function crView() {
   const run = !!cr.t0, now = crNow(), L = cr.laps, sp = L.map((v, i) => v - (L[i - 1] || 0));
   const st = sp.length > 1 ? `<div class="cr-st"><div><span class="sub">Média por volta</span><b class="mono">${crShort(sp.reduce((a, b) => a + b, 0) / sp.length)}</b></div><div><span class="sub">Mais rápida</span><b class="mono">${crShort(Math.min(...sp))}</b></div><div><span class="sub">Mais lenta</span><b class="mono">${crShort(Math.max(...sp))}</b></div></div>` : '';
   const rows = [...sp.keys()].reverse().map(i => `<li><span class="mono sub">${i + 1}</span><span class="mono">${crShort(sp[i])}</span><span class="mono sub">${crShort(L[i])}</span></li>`).join('');
-  return `<section class="card tm-run" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div class="lbl">Cronômetro</div><div class="tm-clock mono" id="tm-clock">${new Date().toLocaleTimeString('pt-BR')}</div></div>
+  return `<section class="card tm-run" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div class="lbl">Cronômetro</div></div>
     <div class="tm-st">${run ? 'Correndo' : now ? 'Pausado' : 'Pronto'}</div><div class="tm-big mono" id="cr-big">${crFmt(now)}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px"><button class="btn primary" data-act="crToggle">${run ? 'Pausar' : now ? 'Continuar' : 'Iniciar'}</button><button class="btn" data-act="crLap" ${run ? '' : 'disabled'}>Volta</button><button class="btn" data-act="crReset" ${now || L.length ? '' : 'disabled'}>Zerar</button><button class="btn" data-act="tmFull">Tela cheia</button></div>
     ${st}${L.length ? `<div class="lbl" style="margin-top:24px">Voltas</div><div class="cr-h sub"><span>#</span><span>Volta</span><span>Total</span></div><ul class="cr-laps">${rows}</ul>` : '<p class="sub" style="text-align:center;margin-top:22px">Use <b>Volta</b> para marcar o tempo de cada questão, redação ou bloco sem parar o cronômetro.</p>'}</section>`;
