@@ -3113,8 +3113,7 @@ function tmHistView() {
       <div class="tmh-a">${acts}</div></div>`;
   };
   return `<section class="card"><div class="lbl">Histórico de provas · ${list.length} ${list.length === 1 ? 'registro' : 'registros'}${nP ? ` · ${nP} ${nP === 1 ? 'não finalizada' : 'não finalizadas'}` : ''}${nF ? ` · ${nF} ${nF === 1 ? 'finalizada' : 'finalizadas'}` : ''}</div>
-    <div class="tmh">${list.map(row).join('')}</div>
-    <div class="sub" style="margin-top:14px">Prova não finalizada é uma prova pausada: use Retomar para continuar de onde parou, com o tempo que faltava. O tempo só vai para as notas se você lançar o resultado a partir do simulador.</div></section>`;
+    <div class="tmh">${list.map(row).join('')}</div></section>`;
 }
 VIEWS.timer = function () {
   const tab = S.ui.tmTab === 'cron' ? 'cron' : S.ui.tmTab === 'hist' ? 'hist' : 'sim', tb = (k, l) => `<button class="pill" data-act="tmTab" data-k="${k}" aria-pressed="${tab === k}">${l}</button>`;
