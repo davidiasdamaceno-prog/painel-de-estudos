@@ -3062,7 +3062,7 @@ function tmRun() {
   const btns = fim ? `<button class="btn primary" data-act="tmLancar">Lançar resultado deste simulado</button>`
     : pro ? `<button class="btn primary" data-act="tmGo">Começar prova</button>`
     : esp ? `<button class="btn primary" data-act="tmGo">Começar agora</button>`
-    : `<button class="btn primary" data-act="tmPause">${pa ? 'Retomar prova' : 'Pausar prova'}</button><button class="btn" data-act="tmFin">Finalizar prova</button><button class="btn" data-act="tmRestart">Recomeçar prova</button>`;
+    : `<button class="btn primary" data-act="tmPause">${pa ? 'Retomar prova' : 'Pausar prova'}</button><button class="btn" data-act="tmFin">Finalizar</button><button class="btn" data-act="tmRestart">Recomeçar prova</button>`;
   return `<section class="card tm-run${fim ? ' tm-fim' : ''}" id="tm-card"><div class="row" style="justify-content:space-between;align-items:center"><div><div class="lbl">${esc(tm.nome)}</div><div class="sub" style="margin-top:4px">${c.t0 ? `${tmClock(c.t0)} → ${tmClock(c.end)} · ` : ''}${tmHM(tm.total)}</div></div></div>
     ${rev}
     <div class="tm-btns">${btns}${fim ? `<button class="btn" data-act="tmReset">Novo simulado</button>` : ''}</div>
