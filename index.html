@@ -562,7 +562,7 @@ tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 .tm-tags { display: grid; grid-template-rows: repeat(2, auto); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px 8px; margin: 22px auto 0; max-width: 640px; }
 .tm-slot { border: 1px dashed var(--line); border-radius: 9px; min-height: 38px; display: grid; }
 .tm-tag { display: grid; place-items: center; border-radius: 9px; background: var(--card-2); border: 1px solid var(--line-2); color: var(--ink); font: 500 13px var(--mono); padding: 9px 2px; box-shadow: 0 2px 0 var(--line-2); transition: opacity .7s ease, transform .7s ease; transform-origin: top left; }
-.tm-tag.out { opacity: 0; transform: translateY(16px) rotate(7deg); pointer-events: none; }
+.tm-tag.out { opacity: .3; transform: translateY(5px) rotate(3deg); pointer-events: none; box-shadow: none; clip-path: polygon(0 0, 100% 0, 100% 58%, 88% 72%, 76% 56%, 63% 74%, 50% 58%, 37% 76%, 24% 60%, 12% 74%, 0 62%); }
 .tm-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 22px; }
 .tm-revw { text-align: left; margin-top: 18px; }
 .tm-rev { background: none; border: 0; border-bottom: 1.5px solid var(--ink-2); color: var(--ink-2); font: inherit; font-size: 14px; padding: 2px 4px 3px; cursor: pointer; } .tm-rev:hover { color: var(--ink); border-color: var(--ink); }
@@ -3010,7 +3010,6 @@ function tmRun() {
     <div class="tm-btns">${btns}${fim ? `<button class="btn" data-act="tmReset">Novo simulado</button>` : ''}</div>
     ${tmTagsHtml(tm.tags, c)}
     ${fim ? `<p class="tm-msg">Largue a caneta. Confira o cartão-resposta e lance o resultado enquanto está fresco.</p>` : ''}
-    ${(tm.marcos || []).length ? `<div class="lbl" style="margin-top:26px">Marcos oficiais</div><ul class="tm-marc">${tm.marcos.map(m => `<li class="${c.t0 && c.eff >= c.t0 + m.min * 60000 ? 'done' : ''}"><span class="mono">${c.t0 ? tmClock(c.t0 + m.min * 60000) : tmHM(m.min)}</span><span>${esc(m.n)}</span></li>`).join('')}</ul>` : ''}
     <div class="tm-btns" style="margin-top:26px">${fim ? '' : `<button class="btn" data-act="tmFull">Tela cheia</button>`}<button class="btn" data-act="tmEnd">Escolher outra prova</button></div></section>`;
 }
 /* cronômetro livre (conta para cima, com voltas) */
