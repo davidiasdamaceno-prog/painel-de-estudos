@@ -2915,11 +2915,11 @@ init();
 ICONS.timer = '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6M12 2v3M19 5l1.5 1.5"/>';
 const TM_KEY = 'pe-timer';
 const TM_PRE = {
-  d1: { nome: 'ENEM · Dia 1', total: 330, h: '13:30', marcos: [[120, 'Saída definitiva liberada (permanência mínima de 2h)'], [300, 'Já pode sair levando o caderno de questões']] },
-  d2: { nome: 'ENEM · Dia 2', total: 300, h: '13:30', marcos: [[120, 'Saída definitiva liberada (permanência mínima de 2h)'], [270, 'Já pode sair levando o caderno de questões']] },
-  livre: { nome: 'Simulado', total: 180, h: '13:30', marcos: [] },
+  d1: { nome: 'ENEM · Dia 1', total: 330, h: '13:30' },
+  d2: { nome: 'ENEM · Dia 2', total: 300, h: '13:30' },
+  livre: { nome: 'Simulado', total: 180, h: '13:30' },
 };
-const tmMk = k => { const p = TM_PRE[k]; return { pre: k, nome: p.nome, total: p.total, marcos: p.marcos.map(([min, n]) => ({ min, n })), modo: 'agora', hora: p.h, som: true, fiscal: false, sem: false, int: 30, ult: true, add: [], rm: [] }; };
+const tmMk = k => { const p = TM_PRE[k]; return { pre: k, nome: p.nome, total: p.total, modo: 'agora', hora: p.h, som: true, fiscal: false, sem: false, int: 30, ult: true, add: [], rm: [] }; };
 /* etiquetas: a duração inteira, de 30 em 30 min, e na última hora 45, 30, 15 e 0 (como nas fitas do ENEM) */
 const tmTags = (total, it = 30, ult = true, add = [], rm = []) => {
   const o = [total]; for (let v = Math.floor((total - 1) / it) * it; v > (ult ? 60 : 0); v -= it) o.push(v);
@@ -2964,11 +2964,10 @@ function tmTick() {
       else if (v === 0) tmFire('fim', c.end, () => { toast('Tempo esgotado! Largue a caneta.'); tmBeep(3, true, on); });
       else tmFire('t' + i, tmTagAt(c, i), () => { if (v <= 60) toast(`Faltam ${tmHM(v)} para o fim da prova.`); tmBeep(1, false, on); });
     });
-    (tm.marcos || []).forEach((m, i) => tmFire('m' + i, c.t0 + m.min * 60000, () => { toast(m.n + '.'); tmBeep(2, true, on); }));
   }
   tmSave();
   if (S.route !== 'timer') return;
-  const ph = c.ph + ':' + (tm.pausedAt ? 'p' : '') + ':' + (tm.marcos || []).filter(m => c.t0 && c.eff >= c.t0 + m.min * 60000).length;
+  const ph = c.ph + ':' + (tm.pausedAt ? 'p' : '');
   if (ph !== tm._ph) { tm._ph = ph; render(true); return; }
   const set = (id, t) => { const el = document.getElementById(id); if (el && el.textContent !== t) el.textContent = t; };
   if (c.ph === 'espera') set('tm-big', tmHMS(c.t0 - c.eff)); else if (c.ph === 'prova') set('tm-big', tmHMS(c.end - c.eff));
@@ -2977,7 +2976,7 @@ function tmTick() {
 setInterval(tmTick, 1000);
 
 HELP_PAGE['Simulador de prova'] = 'timer';
-HELP.timer = ['Simulador de prova', `<p>Treine como na prova de verdade, com <b>etiquetas</b> de tempo (as "fitinhas" do ENEM) que vão saindo conforme o tempo passa: de 30 em 30 minutos e, na última hora, aos 45, 30 e 15 minutos. Cada vez que uma sai, toca um sinal, e o fim da prova tem alarme.</p><p>Escolha <b>ENEM Dia 1</b> (5h30) ou <b>Dia 2</b> (5h), ambos às 13h30 no horário de Brasília, ou monte sua prova em <b>Personalizada</b> com as horas e minutos que quiser. Use <b>Começar: Agora</b> ou marque um horário para ver os mesmos horários da prova real.</p><p><b>Fiscal realista</b> atrasa algumas etiquetas, como acontece de verdade. <b>Sem timer</b> esconde o relógio e você só tem as etiquetas. Sem essa opção, o relógio fica escondido e você revela quando quiser em <b>Revelar tempo de prova</b>. Os <b>marcos oficiais</b> do ENEM também são avisados: saída liberada depois de 2h e, nos últimos 30 minutos, a liberação para levar o caderno.</p><p>O tempo usa a hora do computador, então continua certo se você recarregar a página. Quando acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p><p><b>Cronômetro:</b> a segunda aba conta o tempo para cima. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta.</p>`];
+HELP.timer = ['Simulador de prova', `<p>Treine como na prova de verdade, com <b>etiquetas</b> de tempo (as "fitinhas" do ENEM) que vão saindo conforme o tempo passa: de 30 em 30 minutos e, na última hora, aos 45, 30 e 15 minutos. Cada vez que uma sai, toca um sinal, e o fim da prova tem alarme.</p><p>Escolha <b>ENEM Dia 1</b> (5h30) ou <b>Dia 2</b> (5h), ambos às 13h30 no horário de Brasília, ou monte sua prova em <b>Personalizada</b> com as horas e minutos que quiser. Em <b>Quando começa</b>, escolha <b>Quando eu clicar</b> ou <b>Em um horário</b> (a prova começa sozinha na hora marcada, como o ENEM às 13:30).</p><p><b>Fiscal realista</b> atrasa algumas etiquetas, como acontece de verdade. <b>Sem timer</b> esconde o relógio e você só tem as etiquetas. Sem essa opção, o relógio fica escondido e você revela quando quiser em <b>Revelar tempo de prova</b>.</p><p>O tempo usa a hora do computador, então continua certo se você recarregar a página. Quando acaba, <b>Lançar resultado</b> abre o formulário do simulado.</p><p><b>Cronômetro:</b> a segunda aba conta o tempo para cima. Use <b>Volta</b> para marcar cada questão ou redação; o painel mostra a média, a volta mais rápida e a mais lenta.</p>`];
 
 const tmTagsHtml = (vals, c, edit) => `<div class="tm-tags" style="--cols:${Math.ceil(vals.length / 2)}">${vals.map((v, i) => `<div class="tm-slot"><span class="tm-tag${c && tmGone(c, i) ? ' out' : ''}" id="tg${i}">${tmTagLbl(v)}${edit && i > 0 && v > 0 ? `<button class="tm-x" data-act="tmTagDel" data-v="${v}" aria-label="Remover etiqueta ${tmTagLbl(v)}" title="Remover etiqueta">×</button>` : ''}</span></div>`).join('')}</div>`;
 function tmCustom(d) {
@@ -3062,7 +3061,7 @@ Object.assign(ACT, {
     let start = null;
     if (d.modo === 'hora') { const [h, m] = (d.hora || '').split(':').map(Number); if (isNaN(h)) { toast('Escolha o horário de início.', 'err'); return; } const t = new Date(); t.setHours(h, m, 0, 0); if (t.getTime() < Date.now() - 60000) { toast('Esse horário de hoje já passou. Escolha um horário à frente ou comece agora.', 'err'); return; } start = Math.max(t.getTime(), Date.now()); }
     const tags = tmDraftTags(d), delays = tags.map((v, i) => d.fiscal && i > 0 && v > 0 ? Math.round((20 + Math.random() * 130) * 1000) : 0);
-    tm = { pre: d.pre, nome: (d.nome || 'Simulado').trim(), total, tags, delays, marcos: d.marcos.filter(m => m.min < total), start, shift: 0, pausedAt: null, som: d.som, sem: d.sem, fiscal: d.fiscal, show: false, fired: {} };
+    tm = { pre: d.pre, nome: (d.nome || 'Simulado').trim(), total, tags, delays, start, shift: 0, pausedAt: null, som: d.som, sem: d.sem, fiscal: d.fiscal, show: false, fired: {} };
     if (start) tmWake(); tmSave(); render(true);
   },
   tmGo: () => { tm.start = Date.now(); tm.shift = 0; tm.pausedAt = null; tm.fired = {}; tmBeep(1, true, tm.som !== false); tmWake(); tmSave(); render(true); tmTick(); },
