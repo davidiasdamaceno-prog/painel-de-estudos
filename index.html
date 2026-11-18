@@ -1507,7 +1507,7 @@ function qListHTML(doc) {
 }
 VIEWS['sim-questoes'] = function () {
   const { sid, sim, doc } = currentSim();
-  if (doc && sim && !doc.mfx) setTimeout(async () => { const cur = S.simq[sid]; if (!cur || cur.mfx) return; const { nd, n } = fixMatsDoc(cur, modeloOf(sim)); await putQDoc(sid, nd); if (n && S.ui.simSel === sid) render(true); }, 0);
+  if (doc && sim && !(doc.mfx >= 2) && !S._mfx) { S._mfx = 1; setTimeout(async () => { try { const cur = S.simq[sid]; if (!cur || cur.mfx >= 2) return; const { nd, n, skip } = await fixMatsDoc(cur, modeloOf(sim)); if (skip) return; const now = S.simq[sid] || cur; await putQDoc(sid, { ...nd, itens: nd.itens.map(q => { const o = now.itens.find(x => x.n === q.n); return o && o.mat === (cur.itens.find(x => x.n === q.n) || {}).mat ? q : o || q; }) }); if (n && S.ui.simSel === sid) render(true); } catch (e) {} finally { S._mfx = 0; } }, 0); }
   if (!sim) return head('Notas', 'Esse simulado não existe mais.', `<button class="btn" data-act="go" data-id="sim-notas">${ic('chev', 14)} Voltar às notas</button>`);
   const M = modeloOf(sim), t = simStat(sim);
   const acts = `<button class="btn" data-act="go" data-id="sim-notas">← Notas</button><button class="btn" data-act="simEdit" data-id="${sid}">Editar</button><button class="btn" data-act="simAsk" data-id="${sid}">Comentar</button><button class="btn danger" data-act="simDel" data-id="${sid}">${ic('trash', 14)}</button>`;
@@ -1828,9 +1828,12 @@ async function classify(items, ui, M, vis) {
       if (blobs) { try { ui.log('Não consegui enviar as imagens deste bloco; usando só o texto.', 'warn'); out = await S.ai.json(mk(null), { modelTier: 'default', signal: ui.ctl.signal }); } catch (e2) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e2 && e2.code)) throw e2; ui.log('Falhou neste bloco: ' + aiMsg(e2), 'warn'); } }
       else ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn');
     }
-    (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const a = areaOf(n), mat = fixMat(M, a ? a.n : '', mats.includes(o.mat) ? o.mat : (S.cfg.materias.includes(o.mat) ? o.mat : 'Outra')); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '' }); });
+    (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const a = areaOf(n), mat = mats.includes(o.mat) ? o.mat : (S.cfg.materias.includes(o.mat) ? o.mat : 'Outra'); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '' }); });
     done += batch.length;
   }
+  /* o Claude marcou matéria que não existe nesta parte da prova: reanalisa em qual das permitidas a questão também se encaixa */
+  const bad = items.filter(q => res.has(q.n) && matInvalida(M, res.get(q.n).area, res.get(q.n).mat)).map(q => { const v = res.get(q.n); return { n: q.n, area: v.area, mat: v.mat, sub: v.sub, ass: v.ass, txt: q.raw || q.txt }; });
+  if (bad.length) { ui.log(`${bad.length} questão(ões) vieram com matéria de outro dia; reanalisando…`); const r = await reassignMats(M, bad, ui); r.forEach((v, n) => { const o = res.get(n); if (o) res.set(n, { ...o, mat: v.mat, sub: v.sub }); }); }
   return res;
 }
 async function scanPages(doc, lib, ui) {
@@ -2034,23 +2037,42 @@ function matsPermitidas(M) {
   return [...new Set([...mine, ...S.cfg.materias.filter(m => !outras.has(m)), ...Object.keys(EXTRA_MAT)])];
 }
 
-/* cada parte do caderno só tem as matérias dela (Educação Física vale em qualquer parte). Matéria de outra parte vira a matéria que costuma dividir assunto com ela. */
-const MAT_FALLBACK = { lin: 'Português', hum: 'Geografia', nat: 'Biologia', mat: 'Matemática' };
+/* cada parte do caderno só tem as matérias dela (Educação Física vale em qualquer parte). Se a questão veio com matéria de outra parte, ela é reanalisada:
+   1) matérias permitidas que dividem o mesmo assunto; 2) se não houver, o Claude escolhe pelo texto da questão; 3) senão 'Outra'. */
 const matConhecida = m => modelos().some(x => (x.areas || []).some(a => (a.mats || []).includes(m)));
-function fixMat(M, area, mat) {
-  if (!mat || mat === 'Outra') return mat;
-  if (area) {
-    const a = ((M && M.areas) || []).find(x => x.n === area); if (!a) return mat;
-    return (a.mats || []).includes(mat) || mat === 'Educação Física' || !matConhecida(mat) ? mat : (MAT_FALLBACK[mxKey(area)] || mat);
-  }
-  if (matsPermitidas(M).includes(mat) || !matConhecida(mat)) return mat;
-  const mine = ((M && M.areas) || []).flatMap(x => x.mats || []);
-  return mine.includes('Geografia') ? 'Geografia' : mine.includes('Biologia') ? 'Biologia' : 'Outra';
+const matsDoDia = (M, area) => { const a = area ? ((M && M.areas) || []).find(x => x.n === area) : null; return a ? (a.mats || []) : matsPermitidas(M).filter(m => m !== 'Outra'); };
+function matInvalida(M, area, mat) {
+  if (!mat || mat === 'Outra' || mat === 'Educação Física' || !matConhecida(mat)) return false;
+  if (area && !((M && M.areas) || []).some(x => x.n === area)) return false;
+  return !matsDoDia(M, area).includes(mat);
 }
-function fixMatsDoc(doc, M) {
+function matPorAssunto(M, area, q) {
+  const k = subNorm(q.sub || q.ass); if (!k) return null;
+  const pool = matsDoDia(M, area).concat(matsDoDia(M, area).includes('Educação Física') ? [] : ['Educação Física']);
+  return pool.find(m => subsOf(m).some(x => subNorm(x) === k)) || null;
+}
+/* itens: [{n, area, mat, sub, ass, txt}] → Map n → {mat, sub}; só devolve os que mudaram de matéria */
+async function reassignMats(M, itens, ui) {
+  const out = new Map(), left = [];
+  itens.forEach(q => { const m = matPorAssunto(M, q.area, q); if (m) out.set(q.n, { mat: m, sub: subPick(m, q.sub || q.ass) }); else left.push(q); });
+  if (left.length && S.ai) {
+    const lista = left.map(q => `Questão ${q.n} (marcada como ${q.mat}; assunto: ${q.sub || q.ass || '?'}): ${String(q.txt || q.raw || '').replace(/\s+/g, ' ').slice(0, 600)}`).join('\n');
+    const permit = [...new Set(left.flatMap(q => matsDoDia(M, q.area)))].concat('Educação Física', 'Outra');
+    const guia = subGuia(permit);
+    try {
+      const r = await S.ai.json(`Estas questões de um simulado foram classificadas em matérias que NÃO existem nesta parte da prova. Analise o conteúdo de cada uma e diga em qual das matérias permitidas ela também se encaixa (matérias compartilham assuntos: por exemplo, ambiente, clima, energia, população, saúde e gráficos podem cair em Geografia, História ou Filosofia e Sociologia; não force Geografia nem outra matéria se outra encaixar melhor). Matérias permitidas (use exatamente um destes nomes): ${permit.join('; ')}.\nGuia de assuntos (pode usar outro se não estiver na lista):\n${guia}\n\n${lista}\n\nResponda só com um array JSON: [{"n":número,"mat":"matéria permitida","sub":"assunto"}]`, { modelTier: 'default', ...(ui && ui.ctl ? { signal: ui.ctl.signal } : {}) });
+      (Array.isArray(r) ? r : []).forEach(o => { const q = left.find(x => x.n === +(o && o.n)); if (q && permit.includes(o.mat) && o.mat !== 'Outra') out.set(q.n, { mat: o.mat, sub: subPick(o.mat, o.sub) }); });
+    } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; }
+  }
+  left.forEach(q => { if (!out.has(q.n)) out.set(q.n, { mat: 'Outra', sub: '' }); });
+  return out;
+}
+async function fixMatsDoc(doc, M, ui) {
   const nd = clone(doc), areaOf = areaOfN(M, nd.itens); let n = 0;
-  nd.itens.forEach(q => { const a = areaOf ? areaOf(q.n) : null, m = fixMat(M, a ? a.n : '', q.mat); if (m !== q.mat) { q.mat = m; if (q.sub && !subsOf(m).includes(q.sub)) q.sub = ''; n++; } });
-  nd.mfx = 1; return { nd, n };
+  const bad = nd.itens.filter(q => matInvalida(M, (areaOf(q.n) || {}).n || '', q.mat)).map(q => ({ n: q.n, area: (areaOf(q.n) || {}).n || '', mat: q.mat, sub: q.sub, ass: q.ass, txt: q.txt }));
+  if (bad.length) { const r = await reassignMats(M, bad, ui).catch(() => null); if (r) nd.itens.forEach(q => { const v = r.get(q.n); if (v) { q.mat = v.mat; q.sub = v.sub || ''; n++; } }); }
+  if (bad.length && !n) return { nd: doc, n: 0, skip: 1 };
+  nd.mfx = 2; return { nd, n };
 }
 
 /* ============ gabarito, alternativa marcada e competências/habilidades (Matriz ENEM) ============ */
