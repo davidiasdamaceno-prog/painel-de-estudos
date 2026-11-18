@@ -616,6 +616,14 @@ input.q-ch { width: 96px; }
 .fold > summary::after { content: ""; flex: none; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .2s; margin: -3px 2px 0 4px; }
 .fold[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
 .fold > summary:hover::after { border-color: var(--ink); }
+.aviso { border: 1px solid rgba(239,68,68,.55); background: rgba(239,68,68,.10); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; box-shadow: 0 0 0 3px rgba(239,68,68,.07); }
+.aviso-h { display: flex; align-items: center; gap: 8px; color: #fca5a5; font-size: 13px; }
+.aviso-h .mono { margin-left: auto; font-size: 12px; background: rgba(239,68,68,.25); color: #fecaca; border-radius: 999px; padding: 1px 8px; }
+.aviso-i { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(239,68,68,.22); }
+.aviso-t { color: var(--ink); line-height: 1.55; overflow-wrap: anywhere; }
+.aviso-a { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
+.aviso-o { margin-right: auto; font-size: 11px; color: #fca5a5; text-transform: uppercase; letter-spacing: .06em; }
+.av-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.25); margin-left: auto; flex: none; }
 
 </style>
 </head>
@@ -969,7 +977,7 @@ window.addEventListener('hashchange', () => { const id = location.hash.slice(1);
 function renderSide() {
   const side = $('#side'); side.classList.toggle('open', S.ui.menu);
   side.innerHTML = NAV.map(n => {
-    if (!n.g) return `<button class="nav-home" data-act="go" data-id="${n.id}" ${S.route === n.id ? 'aria-current="page"' : ''}>${ic(n.icon, 18)}<span>${n.label}</span></button>`;
+    if (!n.g) return `<button class="nav-home" data-act="go" data-id="${n.id}" ${S.route === n.id ? 'aria-current="page"' : ''}>${ic(n.icon, 18)}<span>${n.label}</span>${n.id === 'visao' && avTodos().length ? `<i class="av-dot" title="${avTodos().length} dúvida(s) do Claude"></i>` : ''}</button>`;
     const open = !!S.ui.openG[n.g];
     return `<button class="nav-g" data-act="grp" data-g="${n.g}" aria-expanded="${open}"><span>${n.g}</span>${ic('chev', 15)}</button>` +
       (open ? n.items.map(i => `<button class="nav-i" data-act="go" data-id="${i.id}" ${S.route === i.id || (i.id === 'sim-notas' && S.route === 'sim-questoes') ? 'aria-current="page"' : ''}>${ic(i.icon, 17)}<span>${i.label}</span></button>`).join('') : '');
@@ -1037,7 +1045,7 @@ function render(force) {
   if (S.authGate) { main.innerHTML = loginHTML(); renderSide(); renderBar(); return; }
   if (!S.loaded) { main.innerHTML = '<div class="card"><div class="lbl">Carregando</div><p class="sub" style="margin-top:8px">Buscando seus simulados e redações…</p></div>'; renderSide(); renderBar(); return; }
   const v = VIEWS[S.route] || VIEWS.visao;
-  main.innerHTML = banners() + `<div class="view">${S.route === 'visao' ? cdCards() : ''}${v()}</div>`;
+  main.innerHTML = banners() + `<div class="view">${['visao', 'sim-questoes', 'plano', 'caderno'].includes(S.route) ? avisosBox(S.route, S.ui.simSel) : ''}${S.route === 'visao' ? cdCards() : ''}${v()}</div>`;
   main.scrollTop = top;
   renderSide(); renderBar(); drawCharts(); afterRender();
 }
@@ -1548,7 +1556,7 @@ function msgHTML(m) {
   return m.r === 'c' ? `<div class="msg"><div class="who">Claude <span class="tm">${hm(m.ts)}</span></div><div class="md">${md(m.t)}</div></div>`
     : `<div class="msg me"><div class="who">Você <span class="tm">${hm(m.ts)}</span></div><div class="body">${esc(m.t)}</div></div>`;
 }
-function liveHTML(text) { return `<div class="msg" id="live"><div class="who">Claude <span class="stream-dot"></span></div><div class="md cols" id="live-body">${text ? md(text) : '<span class="sub">Pensando…</span>'}</div></div>`; }
+function liveHTML(text) { return `<div class="msg" id="live"><div class="who">Claude <span class="stream-dot"></span></div><div class="md cols" id="live-body">${text ? md(avTira(text).texto) : '<span class="sub">Pensando…</span>'}</div></div>`; }
 VIEWS.caderno = function () {
   const d = D(), threads = [...d.cad].sort((a, b) => (a.aberto === false) - (b.aberto === false) || (b.upd || 0) - (a.upd || 0));
   let tid = S.ui.thread; if (!threads.some(t => t.id === tid)) tid = threads[0]?.id || null; S.ui.thread = tid;
@@ -1571,7 +1579,7 @@ const AN_NOME = { geral: 'Análise geral', plano: 'Plano de 7 dias', simulados: 
 VIEWS.plano = function () {
   const d = D(), er = errMap(errRank().ids), mats = Object.entries(er).sort((a, b) => (b[1].e + b[1].c) - (a[1].e + a[1].c));
   const map = mats.length ? `<div class="g-2">${mats.map(([m, v]) => { const top = Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 6); return `<div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:500"><span class="pill" style="padding:0;border:0;pointer-events:none"><span class="dot" style="background:${matColor(m)}"></span></span>${esc(m)}</b><span class="mono ink2">${v.e} ${v.e === 1 ? 'erro' : 'erros'}${v.c ? ` · ${v.c} ${v.c === 1 ? 'chute' : 'chutes'}` : ''}</span></div><div class="chips" style="margin-top:10px">${top.map(a => `<span class="tag">${esc(a.nome)} <span class="mono">${a.e + a.c}</span></span>`).join('')}</div>${Object.keys(v.sub || {}).length ? `<div class="sub" style="margin-top:10px">Áreas da matéria: ${Object.values(v.sub).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 5).map(a => `${esc(a.nome)} (${a.e + a.c})`).join(' · ')}</div>` : ''}</div>`; }).join('')}</div>` : '<p class="sub">Ainda não há erros marcados. Abra um simulado em Notas, adicione o PDF e marque "Errei" ou "Chute" e este mapa mostra os assuntos que mais pesam.</p>';
-  const live = S.stream && S.stream.an ? `<section class="card"><div class="lbl">${AN_NOME[S.stream.tipo]} · gerando<span class="stream-dot"></span></div><div class="md cols" id="live-body" style="margin-top:12px">${S.stream.text ? md(S.stream.text) : '<span class="sub">Lendo seus dados…</span>'}</div><div style="margin-top:14px"><button class="btn sm" data-act="cadStop">Parar</button></div></section>` : '';
+  const live = S.stream && S.stream.an ? `<section class="card"><div class="lbl">${AN_NOME[S.stream.tipo]} · gerando<span class="stream-dot"></span></div><div class="md cols" id="live-body" style="margin-top:12px">${S.stream.text ? md(avTira(S.stream.text).texto) : '<span class="sub">Lendo seus dados…</span>'}</div><div style="margin-top:14px"><button class="btn sm" data-act="cadStop">Parar</button></div></section>` : '';
   const list = [...d.ans].sort((a, b) => (b.ts || 0) - (a.ts || 0));
   const hist = list.map((a, i) => `<section class="card"><div class="hero-head" style="align-items:center"><div><div class="lbl">${AN_NOME[a.tipo] || 'Análise'}</div><div class="sub">${hm(a.ts)}${a.ref ? ` · ${a.ref.sims} simulados, ${a.ref.reds} redações` : ''}</div></div><div style="display:flex;gap:8px"><button class="btn sm" data-act="anComent" data-id="${a.id}">Comentar</button><button class="btn sm danger" data-act="anDel" data-id="${a.id}" aria-label="Apagar análise">${ic('trash', 14)}</button></div></div>${i === 0 && !live ? `<div class="md cols" style="margin-top:14px">${md(a.texto)}</div>` : `<details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Abrir análise</summary><div class="md" style="margin-top:12px">${md(a.texto)}</div></details>`}</section>`).join('');
   const busy = !!S.stream;
@@ -1657,13 +1665,13 @@ function ctxDetail(ctx) {
   return t ? '\n\nASSUNTO DA CONVERSA\n' + t : '';
 }
 function threadTurns(th) {
-  const turns = [{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\n' + (enemOn() ? MATRIZ_TXT : '') + ctxDetail(th.ctx) }];
+  const turns = [{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\n' + (enemOn() ? MATRIZ_TXT : '') + ctxDetail(th.ctx) + '\n\nPERGUNTA/CONVERSA: responda ao que o aluno pediu.' + AV_PEDIDO }];
   (th.msgs || []).forEach(m => turns.push({ role: m.r === 'c' ? 'assistant' : 'user', content: m.t }));
   return turns;
 }
 function liveUpdate() {
   const el = document.getElementById('live-body'); if (!el || !S.stream) return;
-  el.innerHTML = S.stream.text ? md(S.stream.text) : '<span class="sub">Pensando…</span>';
+  el.innerHTML = S.stream.text ? md(avTira(S.stream.text).texto) : '<span class="sub">Pensando…</span>';
 }
 function stopStream() { if (S.stream && S.stream.ctl) S.stream.ctl.abort(); }
 
@@ -1672,7 +1680,8 @@ async function askThread(tid) {
   const ctl = new AbortController(); S.stream = { tid, text: '', ctl }; render(true);
   const done = async (text, note) => {
     const cur = S.cad.find(t => t.id === tid); if (!cur || !text) return;
-    await dbSet('cad', tid, { ...strip(cur), msgs: [...(cur.msgs || []), { r: 'c', t: text + (note || ''), ts: Date.now() }], upd: Date.now() });
+    const av = avTira(text); avisar(av.duv.map(t => ({ texto: t, rota: 'caderno', origem: 'Caderno' })));
+    await dbSet('cad', tid, { ...strip(cur), msgs: [...(cur.msgs || []), { r: 'c', t: av.texto + (note || ''), ts: Date.now() }], upd: Date.now() });
   };
   try {
     const res = await S.ai(threadTurns(th), { cache: false, signal: ctl.signal, onText: ({ text }) => { if (S.stream) { S.stream.text = text; liveUpdate(); } } });
@@ -1698,8 +1707,9 @@ async function runAnalysis(tipo) {
   const refs = { sims: S.sims.length, reds: S.reds.length };
   const save = text => dbSet('ans', uid(), { tipo, texto: text, ts: Date.now(), ref: refs });
   try {
-    const res = await S.ai([{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\n' + (enemOn() ? MATRIZ_TXT : '') + '\n\nPEDIDO\n' + AN_PROMPT[tipo] + '\nSem tabelas. Seja específico e curto.' + (enemOn() ? '' : ' A prova em análise não é o ENEM: faça uma análise bem mais curta (no máximo uns 12 linhas), por matéria e assunto.') }], { cache: false, signal: ctl.signal, onText: ({ text }) => { if (S.stream) { S.stream.text = text; liveUpdate(); } } });
-    await save(res.text + (res.truncated ? '\n\n_(cortada pelo limite de tamanho)_' : ''));
+    const res = await S.ai([{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\n' + (enemOn() ? MATRIZ_TXT : '') + '\n\nPEDIDO\n' + AN_PROMPT[tipo] + '\nSem tabelas. Seja específico e curto.' + AV_PEDIDO + (enemOn() ? '' : ' A prova em análise não é o ENEM: faça uma análise bem mais curta (no máximo uns 12 linhas), por matéria e assunto.') }], { cache: false, signal: ctl.signal, onText: ({ text }) => { if (S.stream) { S.stream.text = text; liveUpdate(); } } });
+    const av = avTira(res.text); avisar(av.duv.map(t => ({ texto: t, rota: 'plano', origem: 'Análise' })));
+    await save(av.texto + (res.truncated ? '\n\n_(cortada pelo limite de tamanho)_' : ''));
   } catch (e) {
     if (e && e.text) await save(e.text + '\n\n_(interrompida)_').catch(() => { });
     if (!e || e.code !== 'cancelled') toast(aiMsg(e), 'err');
@@ -1825,7 +1835,7 @@ async function classify(items, ui, M, vis) {
   let done = 0;
   for (const bt of batches) {
     const batch = bt.list; ui.log(`Classificando questões ${batch[0].n} a ${batch.at(-1).n}${bt.pages ? ' (texto e imagens)' : ''}…`); ui.prog(0.35 + 0.55 * (done / items.length));
-    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}. ${(M && M.areas && M.areas.length > 1) ? `Matérias de cada parte do caderno (Educação Física vale em qualquer parte): ${M.areas.map(a => a.n + ': ' + (a.mats || []).join(', ')).join('; ')}. ` : ''}Só existem questões dessas matérias nesta prova: se o tema parecer de uma matéria que não está na lista (por exemplo, ambiente ou saúde numa prova de Linguagens e Humanas), escolha a matéria permitida que trata o tema (Geografia, História, Filosofia e Sociologia…). Matérias diferentes podem compartilhar assuntos.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto}, um por questão, na mesma ordem.\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
+    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}. ${(M && M.areas && M.areas.length > 1) ? `Matérias de cada parte do caderno (Educação Física vale em qualquer parte): ${M.areas.map(a => a.n + ': ' + (a.mats || []).join(', ')).join('; ')}. ` : ''}Só existem questões dessas matérias nesta prova: se o tema parecer de uma matéria que não está na lista (por exemplo, ambiente ou saúde numa prova de Linguagens e Humanas), escolha a matéria permitida que trata o tema (Geografia, História, Filosofia e Sociologia…). Matérias diferentes podem compartilhar assuntos.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto}, um por questão, na mesma ordem.${AV_ITEM}\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
     let blobs = null; if (bt.pages) { try { blobs = await vis.render(bt.pages); } catch (e) { blobs = null; } }
     let out = null;
     try { out = await S.ai.json(mk(blobs), { modelTier: 'default', signal: ui.ctl.signal, ...(blobs ? { images: blobs } : {}) }); }
@@ -1834,6 +1844,7 @@ async function classify(items, ui, M, vis) {
       if (blobs) { try { ui.log('Não consegui enviar as imagens deste bloco; usando só o texto.', 'warn'); out = await S.ai.json(mk(null), { modelTier: 'default', signal: ui.ctl.signal }); } catch (e2) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e2 && e2.code)) throw e2; ui.log('Falhou neste bloco: ' + aiMsg(e2), 'warn'); } }
       else ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn');
     }
+    (ui.duv = ui.duv || []).push(...avDuvItens(out, { origem: 'Classificação' }));
     (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const a = areaOf(n), mat = mats.includes(o.mat) ? o.mat : (S.cfg.materias.includes(o.mat) ? o.mat : 'Outra'); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '' }); });
     done += batch.length;
   }
@@ -1891,6 +1902,7 @@ async function runImport(o, ui) {
   sim.pdfNome = o.file.name; if (pdfId) sim.pdfId = pdfId; sim.qn = itens.length;
   await dbSet('simq', sid, { itens, alt: detectAlt(items), ts: Date.now() }); await dbSet('sim', sid, sim);
   S.ui.modelo = modeloOf(sim).id; S.ui.matSel = null;
+  avisar((ui.duv || []).map(d => ({ ...d, simId: sid })));
   ui.prog(1); ui.log(`Pronto: ${itens.length} questões organizadas.`, 'ok');
   return sid;
 }
@@ -2082,7 +2094,7 @@ async function fixMatsDoc(doc, M, ui) {
 }
 
 /* blocos que abrem e fecham; o estado é lembrado mesmo quando o bloco é redesenhado */
-const foldOpen = k => (S.ui.fold && S.ui.fold[k] === false) ? '' : 'open';
+const foldOpen = k => (S.ui.fold && S.ui.fold[k] === true) ? 'open' : '';
 
 /* ============ gabarito, alternativa marcada e competências/habilidades (Matriz ENEM) ============ */
 const mxKey = n => { const k = subNorm(n); return /^ling/.test(k) ? 'lin' : /human/.test(k) ? 'hum' : /natureza/.test(k) ? 'nat' : /^mat/.test(k) ? 'mat' : ''; };
@@ -2261,6 +2273,61 @@ function detectAlt(items) {
   const has = (q, L) => new RegExp('(^|\\n)\\s*\\(?' + L + '[\\).\\-–]\\s*\\S').test(q.raw || ''), d = items.filter(q => has(q, 'D')).length, e = items.filter(q => has(q, 'E')).length;
   return d >= items.length * .3 && e < d * .3 ? 4 : 5;
 }
+
+/* ============ avisos do Claude: contradições, paradoxos e dúvidas ============
+   Ficam numa caixa vermelha na Visão geral e na página a que se referem; o botão "Visão geral" da lateral ganha um pontinho enquanto houver algum.
+   Guardados em S.cfg.avisos [{id,k,t,r(rota),s(simId),o(origem),ts}]; "Entendi" tira o aviso e lembra a chave para ele não voltar igual. */
+const AV_MAX = 40, avKey = s => subNorm(s).slice(0, 120);
+function avSave(avisos, ok) {
+  S.cfg = { ...S.cfg, avisos, avisosOk: ok || S.cfg.avisosOk || [] };
+  dbSet('config', 'geral', { ...S.cfg }).catch(() => { }); schedule();
+}
+function avisar(list) {
+  const cur = (S.cfg.avisos || []).slice(), keys = new Set(cur.map(a => a.k).concat(S.cfg.avisosOk || [])); let add = 0;
+  (list || []).forEach(o => {
+    const t = String(o && o.texto || '').replace(/\s+/g, ' ').trim().slice(0, 420); if (t.length < 8) return;
+    const k = (o.simId || '') + '|' + (o.rota || 'visao') + '|' + avKey(t); if (keys.has(k)) return; keys.add(k);
+    cur.push({ id: uid(), k, t, r: o.rota || 'visao', s: o.simId || '', o: o.origem || '', ts: Date.now() }); add++;
+  });
+  if (add) avSave(cur.slice(-AV_MAX)); return add;
+}
+function avOk(id) {
+  const a = (S.cfg.avisos || []).find(x => x.id === id); if (!a) return;
+  avSave((S.cfg.avisos || []).filter(x => x.id !== id), (S.cfg.avisosOk || []).concat(a.k).slice(-80));
+}
+/* contradições que o painel enxerga sozinho nos dados (somem quando você corrige) */
+function avisosCalc() {
+  const out = [];
+  (S.sims || []).forEach(sim => {
+    const doc = S.simq && S.simq[sim.id]; if (!doc || !(doc.itens || []).length) return;
+    const nome = sim.nome || 'Simulado', dv = divergentes(doc);
+    if (dv.length) out.push({ id: 'c:dv:' + sim.id, t: `${nome}: com o gabarito, ${dv.length} ${dv.length === 1 ? 'questão mudou' : 'questões mudaram'} em relação ao que você tinha marcado antes (${dv.map(q => q.n).slice(0, 12).join(', ')}). Confira se marcou a alternativa certa.`, r: 'sim-questoes', s: sim.id, o: 'Dados', calc: 1 });
+    if (sim.auto || !(sim.mats || []).length) return;
+    const M = modeloOf(sim), g = {};
+    doc.itens.forEach(q => { const k = areaDeQ(M, q); const x = g[k] = g[k] || { m: 0, a: 0, tot: 0 }; x.tot++; if (q.st) { x.m++; if (q.st !== 'e') x.a++; } });
+    if (!Object.values(g).some(x => x.m)) return;
+    const bad = (sim.mats || []).filter(l => g[l.m] && g[l.m].m === g[l.m].tot && g[l.m].a !== l.a).map(l => `${l.m}: lançou ${l.a}, marcou ${g[l.m].a}`);
+    if (bad.length) out.push({ id: 'c:nt:' + sim.id, t: `${nome}: os acertos que você lançou em Notas não batem com as questões marcadas (${bad.join('; ')}).`, r: 'sim-questoes', s: sim.id, o: 'Dados', calc: 1 });
+  });
+  return out;
+}
+const avTodos = () => (S.demo ? [] : [...(S.cfg.avisos || []), ...avisosCalc()]);
+const avDaPagina = (rota, sid) => rota === 'visao' ? avTodos() : avTodos().filter(a => a.r === rota && (!a.s || !sid || a.s === sid));
+function avisosBox(rota, sid) {
+  const L = avDaPagina(rota, sid); if (!L.length) return '';
+  const simNome = id => ((S.sims || []).find(x => x.id === id) || {}).nome || '';
+  return `<section class="aviso" role="alert"><div class="aviso-h">${ic('alert', 16)}<b>Dúvidas e contradições do Claude</b><span class="mono">${L.length}</span></div>` +
+    L.map(a => `<div class="aviso-i"><div class="aviso-t">${esc(a.t)}</div><div class="aviso-a">${a.o ? `<span class="aviso-o">${esc(a.o)}</span>` : ''}${rota === 'visao' && a.r !== 'visao' ? `<button class="btn sm" data-act="avGo" data-r="${esc(a.r)}" data-s="${esc(a.s || '')}">Ver ${a.r === 'sim-questoes' ? esc(simNome(a.s) || 'simulado') : esc(routeLabel(a.r))}</button>` : ''}${a.calc ? '' : `<button class="btn sm" data-act="avOk" data-id="${esc(a.id)}">Entendi</button>`}</div></div>`).join('') + `</section>`;
+}
+/* dúvidas escritas pelo Claude num texto livre, dentro de [[DUVIDAS]] ... [[/DUVIDAS]] (uma por linha com "- ") */
+const AV_RE = /\[\[DUVIDAS\]\]([\s\S]*?)(\[\[\/DUVIDAS\]\]|$)/i;
+function avTira(text) {
+  const m = AV_RE.exec(text || ''); if (!m) return { texto: String(text || ''), duv: [] };
+  return { texto: String(text).replace(AV_RE, '').trimEnd(), duv: m[1].split('\n').map(l => l.replace(/^\s*[-•*]\s*/, '').trim()).filter(l => l.length > 7) };
+}
+const AV_PEDIDO = ' Se, ao analisar, encontrar alguma contradição, paradoxo ou dúvida real nos dados (números que não batem, informações incompatíveis, algo que você não consegue afirmar com segurança), escreva ao final um bloco exatamente assim: [[DUVIDAS]] seguido de uma linha "- ..." por dúvida (curta e específica, com os números) e depois [[/DUVIDAS]]. Se não tiver nenhuma, NÃO escreva o bloco.';
+const avDuvItens = (out, ctx) => (Array.isArray(out) ? out : []).filter(o => o && o.duvida && String(o.duvida).trim().length > 7).map(o => ({ texto: `Questão ${o.n}${ctx.nome ? ` (${ctx.nome})` : ''}: ${String(o.duvida).trim()}`, rota: 'sim-questoes', simId: ctx.simId || '', origem: ctx.origem || 'Classificação' }));
+const AV_ITEM = ' Se tiver dúvida real sobre uma questão ou achar contradição (enunciado cortado ou ambíguo, matéria duvidosa, dados que não batem), acrescente nesse objeto o campo "duvida" com uma frase curta; se não tiver, omita o campo.';
 
 /* ============ formulários e janelas ============ */
 function leaveDemo() { if (S.demo) { S.demoOff = true; S.demoForce = false; S.demo = false; render(true); } }
@@ -3057,6 +3124,7 @@ async function reclassify(all) {
     let extra = [];
     if (all && vis) { extra = await rescueMissing(pages, M, doc.itens.map(q => ({ n: q.n, pg: q.pg || pageOfQ(pages, q.n) })), ui, vis); extra.forEach(e => items.push({ n: e.n, raw: e.raw, pg: e.pg })); }
     const res = await classify(items, ui, M, vis);
+    avisar((ui.duv || []).map(d => ({ ...d, simId: sid })));
     const nd = clone(S.simq[sid] || doc); let n = 0;
     nd.itens.forEach(q => { const it = items.find(x => x.n === q.n), r = res.get(q.n); if (it && it.pg && !q.pg) q.pg = it.pg; if (!r) return; if (all) { q.mat = r.mat; q.sub = r.sub; q.area = r.area; if (r.ass) q.ass = r.ass; n++; } else if (!q.mat || q.mat === 'Outra') { q.mat = r.mat; q.sub = r.sub; q.area = r.area; if (!q.ass) q.ass = r.ass; n++; } });
     extra.forEach(e => { const r = res.get(e.n) || e; nd.itens.push({ n: e.n, mat: r.mat || 'Outra', sub: r.sub || '', area: r.area || '', pg: e.pg || 0, ass: r.ass || '', txt: cleanTxt(e.raw || '').slice(0, 1400), st: '', gab: '', resp: '' }); });
@@ -3109,6 +3177,8 @@ const ACT = {
     q.ch = !q.ch; deriveSt(q); setQDoc(sid, nd); refreshQ(el.dataset.n);
   },
   qCHFill: () => chFillAction(),
+  avOk: el => avOk(el.dataset.id),
+  avGo: el => { if (el.dataset.s) S.ui.simSel = el.dataset.s; go(el.dataset.r); },
   qSt: el => {
     const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return; const nd = clone(doc), q = nd.itens.find(x => String(x.n) === el.dataset.n); if (!q) return;
     q.st = q.st === el.dataset.v ? '' : el.dataset.v; setQDoc(sid, nd); refreshQ(el.dataset.n);
