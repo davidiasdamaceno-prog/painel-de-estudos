@@ -456,7 +456,7 @@ body.gate .shell { grid-template-columns: minmax(0, 1fr); padding: 0 20px 18px; 
 .rx-badge.baixa { opacity: .75; }
 .rx-rows { display: grid; gap: 7px; }
 .rx-r { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(70px, 1fr) 74px; align-items: center; gap: 10px; font-size: 12.5px; padding: 2px 4px; border-radius: 8px; }
-.rx-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.rx-n { overflow: visible; white-space: normal; overflow-wrap: anywhere; color: var(--ink-2); }
 .rx-b { height: 8px; border-radius: 6px; background: var(--line); overflow: hidden; }
 .rx-b i { display: block; height: 100%; border-radius: 6px; background: var(--ink-2); }
 .rx-v { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; font-family: var(--mono); }
@@ -595,6 +595,17 @@ tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 .tmh-st.ok { color: var(--good); border-color: var(--good); } .tmh-st.warn { color: var(--warn); border-color: var(--warn); } .tmh-st.run { color: var(--ink); border-color: var(--ink-2); }
 @media (max-width: 700px) { .tmh-r { grid-template-columns: minmax(0, 1fr) auto; } .tmh-t { text-align: left; } .tmh-a { justify-content: flex-start; grid-column: 1 / -1; } }
 
+.q-resp { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 2px; }
+.q-resp .q-st { margin-left: 0; }
+.st.let { min-width: 34px; text-align: center; font-family: var(--mono); }
+.st.sm { padding: 2px 8px; font-size: 11px; }
+.q-res { font-size: 12px; font-family: var(--mono); }
+.q-res.ok { color: var(--good); } .q-res.bad { color: var(--bad); }
+.q-man { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; }
+input.q-ch { width: 96px; }
+.prev-rank { margin-top: 10px; opacity: .5; font-size: 11px; line-height: 1.5; color: var(--ink-2); }
+.prev-rank .prev-t { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 2px; }
+
 </style>
 </head>
 <body>
@@ -682,7 +693,7 @@ function modPct(m, area) {
   if (m.metaArea && sq) return m.metaArea * m.areas.length / sq * 100;
   return S.cfg.metaAcerto;
 }
-const areaDeMat = (m, mat) => ((m.areas || []).find(a => (a.mats || []).includes(mat)) || {}).n || ((m.areas || []).length === 1 ? m.areas[0].n : mat);
+const areaDeMat = (m, mat) => ((m.areas || []).find(a => (a.mats || []).includes(mat)) || {}).n || ((m.areas || []).find(a => a.n === EXTRA_MAT[mat]) || {}).n || ((m.areas || []).length === 1 ? m.areas[0].n : mat);
 function metaLbl(m) {
   if (!m || m.legacy || (!m.metaTotal && !m.metaArea)) return `meta ${S.cfg.metaAcerto}%`;
   return 'meta ' + [m.metaTotal ? `${m.metaTotal}/${modQ(m)}` : '', m.metaArea ? `${m.metaArea} por área` : ''].filter(Boolean).join(' · ');
@@ -703,7 +714,7 @@ function qByMat(s) {
 function matRows(s) { const q = qByMat(s); if (q) return q; const M = modeloOf(s); return (s.mm && s.mm.length) ? s.mm : (s.mats || []).filter(x => !(M.areas || []).some(a => a.n === x.m)); }
 function autoMats(sim, doc) {
   const M = modeloOf(sim), g = {};
-  (doc.itens || []).forEach(q => { const k = areaDeMat(M, q.mat || 'Outra'); const x = g[k] = g[k] || { m: k, a: 0, t: 0, n: 0 }; x.n++; if (q.st && q.st !== 'e') x.a++; });
+  (doc.itens || []).forEach(q => { const k = areaDeQ(M, q); const x = g[k] = g[k] || { m: k, a: 0, t: 0, n: 0 }; x.n++; if (q.st && q.st !== 'e') x.a++; });
   return Object.values(g).map(x => ({ m: x.m, a: x.a, t: (M.areas || []).find(a => a.n === x.m)?.q || x.n }));
 }
 const gKey = n => String(n || '').toLowerCase().replace(/[º°˚]/g, 'º').replace(/\s+/g, ' ').trim();
@@ -856,11 +867,11 @@ function compStats(reds) {
   reds = reds || redsSorted();
   return COMPS.map((c, i) => { const v = reds.map(r => r.c && r.c[i] != null ? +r.c[i] : null).filter(x => x != null); return { c, nome: COMP_NOMES[i], all: stepN(avg(v)), recent: stepN(avg(v.slice(-4))), allRaw: avg(v), recentRaw: avg(v.slice(-4)), last: v.at(-1) }; });
 }
-function errRank(n) {
-  n = n || ({ last: 1, last3: 3 }[S.ui.errScope] || 9999);
+function errRank(n, back) {
+  n = n || ({ last: 1, last3: 3 }[S.ui.errScope] || 9999); back = back || 0;
   const U = new Map();
   simsAllSorted().forEach(s => { const k = s.grupo ? 'g:' + gKey(s.grupo) : 's:' + s.id, u = U.get(k) || { nome: s.grupo || s.nome, data: s.data, sims: [] }; u.sims.push(s); if (s.data > u.data) u.data = s.data; U.set(k, u); });
-  const units = [...U.values()].sort((a, b) => a.data.localeCompare(b.data)).slice(-n);
+  const all = [...U.values()].sort((a, b) => a.data.localeCompare(b.data)), end = all.length - back, units = all.slice(Math.max(0, end - n), Math.max(0, end));
   const ar = {}, mt = {}, as = {};
   units.forEach(u => u.sims.forEach(s => {
     const M = modeloOf(s);
@@ -880,7 +891,8 @@ function errMap(ids) {
   Object.entries(d.simq || {}).filter(([sid]) => !ids || ids.has(sid)).forEach(([sid, doc]) => (doc.itens || []).forEach(q => {
     if (q.st !== 'e' && q.st !== 'c') return;
     const m = q.mat || 'Sem matéria'; const a = (q.ass || 'sem assunto').trim() || 'sem assunto';
-    out[m] = out[m] || { e: 0, c: 0, ass: {} }; out[m][q.st]++;
+    out[m] = out[m] || { e: 0, c: 0, ass: {}, sub: {} }; out[m][q.st]++;
+    if (q.sub) { out[m].sub[q.sub] = out[m].sub[q.sub] || { nome: q.sub, e: 0, c: 0 }; out[m].sub[q.sub][q.st]++; }
     const k = a.toLowerCase(); out[m].ass[k] = out[m].ass[k] || { nome: a, e: 0, c: 0 }; out[m].ass[k][q.st]++;
   }));
   return out;
@@ -1445,39 +1457,48 @@ function qStats(doc) {
 function qStatsInner(doc) {
   const s = qStats(doc), rows = Object.entries(s.by).sort((a, b) => a[1].a / a[1].t - b[1].a / b[1].t);
   return `<div class="lbl">Resultado das questões marcadas</div>
-    <div class="sub" style="margin:4px 0 14px">${s.marked} de ${s.total} marcadas · ${s.e} erradas · ${s.c} chutes. Chute conta como acerto, mas entra na lista de revisão.</div>
-    ${rows.length ? barRows(rows.map(([m, v]) => ({ n: m, pct: v.a / v.t * 100, v: `${v.a}/${v.t}`, color: matColor(m), mk: (() => { const M = modeloOf(S.sims.find(x => x.id === S.ui.simSel) || {}); return modPct(M, areaDeMat(M, m)); })() }))) : '<p class="sub">Marque "Acertei", "Errei" ou "Chute" em cada questão, ou cole o gabarito e as suas respostas.</p>'}`;
+    <div class="sub" style="margin:4px 0 14px">${s.marked} de ${s.total} conferidas · ${s.e} erradas · ${s.c} acertos no chute. Chute que acerta conta como acerto, mas entra na lista de revisão.${(() => { const k = keyStats(doc); return k.w ? ` ${k.w} respondidas aguardam o gabarito.` : ''; })()}</div>
+    ${rows.length ? barRows(rows.map(([m, v]) => ({ n: m, pct: v.a / v.t * 100, v: `${v.a}/${v.t}`, color: matColor(m), mk: (() => { const M = modeloOf(S.sims.find(x => x.id === S.ui.simSel) || {}); return modPct(M, areaDeMat(M, m)); })() }))) : '<p class="sub">Adicione o gabarito e marque a alternativa que você escolheu em cada questão: o painel compara e conta os acertos.</p>'}`;
 }
-function qCardHTML(q, mats) {
-  const opts = [...new Set([...mats, q.mat || 'Outra', 'Outra'])];
+function qCardHTML(q, mats, doc) {
+  const opts = [...new Set([...mats, q.mat || 'Outra', 'Outra'])], sim = S.sims.find(x => x.id === S.ui.simSel), enem = !!sim && isEnem(modeloOf(sim)), semGab = !hasKey(doc || S.simq[S.ui.simSel]);
+  const ok = q.gab && q.resp ? q.resp === q.gab : null, ch = [q.comp ? 'C' + q.comp : '', q.hab ? 'H' + q.hab : ''].filter(Boolean).join(' ');
+  const key = sim && mxKey(areaDeQ(modeloOf(sim), q)), tip = q.hab && key ? chLabel(key, 'H', q.hab) : q.comp && key ? chLabel(key, 'C', q.comp) : '';
   return `<article class="q ${q.st ? 'st-' + q.st : ''}" data-n="${q.n}" id="q-${q.n}">
     <div class="q-head"><span class="n">Q${q.n}</span>
       <select data-bind="qMat" data-n="${q.n}" aria-label="Matéria da questão ${q.n}">${opts.map(m => `<option ${m === (q.mat || 'Outra') ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
+      <select data-bind="qSub" data-n="${q.n}" aria-label="Área da matéria da questão ${q.n}"><option value="">área da matéria</option>${subGroups(q.mat || 'Outra').map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(x => `<option ${x === q.sub ? 'selected' : ''}>${esc(x)}</option>`).join('')}</optgroup>`).join('')}${q.sub && !subsOf(q.mat || 'Outra').includes(q.sub) ? `<option selected>${esc(q.sub)}</option>` : ''}</select>
       <input type="text" data-bind="qAss" data-n="${q.n}" value="${esc(q.ass || '')}" placeholder="assunto" aria-label="Assunto da questão ${q.n}">
-      <div class="q-st">${['a', 'e', 'c'].map(k => `<button class="st" data-act="qSt" data-n="${q.n}" data-v="${k}" aria-pressed="${q.st === k}">${ST_LABEL[k]}</button>`).join('')}</div></div>
+      ${enem ? `<input type="text" class="q-ch" data-bind="qCH" data-n="${q.n}" value="${esc(ch)}" placeholder="C · H" title="${esc(tip || 'Competência e habilidade, ex.: C5 H17')}" aria-label="Competência e habilidade da questão ${q.n}">` : ''}</div>
+    <div class="q-resp"><div class="q-st q-let" role="group" aria-label="Alternativa marcada na questão ${q.n}">${altLetters(doc || S.simq[S.ui.simSel], q).map(k => `<button class="st let" data-act="qLet" data-n="${q.n}" data-v="${k}" aria-pressed="${q.resp === k}">${k}</button>`).join('')}<button class="st" data-act="qChute" data-n="${q.n}" aria-pressed="${!!q.ch}" title="Marque se foi chute">Chute</button></div>
+      ${ok === null ? (q.gab ? '<span class="q-res sub">gabarito carregado</span>' : '') : `<span class="q-res ${ok ? 'ok' : 'bad'}">${ok ? (q.ch ? 'Acertou no chute' : 'Acertou') : 'Errou'} · gabarito ${esc(q.gab)}</span>`}
+      ${semGab ? `<span class="q-man sub">sem gabarito: ${['a', 'e', 'c'].map(k => `<button class="st sm" data-act="qSt" data-n="${q.n}" data-v="${k}" aria-pressed="${q.st === k && !q.resp}">${ST_LABEL[k]}</button>`).join('')}</span>` : ''}</div>
     ${q.txt ? `<details><summary class="sub" style="cursor:pointer">Ver enunciado</summary><div class="q-txt" style="margin-top:10px">${esc(q.txt)}</div></details>` : ''}
-    <div class="q-foot">${q.gab || q.resp ? `<span class="mono">gabarito ${esc(q.gab || '?')} · você ${esc(q.resp || '?')}</span>` : ''}<button class="link" data-act="qComent" data-n="${q.n}">Comentar com o Claude</button></div></article>`;
+    <div class="q-foot"><button class="link" data-act="qComent" data-n="${q.n}">Comentar com o Claude</button></div></article>`;
 }
 function confHTML(doc) {
   const sim = S.sims.find(x => x.id === S.ui.simSel); if (!sim) return '';
   const M = modeloOf(sim), L = sim.mats || [], g = {};
-  (doc.itens || []).forEach(q => { const k = areaDeMat(M, q.mat || 'Outra'); const x = g[k] = g[k] || { tot: 0, m: 0, a: 0 }; x.tot++; if (q.st) { x.m++; if (q.st !== 'e') x.a++; } });
-  if (sim.auto) { const st = qStats(doc); return `<div class="conf-alert info">${ic('alert', 14)}<span>Os acertos por área deste simulado vêm das questões que você marca (${st.marked} de ${st.total} marcadas). Se quiser fixar o número pelo que você lançou, edite o simulado e preencha os acertos.</span></div>`; }
-  if (!Object.values(g).some(x => x.m)) return '';
-  if (!L.length) return `<div class="conf-alert">${ic('alert', 14)}<span>Este simulado não tem acertos lançados em Notas. <button class="btn sm" data-act="qApply">Usar o que marquei aqui como notas</button></span></div>`;
+  (doc.itens || []).forEach(q => { const k = areaDeQ(M, q); const x = g[k] = g[k] || { tot: 0, m: 0, a: 0 }; x.tot++; if (q.st) { x.m++; if (q.st !== 'e') x.a++; } });
+  const dv = divergentes(doc); const dvMsg = dv.length ? `<div class="conf-alert">${ic('alert', 14)}<span>Com o gabarito, ${dv.length} ${dv.length === 1 ? 'questão mudou' : 'questões mudaram'} em relação ao que você tinha marcado antes: ${dv.slice(0, 12).map(q => `Q${q.n} (antes ${q.st0 === 'e' ? 'errada' : 'certa'}, gabarito ${q.st === 'e' ? 'errada' : 'certa'})`).join(', ')}${dv.length > 12 ? '…' : ''}.</span></div>` : '';
+  if (sim.auto) { const st = qStats(doc); return dvMsg + `<div class="conf-alert info">${ic('alert', 14)}<span>Os acertos por área deste simulado vêm das questões que você marca (${st.marked} de ${st.total} marcadas). Se quiser fixar o número pelo que você lançou, edite o simulado e preencha os acertos.</span></div>`; }
+  if (!Object.values(g).some(x => x.m)) return dvMsg;
+  if (!L.length) return dvMsg + `<div class="conf-alert">${ic('alert', 14)}<span>Este simulado não tem acertos lançados em Notas. <button class="btn sm" data-act="qApply">Usar o que marquei aqui como notas</button></span></div>`;
   const msgs = [];
   L.forEach(l => {
     const q = g[l.m]; if (!q) return;
     if (q.a < l.a) msgs.push(`<b>${esc(l.m)}</b>: você tinha cadastrado ${l.a} acertos, mas marcou ${q.a} nas questões. Falta ${l.a - q.a}, não está batendo.`);
     else if (q.a > l.a) msgs.push(`<b>${esc(l.m)}</b>: você tinha cadastrado ${l.a} acertos, mas marcou ${q.a} nas questões. ${q.a - l.a} a mais, não está batendo.`);
   });
-  return msgs.length ? `<div class="conf-alert">${ic('alert', 14)}<span>${msgs.join('<br>')}</span></div>` : '';
+  if (msgs.length) return dvMsg + `<div class="conf-alert">${ic('alert', 14)}<span>${msgs.join('<br>')}</span></div>`;
+  const comp = L.filter(l => g[l.m] && g[l.m].m === g[l.m].tot);
+  return dvMsg + (comp.length && comp.length === L.filter(l => g[l.m]).length && hasKey(doc) ? `<div class="conf-alert info">${ic('alert', 14)}<span>Confere: os acertos do gabarito batem com as notas que você lançou (${comp.map(l => `${esc(l.m)} ${l.a}`).join(', ')}).</span></div>` : '');
 }
 function qStatsHTML(doc) { return confHTML(doc) + qStatsInner(doc); }
 function qListHTML(doc) {
   const mats = S.cfg.materias; const f = S.ui.qSt, mm = S.ui.qMat, s = S.ui.qSearch.trim().toLowerCase();
   const items = (doc.itens || []).filter(q => (mm === 'todas' || (q.mat || 'Outra') === mm) && (f === 'todas' || (f === 'n' ? !q.st : q.st === f)) && (!s || `${q.n} ${q.ass || ''} ${q.txt || ''}`.toLowerCase().includes(s)));
-  return items.length ? items.map(q => qCardHTML(q, mats)).join('') : '<div class="empty"><b>Nenhuma questão com esses filtros</b></div>';
+  return items.length ? items.map(q => qCardHTML(q, mats, doc)).join('') : '<div class="empty"><b>Nenhuma questão com esses filtros</b></div>';
 }
 VIEWS['sim-questoes'] = function () {
   const { sid, sim, doc } = currentSim();
@@ -1496,10 +1517,16 @@ VIEWS['sim-questoes'] = function () {
   return h + resumo + `<section class="card">
       <div class="row" style="align-items:center"><span class="sub">${itens.length} questões${sim.pdfNome ? ' · ' + esc(sim.pdfNome) : ''}</span><div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn sm" data-act="pdfNew" data-sim="${sid}">Trocar PDF</button>
-        <button class="btn sm" data-act="keyNew">Gabarito e respostas</button>
+        <button class="btn sm" data-act="keyNew">Gabarito em PDF ou texto</button>
+        <label class="sub" style="display:inline-flex;gap:6px;align-items:center">Alternativas<select data-bind="qAlt" aria-label="Quantas alternativas cada questão tem"><option value="5" ${(doc.alt || 5) === 5 ? 'selected' : ''}>A a E</option><option value="4" ${doc.alt === 4 ? 'selected' : ''}>A a D</option></select></label>
         ${unclass && S.ai ? `<button class="btn sm" data-act="qReclass">Classificar ${unclass} sem matéria</button>` : ''}
+        ${S.ai ? `<button class="btn sm" data-act="qReclassAll">Reclassificar matéria e área</button>` : ''}
+        ${S.ai && isEnem(M) ? `<button class="btn sm" data-act="qCHFill">Classificar competências e habilidades</button>` : ''}
         <button class="btn sm" data-act="go" data-id="plano">Ver mapa de erros</button></div></div></section>
     <section class="card" id="qstats">${qStatsHTML(doc)}</section>
+    <div id="qalert">${typeof alertasHTML === 'function' ? alertasHTML(doc) : ''}</div>
+    <div id="qch">${chHTML(doc, sim)}</div>
+    <div id="qfreq">${freqHTML(doc)}</div>
     <section class="card"><div style="display:grid;gap:12px">${pills}${stf}<input type="text" data-bind="qSearch" value="${esc(S.ui.qSearch)}" placeholder="Buscar por número, assunto ou trecho do enunciado" aria-label="Buscar questão"></div></section>
     <div class="qs" id="qlist">${qListHTML(doc)}</div>`;
 };
@@ -1531,18 +1558,18 @@ VIEWS.caderno = function () {
 const AN_NOME = { geral: 'Análise geral', plano: 'Plano de 7 dias', simulados: 'Simulados', redacao: 'Redação' };
 VIEWS.plano = function () {
   const d = D(), er = errMap(errRank().ids), mats = Object.entries(er).sort((a, b) => (b[1].e + b[1].c) - (a[1].e + a[1].c));
-  const map = mats.length ? `<div class="g-2">${mats.map(([m, v]) => { const top = Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 6); return `<div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:500"><span class="pill" style="padding:0;border:0;pointer-events:none"><span class="dot" style="background:${matColor(m)}"></span></span>${esc(m)}</b><span class="mono ink2">${v.e} ${v.e === 1 ? 'erro' : 'erros'}${v.c ? ` · ${v.c} ${v.c === 1 ? 'chute' : 'chutes'}` : ''}</span></div><div class="chips" style="margin-top:10px">${top.map(a => `<span class="tag">${esc(a.nome)} <span class="mono">${a.e + a.c}</span></span>`).join('')}</div></div>`; }).join('')}</div>` : '<p class="sub">Ainda não há erros marcados. Abra um simulado em Notas, adicione o PDF e marque "Errei" ou "Chute" e este mapa mostra os assuntos que mais pesam.</p>';
+  const map = mats.length ? `<div class="g-2">${mats.map(([m, v]) => { const top = Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 6); return `<div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:500"><span class="pill" style="padding:0;border:0;pointer-events:none"><span class="dot" style="background:${matColor(m)}"></span></span>${esc(m)}</b><span class="mono ink2">${v.e} ${v.e === 1 ? 'erro' : 'erros'}${v.c ? ` · ${v.c} ${v.c === 1 ? 'chute' : 'chutes'}` : ''}</span></div><div class="chips" style="margin-top:10px">${top.map(a => `<span class="tag">${esc(a.nome)} <span class="mono">${a.e + a.c}</span></span>`).join('')}</div>${Object.keys(v.sub || {}).length ? `<div class="sub" style="margin-top:10px">Áreas da matéria: ${Object.values(v.sub).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 5).map(a => `${esc(a.nome)} (${a.e + a.c})`).join(' · ')}</div>` : ''}</div>`; }).join('')}</div>` : '<p class="sub">Ainda não há erros marcados. Abra um simulado em Notas, adicione o PDF e marque "Errei" ou "Chute" e este mapa mostra os assuntos que mais pesam.</p>';
   const live = S.stream && S.stream.an ? `<section class="card"><div class="lbl">${AN_NOME[S.stream.tipo]} · gerando<span class="stream-dot"></span></div><div class="md" id="live-body" style="margin-top:12px">${S.stream.text ? md(S.stream.text) : '<span class="sub">Lendo seus dados…</span>'}</div><div style="margin-top:14px"><button class="btn sm" data-act="cadStop">Parar</button></div></section>` : '';
   const list = [...d.ans].sort((a, b) => (b.ts || 0) - (a.ts || 0));
   const hist = list.map((a, i) => `<section class="card"><div class="hero-head" style="align-items:center"><div><div class="lbl">${AN_NOME[a.tipo] || 'Análise'}</div><div class="sub">${hm(a.ts)}${a.ref ? ` · ${a.ref.sims} simulados, ${a.ref.reds} redações` : ''}</div></div><div style="display:flex;gap:8px"><button class="btn sm" data-act="anComent" data-id="${a.id}">Comentar</button><button class="btn sm danger" data-act="anDel" data-id="${a.id}" aria-label="Apagar análise">${ic('trash', 14)}</button></div></div>${i === 0 && !live ? `<div class="md" style="margin-top:14px">${md(a.texto)}</div>` : `<details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Abrir análise</summary><div class="md" style="margin-top:12px">${md(a.texto)}</div></details>`}</section>`).join('');
   const busy = !!S.stream;
-  const rk = errRank(), sc = ['last', 'last3'].includes(S.ui.errScope) ? S.ui.errScope : 'all';
+  const rk = errRank(), rp = errRank(null, 1), sc = ['last', 'last3'].includes(S.ui.errScope) ? S.ui.errScope : 'all';
   const rkCard = `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Onde mais erro${helpBtn('onde')}</span><div class="chips" style="margin-left:auto">${[['all', 'Todos os simulados'], ['last3', 'Últimos 3'], ['last', 'Último']].map(([k, l]) => `<button class="pill" data-act="errScope" data-k="${k}" aria-pressed="${sc === k}">${l}</button>`).join('')}</div></div>
     ${rk.units.length ? `<p class="sub" style="margin-top:6px">Base: ${rk.units.map(esc).join(' · ')}</p>` : ''}
     ${(rk.areas.length || rk.mats.length) ? `<div class="g-2" style="margin-top:16px">
-      <div><div class="sub" style="margin-bottom:10px">Por área · % de erro</div>${rk.areas.length ? barRows(rk.areas.map(x => ({ n: x.n, pct: x.p, v: `${x.err} erros · ${nf(x.p, 0)}%`, color: matColor(x.n) }))) : '<p class="sub">Sem acertos por área nesse período.</p>'}</div>
-      <div><div class="sub" style="margin-bottom:10px">Por matéria · erros e chutes das questões marcadas</div>${rk.mats.length ? barRows(rk.mats.map(x => ({ n: x.n, pct: x.p, v: `${x.err} de ${x.t} · ${nf(x.p, 0)}%`, color: matColor(x.n) }))) : '<p class="sub">Adicione o PDF do simulado em Notas e marque as questões para ver por matéria.</p>'}</div></div>
-      ${rk.ass.length ? `<div style="margin-top:22px"><div class="sub" style="margin-bottom:10px">Assuntos para priorizar · % de erro (mínimo de 2 questões marcadas)</div><div class="ass-list">${rk.ass.slice(0, 12).map(x => `<div class="ass-row"><span class="dot" style="background:${matColor(x.m)}"></span><span class="ass-n"><b>${esc(x.n)}</b> <span class="sub">${esc(x.m)}</span></span><span class="mono ink2">${x.err} de ${x.t} · ${nf(x.p, 0)}%</span><span class="ass-t ${x.tr == null ? '' : x.tr <= -15 ? 'up' : x.tr >= 15 ? 'down' : ''}">${x.tr == null ? 'poucos dados' : x.tr <= -15 ? 'melhorando' : x.tr >= 15 ? 'piorando' : 'estável'}</span></div>`).join('')}</div></div>` : ''}` : '<p class="sub" style="margin-top:10px">Lance um simulado para ver onde você mais erra.</p>'}</section>`;
+      <div><div class="sub" style="margin-bottom:10px">Por área · % de erro</div>${rk.areas.length ? barRows(rk.areas.map(x => ({ n: x.n, pct: x.p, v: `${x.err} erros · ${nf(x.p, 0)}%`, color: matColor(x.n) }))) : '<p class="sub">Sem acertos por área nesse período.</p>'}${prevRank(rk.areas, rp.areas, x => x.n, x => `${esc(x.n)} ${nf(x.p, 0)}%`, 6, 'Antes do último simulado')}</div>
+      <div><div class="sub" style="margin-bottom:10px">Por matéria · erros e chutes das questões marcadas</div>${rk.mats.length ? barRows(rk.mats.map(x => ({ n: x.n, pct: x.p, v: `${x.err} de ${x.t} · ${nf(x.p, 0)}%`, color: matColor(x.n) }))) : '<p class="sub">Adicione o PDF do simulado em Notas e marque as questões para ver por matéria.</p>'}${prevRank(rk.mats, rp.mats, x => x.n, x => `${esc(x.n)} ${x.err}/${x.t}`, 6, 'Antes do último simulado')}</div></div>
+      ${rk.ass.length ? `<div style="margin-top:22px"><div class="sub" style="margin-bottom:10px">Assuntos para priorizar · % de erro (mínimo de 2 questões marcadas)</div><div class="ass-list">${rk.ass.slice(0, 12).map(x => `<div class="ass-row"><span class="dot" style="background:${matColor(x.m)}"></span><span class="ass-n"><b>${esc(x.n)}</b> <span class="sub">${esc(x.m)}</span></span><span class="mono ink2">${x.err} de ${x.t} · ${nf(x.p, 0)}%</span><span class="ass-t ${x.tr == null ? '' : x.tr <= -15 ? 'up' : x.tr >= 15 ? 'down' : ''}">${x.tr == null ? 'poucos dados' : x.tr <= -15 ? 'melhorando' : x.tr >= 15 ? 'piorando' : 'estável'}</span></div>`).join('')}</div>${prevRank(rk.ass, rp.ass, x => x.m + x.n, x => `${esc(x.n)} ${x.err}/${x.t}`, 8, 'Antes do último simulado')}</div>` : ''}` : '<p class="sub" style="margin-top:10px">Lance um simulado para ver onde você mais erra.</p>'}</section>`;
   return head('Plano e conclusões', 'O Claude lê os seus simulados, redações e questões marcadas e devolve o que está evoluindo, o que está travando e o que estudar agora.', '') +
     `<section class="card"><div class="lbl">Pedir ao Claude</div><div class="chips" style="margin-top:14px">${['geral', 'plano', 'simulados', 'redacao'].map(k => `<button class="btn" data-act="analisar" data-k="${k}" ${busy || !S.ai ? 'disabled' : ''}>${ic(k === 'plano' ? 'target' : 'spark', 15)} ${AN_NOME[k]}</button>`).join('')}</div>${!S.ai ? '<p class="sub" style="margin-top:10px">O Claude não está disponível nesta visualização.</p>' : ''}</section>
     ${projCard()}${rxCrossCard(false)}${rkCard}${live}${hist}
@@ -1564,11 +1591,12 @@ const AIERR = {
 };
 const aiMsg = e => (e && AIERR[e.code]) || (e && e.message) || 'Algo deu errado.';
 
-const RULES = () => `Você é o tutor de estudos dentro do painel de acompanhamento do aluno. Responda em português do Brasil, direto, usando apenas os dados abaixo. Cite números (datas, acertos, notas). Se uma série tiver menos de 3 pontos, diga que ainda não dá para falar de tendência. Nunca invente notas, questões ou resultados que não estejam nos dados; se faltar informação, diga o que falta. PREVISÃO E CONSISTÊNCIA: o bloco já traz a previsão da próxima nota e o perfil de oscilação de cada matéria/área; use esses números (não recalcule) e diga se a queda ou o erro é falta de base (baixo e estável) ou desatenção (média boa que oscila). RAIO-X ENEM: os dados trazem a frequência dos assuntos no ENEM e um cruzamento já calculado com os meus resultados. Use isso para ponderar as conclusões: se eu erro muito uma matéria ou assunto de pouca incidência (ou fora dos assuntos mais cobrados), diga que pode ser menos prioritário e que o tempo rende mais em matérias de peso alto; se eu erro em algo de alta incidência, priorize e cite a frequência. Sempre cite o dado do Raio-X (por exemplo, a % dos itens ou o peso na área) e lembre que ele vale para o ENEM, não para FAMERP ou FAMEMA. Formato: parágrafos curtos, listas só quando ajudam, **negrito** nos pontos principais, sem tabelas grandes.\n\nINSTRUÇÕES DO ALUNO\n${S.cfg.instr || ''}`;
+const RULES = () => `Você é o tutor de estudos dentro do painel de acompanhamento do aluno. Responda em português do Brasil, direto, usando apenas os dados abaixo. Cite números (datas, acertos, notas). Se uma série tiver menos de 3 pontos, diga que ainda não dá para falar de tendência. Nunca invente notas, questões ou resultados que não estejam nos dados; se faltar informação, diga o que falta. PREVISÃO E CONSISTÊNCIA: o bloco já traz a previsão da próxima nota e o perfil de oscilação de cada matéria/área; use esses números (não recalcule) e diga se a queda ou o erro é falta de base (baixo e estável) ou desatenção (média boa que oscila). RAIO-X ENEM: os dados trazem a frequência dos assuntos no ENEM e um cruzamento já calculado com os meus resultados. Use isso para ponderar as conclusões: se eu erro muito uma matéria ou assunto de pouca incidência (ou fora dos assuntos mais cobrados), diga que pode ser menos prioritário e que o tempo rende mais em matérias de peso alto; se eu erro em algo de alta incidência, priorize e cite a frequência. Sempre cite o dado do Raio-X (por exemplo, a % dos itens ou o peso na área) e lembre que ele vale para o ENEM, não para FAMERP ou FAMEMA. ÁREA DA MATÉRIA: cada questão marcada tem também a área da matéria (ex.: Física → Mecânica, Biologia → Ecologia); ao falar de uma matéria, cite as áreas em que mais erro, e não só o assunto. FREQUÊNCIA: os blocos ASSUNTOS QUE CAÍRAM trazem quantas questões caíram de cada assunto; ao analisar um simulado, diga o que caiu e quanto (ex.: "caíram 3 questões de Calorimetria"), relacione com o que o aluno errou e compare com a incidência no Raio-X. ALERTAS DE ESTUDO: o bloco ERROS EM ASSUNTOS FREQUENTES NO ENEM lista assuntos que o aluno errou e que costumam cair bastante. Sempre avise o aluno sobre eles de forma explícita e inclua cada um na sugestão de estudo, na ordem de peso no ENEM, dizendo o que revisar. COMPETÊNCIAS E HABILIDADES: o bloco COMPETÊNCIAS E HABILIDADES EM QUE MAIS ERRO traz as competências (C) e habilidades (H) da Matriz do ENEM com mais erros, por área, vindas do gabarito ou classificadas pelo painel. Cite os códigos com o que significam, diga o que essas habilidades exigem do aluno na prova e o que treinar; considere que um erro com chute indica insegurança e não só falta de conteúdo. Se houver erros no gabarito marcados como diferentes do que o aluno tinha dito, comente a diferença. MATRIZ ENEM: o bloco MATRIZ DE REFERÊNCIA traz as competências e habilidades oficiais do Inep. Ao analisar uma questão ou um padrão de erros, indique a área, a competência (C) e a habilidade (H) mais provável e o objeto de conhecimento, usando só o que está na matriz; diga quando houver mais de uma possibilidade e nunca invente habilidades. Formato: parágrafos curtos, listas só quando ajudam, **negrito** nos pontos principais, sem tabelas grandes.\n\nINSTRUÇÕES DO ALUNO\n${S.cfg.instr || ''}`;
 
 function pack() {
   const d = D(), cfg = S.cfg, L = [];
   const M = activeModelo(); L.push(`Hoje: ${TODAY_ISO}. Modelo de prova em análise: ${M.nome}${M.legacy ? '' : ' — áreas: ' + M.areas.map(a => `${a.n} (${a.q} questões)`).join(', ') + '; ' + metaLbl(M)}. Só os simulados deste modelo estão na lista; modelos diferentes são analisados separadamente. Piso por matéria ${cfg.piso}%, meta de redação ${cfg.metaRed} pontos.${provasProx().length ? ` Provas: ${provasProx().map(p => `${p.nome} em ${p.data}`).join('; ')}.` : ''}`);
+  if (!isEnem(M)) L.push('ATENÇÃO: esta prova NÃO é o ENEM. Faça uma análise mais curta, por matéria e assunto. Não use Matriz de Referência, competências, habilidades nem Raio-X, e não compare os erros com a frequência do ENEM.');
   const sims = simsSorted().slice(-24);
   L.push(`\nSIMULADOS (antigo → novo; acertos/total por matéria):`);
   if (!sims.length) L.push('(nenhum lançado)');
@@ -1588,8 +1616,10 @@ function pack() {
   const er = Object.entries(errMap()).sort((a, b) => (b[1].e + b[1].c) - (a[1].e + a[1].c)).slice(0, 12);
   L.push(`\nQUESTÕES ERRADAS E CHUTES DE TODOS OS SIMULADOS (por matéria e assunto):`);
   if (!er.length) L.push('(nenhuma marcada)');
-  er.forEach(([m, v]) => L.push(`- ${m}: ${v.e} erros, ${v.c} chutes; assuntos: ${Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 8).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}`));
-  L.push(rxPack());
+  er.forEach(([m, v]) => L.push(`- ${m}: ${v.e} erros, ${v.c} chutes; assuntos: ${Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 8).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}${Object.keys(v.sub || {}).length ? `; áreas da matéria: ${Object.values(v.sub).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 6).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}` : ''}`));
+  { const chp = !enemOn() ? '' : chPack(chAllRows(), 'COMPETÊNCIAS E HABILIDADES EM QUE MAIS ERRO (simulados ENEM; erros = alternativa diferente do gabarito; chute = acerto marcado como chute):'); if (chp) L.push('\n' + chp); }
+  { const ult = [...sims].reverse().find(x => d.simq[x.id]); if (ult) L.push('\n' + freqPack(ult, d.simq[ult.id], `ASSUNTOS QUE CAÍRAM NO ÚLTIMO SIMULADO COM QUESTÕES (${ult.nome}, ${ult.data}) — número de questões por assunto; use isto para dizer, por exemplo, "caíram 3 questões de calorimetria" e compare com o Raio-X:`)); const fa = freqAllPack(); if (fa) L.push('\n' + fa); const al = alertasPack(); if (al) L.push('\n' + al); }
+  if (isEnem(M)) L.push(rxPack());
   L.push(projPack());
   return L.join('\n');
 }
@@ -1599,7 +1629,7 @@ function ctxDetail(ctx) {
   if (ctx.k === 'sim') {
     const s = d.sims.find(x => x.id === ctx.id); if (!s) return '';
     const st = simStat(s); t = `SIMULADO EM FOCO: ${s.nome} (${s.data}, ${modeloOf(s).nome}) — ${st.a}/${st.t}. Por matéria: ${(s.mats || []).map(m => `${m.m} ${m.a}/${m.t}`).join(', ')}.${s.obs ? ' Obs: ' + s.obs : ''}`;
-    const doc = d.simq[s.id]; if (doc) { const bad = (doc.itens || []).filter(q => q.st === 'e' || q.st === 'c').slice(0, 25); if (bad.length) t += `\nQuestões erradas/chutes: ` + bad.map(q => `Q${q.n} [${q.mat}] ${q.ass || ''} (${q.st === 'e' ? 'errei' : 'chute'})${q.txt ? ': ' + trunc(q.txt, 260) : ''}`).join(' || '); }
+    const doc = d.simq[s.id]; if (doc) { const fq = freqPack(s, doc, '\nASSUNTOS QUE CAÍRAM NESTE SIMULADO (questões por assunto):'); if (fq) t += fq; const alt = alertasPack(doc.itens, 'NESTE SIMULADO'); if (alt) t += '\n' + alt; const chs = !simEnem(s) ? '' : chPack(chRowsOf(doc, modeloOf(s)), 'COMPETÊNCIAS E HABILIDADES EM QUE MAIS ERRO NESTE SIMULADO:'); if (chs) t += '\n' + chs; const bad = (doc.itens || []).filter(q => q.st === 'e' || q.st === 'c').slice(0, 25); if (bad.length) t += `\nQuestões erradas/chutes: ` + bad.map(q => `Q${q.n} [${q.mat}] ${q.ass || ''} (${q.st === 'e' ? 'errei' : 'chute'})${q.txt ? ': ' + trunc(q.txt, 260) : ''}`).join(' || '); }
   } else if (ctx.k === 'red') {
     const r = d.reds.find(x => x.id === ctx.id); if (!r) return '';
     t = `REDAÇÃO EM FOCO: "${r.tema}" (${r.data}, ${r.tipo}) — ${(r.c || []).map((v, i) => `C${i + 1} ${v}`).join(', ')}, total ${redTotal(r)}.${(r.marcas || []).length ? ' Marcas: ' + r.marcas.join(', ') + '.' : ''}${r.obs ? '\nComentários da correção/anotações: ' + r.obs : ''}${r.texto ? '\nTEXTO DO ALUNO:\n' + r.texto.slice(0, 6000) : ''}`;
@@ -1608,14 +1638,14 @@ function ctxDetail(ctx) {
     t = `MATÉRIA EM FOCO: ${ctx.id}.${x ? ` Série (% por simulado, antigo → novo): ${x.series.map(v => v == null ? '–' : nf(v, 0)).join(', ')}.` : ''}${e ? ` Assuntos com erro: ${Object.values(e.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}.` : ''}${(() => { const rx = rxMat(ctx.id); return rx ? `\nRAIO-X: ${rx.n} tem peso ${nf(rx.share * 100, 1)}% da área (${rxQ(rx.q)}), incidência ${rx.cls}. Assuntos mais cobrados: ${rx.a.slice(0, 6).map(x => `${x[0]} ${nf(x[1] / rx.it * 100, 1)}%`).join('; ')}.` : ''; })()}`;
   } else if (ctx.k === 'q') {
     const [sid, n] = String(ctx.id).split(':'); const doc = d.simq[sid]; const q = doc && (doc.itens || []).find(x => String(x.n) === n); const s = d.sims.find(x => x.id === sid);
-    if (q) t = `QUESTÃO EM FOCO: Q${q.n} do simulado "${s ? s.nome : ''}" — matéria ${q.mat}, assunto ${q.ass || '?'}, situação: ${q.st ? ST_LABEL[q.st] : 'sem marcação'}${q.gab || q.resp ? `, gabarito ${q.gab || '?'}, minha resposta ${q.resp || '?'}` : ''}.\nENUNCIADO (extraído do PDF, pode ter falhas de formatação):\n${q.txt || '(sem texto)'}`;
+    if (q) t = `QUESTÃO EM FOCO: Q${q.n} do simulado "${s ? s.nome : ''}" — matéria ${q.mat}, assunto ${q.ass || '?'}, situação: ${q.st ? ST_LABEL[q.st] : 'sem marcação'}${q.ch ? ' (marcada como chute)' : ''}${q.gab || q.resp ? `, gabarito ${q.gab || '?'}, minha resposta ${q.resp || '?'}` : ''}${q.comp || q.hab ? `, ${q.comp ? 'competência C' + q.comp : ''}${q.hab ? ' habilidade H' + q.hab : ''}` : ''}.\nENUNCIADO (extraído do PDF, pode ter falhas de formatação):\n${q.txt || '(sem texto)'}`;
   } else if (ctx.k === 'an') {
     const a = d.ans.find(x => x.id === ctx.id); if (a) t = `ANÁLISE ANTERIOR EM FOCO (${AN_NOME[a.tipo]}, ${hm(a.ts)}):\n${a.texto.slice(0, 6000)}`;
   }
   return t ? '\n\nASSUNTO DA CONVERSA\n' + t : '';
 }
 function threadTurns(th) {
-  const turns = [{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + ctxDetail(th.ctx) }];
+  const turns = [{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\n' + (enemOn() ? MATRIZ_TXT : '') + ctxDetail(th.ctx) }];
   (th.msgs || []).forEach(m => turns.push({ role: m.r === 'c' ? 'assistant' : 'user', content: m.t }));
   return turns;
 }
@@ -1656,7 +1686,7 @@ async function runAnalysis(tipo) {
   const refs = { sims: S.sims.length, reds: S.reds.length };
   const save = text => dbSet('ans', uid(), { tipo, texto: text, ts: Date.now(), ref: refs });
   try {
-    const res = await S.ai([{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\nPEDIDO\n' + AN_PROMPT[tipo] + '\nSem tabelas. Seja específico e curto.' }], { cache: false, signal: ctl.signal, onText: ({ text }) => { if (S.stream) { S.stream.text = text; liveUpdate(); } } });
+    const res = await S.ai([{ role: 'user', content: RULES() + '\n\nDADOS DO ALUNO\n' + pack() + '\n\n' + (enemOn() ? MATRIZ_TXT : '') + '\n\nPEDIDO\n' + AN_PROMPT[tipo] + '\nSem tabelas. Seja específico e curto.' + (enemOn() ? '' : ' A prova em análise não é o ENEM: faça uma análise bem mais curta (no máximo uns 12 linhas), por matéria e assunto.') }], { cache: false, signal: ctl.signal, onText: ({ text }) => { if (S.stream) { S.stream.text = text; liveUpdate(); } } });
     await save(res.text + (res.truncated ? '\n\n_(cortada pelo limite de tamanho)_' : ''));
   } catch (e) {
     if (e && e.text) await save(e.text + '\n\n_(interrompida)_').catch(() => { });
@@ -1678,9 +1708,8 @@ function loadPdfJs() {
   });
   return _pdfP;
 }
-async function readPdf(file, onPage) {
-  const lib = await loadPdfJs(); const buf = await file.arrayBuffer();
-  const doc = await lib.getDocument({ data: new Uint8Array(buf) }).promise; const pages = [];
+async function pdfPages(doc, onPage) {
+  const pages = [];
   for (let p = 1; p <= doc.numPages; p++) {
     const pg = await doc.getPage(p), tc = await pg.getTextContent(); let line = '', lastY = null; const lines = [];
     for (const it of tc.items) {
@@ -1690,7 +1719,67 @@ async function readPdf(file, onPage) {
     }
     if (line) lines.push(line); pages.push(lines.join('\n')); onPage && onPage(p, doc.numPages);
   }
-  return { pages, doc, lib };
+  return pages;
+}
+async function readPdf(file, onPage) {
+  const lib = await loadPdfJs(); const buf = await file.arrayBuffer();
+  const doc = await lib.getDocument({ data: new Uint8Array(buf) }).promise;
+  return { pages: await pdfPages(doc, onPage), doc, lib };
+}
+async function loadSimPdf(sim) {
+  const lib = await loadPdfJs(), r = await fetch('/_blob/' + sim.pdfId); if (!r.ok) return null;
+  return lib.getDocument({ data: new Uint8Array(await r.arrayBuffer()) }).promise;
+}
+/* ---- leitura visual: páginas viram imagens para o Claude ver figuras, gráficos, mapas, tirinhas e cartazes ---- */
+async function renderPages(doc, idxs, scale) {
+  const out = [];
+  for (const k of idxs) {
+    const pg = await doc.getPage(k), vp = pg.getViewport({ scale: scale || 1.25 }), cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+    await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise; out.push(await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.8)));
+  }
+  return out;
+}
+async function visOf(doc) {
+  if (!S.ai || !doc) return null;
+  const lim = await S.ai.limits().catch(() => null); if (!lim || !lim.images) return null;
+  const per = Math.max(1, Math.min(3, lim.images.maxCount || 3)), max = lim.images.maxInputBytes || 8e6;
+  const render = async idxs => { let sc = 1.25, bl = []; for (let t = 0; t < 3; t++) { bl = await renderPages(doc, idxs, sc); if (bl.reduce((a, b) => a + b.size, 0) <= max * 0.9) break; sc *= 0.75; } return bl; };
+  return { doc, per, render };
+}
+const pageOfQ = (pages, n) => { const re = new RegExp('(?:^|\\n)\\s*QUEST[ÃA]O\\s*[:\\-–]?\\s*0*' + n + '\\b', 'i'); const i = pages.findIndex(t => re.test(t)); return i < 0 ? 0 : i + 1; };
+function missingNums(M, present) {
+  const ns = [...present].sort((a, b) => a - b); if (!ns.length) return [];
+  const lo = ns[0], hi = ns.at(-1), tq = M && !M.legacy ? modQ(M) : 0; let a = lo, b = hi;
+  if (tq) { const base = Math.floor((lo - 1) / tq) * tq; if (hi <= base + tq) { a = base + 1; b = base + tq; } }
+  const out = []; for (let n = a; n <= b; n++) if (!present.has(n)) out.push(n);
+  return out.length > 40 ? [] : out;
+}
+const fmtNums = L => { const r = []; L.forEach(n => { const l = r.at(-1); if (l && n === l[1] + 1) l[1] = n; else r.push([n, n]); }); return r.map(([a, b]) => a === b ? 'Q' + a : `Q${a}–${b}`).join(', '); };
+/* procura nas imagens das páginas as questões que o texto do PDF não trouxe (ex.: cabeçalho dentro de imagem) */
+async function rescueMissing(pages, M, items, ui, vis) {
+  const have = new Map(items.map(q => [q.n, q])), present = new Set(have.keys()), miss = missingNums(M, present);
+  if (!miss.length || !vis) return [];
+  ui.log(`Faltam ${fmtNums(miss)} no texto; procurando nas imagens das páginas…`);
+  const runs = []; miss.forEach(n => { const r = runs.at(-1); if (r && n === r.b + 1) r.b = n; else runs.push({ a: n, b: n }); });
+  const mats = [...new Set([...S.cfg.materias, ...((M && M.areas) || []).flatMap(a => a.mats || []), ...Object.keys(EXTRA_MAT)])].filter(m => !/^outra$/i.test(m)).concat('Outra');
+  const found = [], N = vis.doc.numPages;
+  for (const r of runs) {
+    const prev = [...present].filter(x => x < r.a).sort((x, y) => y - x)[0], next = [...present].filter(x => x > r.b).sort((x, y) => x - y)[0];
+    const p0 = Math.max(1, prev != null ? (have.get(prev).pg || 1) : 1), p1 = Math.min(N, next != null ? (have.get(next).pg || N) : N), to = Math.min(p1, p0 + 7);
+    const want = []; for (let n = r.a; n <= r.b; n++) want.push(n);
+    for (let p = p0; p <= to && !want.every(n => found.some(f => f.n === n)); p += vis.per) {
+      const idxs = []; for (let k = p; k < p + vis.per && k <= to; k++) idxs.push(k);
+      try {
+        const blobs = await vis.render(idxs);
+        const out = await S.ai.json(`As imagens são as páginas ${idxs[0]} a ${idxs.at(-1)} de um simulado do ENEM/vestibular, na ordem. Procure as questões de número ${want.join(', ')} (o número aparece como "QUESTÃO nn"). Para cada uma que COMEÇA nestas páginas, devolva o enunciado resumido (até 500 caracteres, descrevendo também figuras, gráficos ou tabelas), a matéria e a área da matéria.\nMatérias permitidas: ${mats.join('; ')}.\nÁreas da matéria (prefira um item da lista da matéria; se nenhum servir, escreva o assunto específico com suas palavras):\n${subGuia(mats)}\nResponda só com um array JSON de objetos {"n": número, "p": posição da imagem (1 a ${idxs.length}) em que a questão começa, "mat": matéria, "sub": área da matéria, "ass": assunto em 2 a 5 palavras, "txt": enunciado resumido}. Se não achar nenhuma, responda [].`, { images: blobs, modelTier: 'default', signal: ui.ctl.signal });
+        (Array.isArray(out) ? out : []).forEach(o => { const n = +o.n; if (!want.includes(n) || found.some(f => f.n === n)) return; const mat = mats.includes(o.mat) ? o.mat : 'Outra'; found.push({ n, mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), raw: String(o.txt || ''), pg: idxs[Math.max(0, Math.min(idxs.length - 1, (+o.p || 1) - 1))] }); });
+      } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; ui.log('Falhou ao procurar nas imagens: ' + aiMsg(e), 'warn'); }
+    }
+  }
+  const still = miss.filter(n => !found.some(f => f.n === n));
+  if (found.length) ui.log(`Recuperei ${fmtNums(found.map(f => f.n).sort((a, b) => a - b))} pelas imagens.`, 'ok');
+  if (still.length) ui.log(`Não encontrei ${fmtNums(still)} no PDF.`, 'warn');
+  return found;
 }
 function splitQuestions(text) {
   const lines = text.split('\n');
@@ -1714,16 +1803,27 @@ async function splitByAI(full, ui) {
   (Array.isArray(out) ? out : []).forEach(o => { const ini = String(o.ini || '').replace(/\s+/g, ' ').trim(); if (!ini) return; const i = flat.indexOf(ini, cur); if (i >= 0) { pos.push({ n: +o.n, i }); cur = i + ini.length; } });
   return pos.map((p, k) => ({ n: p.n, raw: flat.slice(p.i, k + 1 < pos.length ? pos[k + 1].i : flat.length) }));
 }
-async function classify(items, ui) {
-  const mats = [...S.cfg.materias, 'Outra'], res = new Map(), size = 20;
-  for (let i = 0; i < items.length; i += size) {
-    const batch = items.slice(i, i + size);
-    ui.log(`Classificando questões ${batch[0].n} a ${batch.at(-1).n}…`); ui.prog(0.35 + 0.55 * (i / items.length));
-    const prompt = `Classifique cada questão de um simulado de vestibular de Medicina/ENEM.\nMatérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}.\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "ass": assunto}, um por questão, na mesma ordem.\n\nQUESTÕES:\n` + batch.map(q => `[${q.n}] ${trunc(q.raw, 650)}`).join('\n\n');
-    try {
-      const out = await S.ai.json(prompt, { modelTier: 'default', signal: ui.ctl.signal });
-      (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n != null) res.set(n, { mat: mats.includes(o.mat) ? o.mat : 'Outra', ass: String(o.ass || '').slice(0, 80) }); });
-    } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn'); }
+async function classify(items, ui, M, vis) {
+  const res = new Map(), areaOf = areaOfN(M, items);
+  /* qualquer matéria pode aparecer em qualquer parte do caderno (ex.: Educação Física em Natureza ou Humanas) */
+  const mats = [...new Set([...S.cfg.materias, ...((M && M.areas) || []).flatMap(a => a.mats || []), ...Object.keys(EXTRA_MAT)])].filter(m => !/^outra$/i.test(m)).concat('Outra');
+  const guia = subGuia(mats), withPg = vis ? items.filter(q => q.pg).sort((a, b) => a.pg - b.pg || a.n - b.n) : [], rest = vis ? items.filter(q => !q.pg) : items.slice(), batches = [];
+  for (let i = 0; i < withPg.length;) { const p0 = withPg[i].pg, list = []; while (i < withPg.length && withPg[i].pg < p0 + vis.per && list.length < 12) list.push(withPg[i++]); batches.push({ list, pages: Array.from({ length: Math.min(vis.per, vis.doc.numPages - p0 + 1) }, (_, k) => p0 + k) }); }
+  for (let i = 0; i < rest.length; i += 15) batches.push({ list: rest.slice(i, i + 15), pages: null });
+  let done = 0;
+  for (const bt of batches) {
+    const batch = bt.list; ui.log(`Classificando questões ${batch[0].n} a ${batch.at(-1).n}${bt.pages ? ' (texto e imagens)' : ''}…`); ui.prog(0.35 + 0.55 * (done / items.length));
+    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto}, um por questão, na mesma ordem.\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
+    let blobs = null; if (bt.pages) { try { blobs = await vis.render(bt.pages); } catch (e) { blobs = null; } }
+    let out = null;
+    try { out = await S.ai.json(mk(blobs), { modelTier: 'default', signal: ui.ctl.signal, ...(blobs ? { images: blobs } : {}) }); }
+    catch (e) {
+      if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e;
+      if (blobs) { try { ui.log('Não consegui enviar as imagens deste bloco; usando só o texto.', 'warn'); out = await S.ai.json(mk(null), { modelTier: 'default', signal: ui.ctl.signal }); } catch (e2) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e2 && e2.code)) throw e2; ui.log('Falhou neste bloco: ' + aiMsg(e2), 'warn'); } }
+      else ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn');
+    }
+    (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const mat = mats.includes(o.mat) ? o.mat : 'Outra', a = areaOf(n); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '' }); });
+    done += batch.length;
   }
   return res;
 }
@@ -1749,30 +1849,338 @@ async function runImport(o, ui) {
   if (!S.ai) throw new Error('O Claude não está disponível nesta visualização.');
   ui.log('Lendo o PDF…'); ui.prog(0.03);
   const { pages, doc, lib } = await readPdf(o.file, (p, n) => ui.prog(0.03 + 0.25 * p / n));
-  const chars = pages.join('').replace(/\s/g, '').length; let items = [], cls = new Map();
+  const simPre = o.simId ? S.sims.find(s => s.id === o.simId) : null, Mdl = simPre ? modeloOf(simPre) : (modelosAll().find(m => m.id === (o.modelo || activeModelo().id)) || activeModelo());
+  const chars = pages.join('').replace(/\s/g, '').length; let items = [], cls = new Map(), vis = null;
   if (chars < 120 * pages.length) {
     ui.log('O PDF não tem texto selecionável; vou ler as páginas como imagem.');
-    items = await scanPages(doc, lib, ui); items.forEach(q => cls.set(q.n, { mat: q.mat, ass: q.ass }));
+    items = await scanPages(doc, lib, ui); items.forEach(q => cls.set(q.n, { mat: q.mat, ass: q.ass, sub: '' }));
+    if (items.length) { const c2 = await classify(items.map(q => ({ n: q.n, raw: q.raw })), ui, Mdl); c2.forEach((v, n) => { const o = cls.get(n) || {}; cls.set(n, { mat: v.mat !== 'Outra' ? v.mat : o.mat || v.mat, sub: v.sub, ass: v.ass || o.ass, area: v.area }); }); }
   } else {
     const full = pages.join('\n'); items = splitQuestions(full);
     if (items.length < 3) items = await splitByAI(full, ui);
+    items.forEach(q => { q.pg = pageOfQ(pages, q.n); });
+    vis = await visOf(doc).catch(() => null);
+    if (vis && items.length) { const extra = await rescueMissing(pages, Mdl, items, ui, vis); extra.forEach(e => items.push({ n: e.n, raw: e.raw, pg: e.pg, pre: e })); items.sort((a, b) => a.n - b.n); }
     ui.log(`${items.length} questões encontradas.`);
-    if (items.length) cls = await classify(items, ui);
+    if (items.length) { cls = await classify(items, ui, Mdl, vis); items.forEach(q => { if (q.pre && !cls.has(q.n)) cls.set(q.n, { mat: q.pre.mat, sub: q.pre.sub, ass: q.pre.ass, area: '' }); }); }
   }
   if (!items.length) throw new Error('Não consegui identificar questões nesse PDF.');
   ui.prog(0.92);
   let pdfId = null;
   if (S.assets) { try { pdfId = (await S.assets.upload(o.file, { type: 'application/pdf' })).id; ui.log('PDF guardado no painel.'); } catch (e) { ui.log('Não guardei o arquivo do PDF (' + (e && (e.code || e.message)) + '), mas as questões foram lidas.', 'warn'); } }
-  const itens = items.map(q => { const c = cls.get(q.n) || {}; return { n: q.n, mat: c.mat || 'Outra', ass: c.ass || '', txt: cleanTxt(q.raw).slice(0, 1400), st: '', gab: '', resp: '' }; });
+  const itens = items.map(q => { const c = cls.get(q.n) || {}; return { n: q.n, mat: c.mat || 'Outra', sub: c.sub || '', area: c.area || '', pg: q.pg || 0, ass: c.ass || '', txt: cleanTxt(q.raw).slice(0, 1400), st: '', gab: '', resp: '' }; });
   let size = JSON.stringify({ itens }).length; for (let lim = 1400; size > 235000 && lim > 100; lim = Math.floor(lim / 2)) { itens.forEach(q => { q.txt = q.txt.slice(0, lim); }); size = JSON.stringify({ itens }).length; }
   let sid = o.simId, sim = sid ? S.sims.find(s => s.id === sid) : null;
   if (!sim) { sid = uid(); sim = { nome: o.nome || trunc(o.file.name.replace(/\.pdf$/i, ''), 60), data: o.data || TODAY_ISO, modelo: o.modelo || activeModelo().id, banca: (modelosAll().find(m => m.id === (o.modelo || activeModelo().id)) || activeModelo()).nome, mats: [], obs: '', ts: Date.now() }; }
   else sim = strip(sim);
   sim.pdfNome = o.file.name; if (pdfId) sim.pdfId = pdfId; sim.qn = itens.length;
-  await dbSet('simq', sid, { itens, ts: Date.now() }); await dbSet('sim', sid, sim);
+  await dbSet('simq', sid, { itens, alt: detectAlt(items), ts: Date.now() }); await dbSet('sim', sid, sim);
   S.ui.modelo = modeloOf(sim).id; S.ui.matSel = null;
   ui.prog(1); ui.log(`Pronto: ${itens.length} questões organizadas.`, 'ok');
   return sid;
+}
+
+// Matriz de Referência do ENEM (Inep/MEC 2026), condensada para o contexto das análises do Claude.
+const MATRIZ_TXT = "MATRIZ DE REFERÊNCIA DO ENEM (Inep/MEC, 2026) — use para classificar cada questão analisada pela competência de área (C) e habilidade (H) e pelo objeto de conhecimento. As habilidades H1–H30 são numeradas dentro de cada área.\nEIXOS COGNITIVOS (todas as áreas): I Dominar linguagens (DL); II Compreender fenômenos (CF); III Enfrentar situações-problema (SP); IV Construir argumentação (CA); V Elaborar propostas (EP).\n\n## LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS\nC1 — Aplicar as tecnologias da comunicação e da informação na escola, no trabalho e em outros contextos relevantes para sua vida.\n  H1: Identificar as diferentes linguagens e seus recursos expressivos como elementos de caracterização dos sistemas de comunicação.\n  H2: Recorrer aos conhecimentos sobre as linguagens dos sistemas de comunicação e informação para resolver problemas sociais.\n  H3: Relacionar informações geradas nos sistemas de comunicação e informação, considerando a função social desses sistemas.\n  H4: Reconhecer posições críticas aos usos sociais que são feitos das linguagens e dos sistemas de comunicação e informação.\nC2 — Conhecer e usar língua(s) estrangeira(s) moderna(s) como instrumento de acesso a informações e a outras culturas e grupos sociais.\n  H5: Associar vocábulos e expressões de um texto em LEM ao seu tema.\n  H6: Utilizar os conhecimentos da LEM e de seus mecanismos como meio de ampliar as possibilidades de acesso a informações, tecnologias e culturas.\n  H7: Relacionar um texto em LEM, as estruturas linguísticas, sua função e seu uso social.\n  H8: Reconhecer a importância da produção cultural em LEM como representação da diversidade cultural e linguística.\nC3 — Compreender e usar a linguagem corporal como relevante para a própria vida, integradora social e formadora da identidade.\n  H9: Reconhecer as manifestações corporais de movimento como originárias de necessidades cotidianas de um grupo social.\n  H10: Reconhecer a necessidade de transformação de hábitos corporais em função das necessidades cinestésicas.\n  H11: Reconhecer a linguagem corporal como meio de interação social, considerando os limites de desempenho e as alternativas de adaptação para diferentes indivíduos.\nC4 — Compreender a arte como saber cultural e estético gerador de significação e integrador da organização do mundo e da própria identidade.\n  H12: Reconhecer diferentes funções da arte, do trabalho da produção dos artistas em seus meios culturais.\n  H13: Analisar as diversas produções artísticas como meio de explicar diferentes culturas, padrões de beleza e preconceitos.\n  H14: Reconhecer o valor da diversidade artística e das inter-relações de elementos que se apresentam nas manifestações de vários grupos sociais e étnicos.\nC5 — Analisar, interpretar e aplicar recursos expressivos das linguagens, relacionando textos com seus contextos, mediante a natureza, função, organização, estrutura das manifestações, de acordo com as condições de produção e recepção.\n  H15: Estabelecer relações entre o texto literário e o momento de sua produção, situando aspectos do contexto histórico, social e político.\n  H16: Relacionar informações sobre concepções artísticas e procedimentos de construção do texto literário.\n  H17: Reconhecer a presença de valores sociais e humanos atualizáveis e permanentes no patrimônio literário nacional.\nC6 — Compreender e usar os sistemas simbólicos das diferentes linguagens como meios de organização cognitiva da realidade pela constituição de significados, expressão, comunicação e informação.\n  H18: Identificar os elementos que concorrem para a progressão temática e para a organização e estruturação de textos de diferentes gêneros e tipos.\n  H19: Analisar a função da linguagem predominante nos textos em situações específicas de interlocução.\n  H20: Reconhecer a importância do patrimônio linguístico para a preservação da memória e da identidade nacional.\nC7 — Confrontar opiniões e pontos de vista sobre as diferentes linguagens e suas manifestações específicas.\n  H21: Reconhecer, em textos de diferentes gêneros, recursos verbais e não verbais utilizados com a finalidade de criar e mudar comportamentos e hábitos.\n  H22: Relacionar, em diferentes textos, opiniões, temas, assuntos e recursos linguísticos.\n  H23: Inferir em um texto quais são os objetivos de seu produtor e quem é seu público-alvo, pela análise dos procedimentos argumentativos utilizados.\n  H24: Reconhecer no texto estratégias argumentativas empregadas para o convencimento do público, tais como a intimidação, sedução, comoção, chantagem, entre outras.\nC8 — Compreender e usar a língua portuguesa como língua materna, geradora de significação e integradora da organização do mundo e da própria identidade.\n  H25: Identificar, em textos de diferentes gêneros, as marcas linguísticas que singularizam as variedades linguísticas sociais, regionais e de registro.\n  H26: Relacionar as variedades linguísticas a situações específicas de uso social.\n  H27: Reconhecer os usos da norma-padrão da língua portuguesa nas diferentes situações de comunicação.\nC9 — Entender os princípios, a natureza, a função e o impacto das tecnologias da comunicação e da informação na sua vida pessoal e social, no desenvolvimento do conhecimento, associando-os aos conhecimentos científicos, às linguagens que lhes dão suporte, às demais tecnologias, aos processos de produção e aos problemas que se propõem solucionar.\n  H28: Reconhecer a função e o impacto social das diferentes tecnologias da comunicação e informação.\n  H29: Identificar, pela análise de suas linguagens, as tecnologias da comunicação e informação.\n  H30: Relacionar as tecnologias de comunicação e informação ao desenvolvimento das sociedades e ao conhecimento que elas produzem.\nObjetos de conhecimento (grupos): Estudo do texto: as sequências discursivas e os gêneros textuais no sistema de comunicação e informação | Estudo das práticas corporais: a linguagem corporal como integradora social e formadora de identidade | Produção e recepção de textos artísticos: interpretação e representação do mundo para o fortalecimento dos processos de identidade e cidadania | Estudo do texto literário: relações entre produção literária e processo social, concepções artísticas, procedimentos de construção e recepção de textos | Estudo dos aspectos linguísticos em diferentes textos: recursos expressivos da língua, procedimentos de construção e recepção de textos | Estudo do texto argumentativo, seus gêneros e recursos linguísticos: argumentação — tipo, gêneros e usos em Língua Portuguesa | Estudo dos aspectos linguísticos da Língua Portuguesa: usos da língua — norma culta e variação linguística | Estudo dos gêneros digitais: tecnologia da comunicação e informação — impacto e função social\n\n## MATEMÁTICA E SUAS TECNOLOGIAS\nC1 — Construir significados para os números naturais, inteiros, racionais e reais.\n  H1: Reconhecer, no contexto social, diferentes significados e representações dos números e operações — naturais, inteiros, racionais ou reais.\n  H2: Identificar padrões numéricos ou princípios de contagem.\n  H3: Resolver situação-problema envolvendo conhecimentos numéricos.\n  H4: Avaliar a razoabilidade de um resultado numérico na construção de argumentos sobre afirmações quantitativas.\n  H5: Avaliar propostas de intervenção na realidade utilizando conhecimentos numéricos.\nC2 — Utilizar o conhecimento geométrico para realizar a leitura e a representação da realidade e agir sobre ela.\n  H6: Interpretar a localização e a movimentação de pessoas/objetos no espaço tridimensional e sua representação no espaço bidimensional.\n  H7: Identificar características de figuras planas ou espaciais.\n  H8: Resolver situação-problema que envolva conhecimentos geométricos de espaço e forma.\n  H9: Utilizar conhecimentos geométricos de espaço e forma na seleção de argumentos propostos como solução de problemas do cotidiano.\nC3 — Construir noções de grandezas e medidas para a compreensão da realidade e a solução de problemas do cotidiano.\n  H10: Identificar relações entre grandezas e unidades de medida.\n  H11: Utilizar a noção de escalas na leitura de representação de situação do cotidiano.\n  H12: Resolver situação-problema que envolva medidas de grandezas.\n  H13: Avaliar o resultado de uma medição na construção de um argumento consistente.\n  H14: Avaliar proposta de intervenção na realidade utilizando conhecimentos geométricos relacionados a grandezas e medidas.\nC4 — Construir noções de variação de grandezas para a compreensão da realidade e a solução de problemas do cotidiano.\n  H15: Identificar a relação de dependência entre grandezas.\n  H16: Resolver situação-problema envolvendo a variação de grandezas, direta ou inversamente proporcionais.\n  H17: Analisar informações envolvendo a variação de grandezas como recurso para a construção de argumentação.\n  H18: Avaliar propostas de intervenção na realidade envolvendo variação de grandezas.\nC5 — Modelar e resolver problemas que envolvem variáveis socioeconômicas ou técnico-científicas, usando representações algébricas.\n  H19: Identificar representações algébricas que expressem a relação entre grandezas.\n  H20: Interpretar gráfico cartesiano que represente relações entre grandezas.\n  H21: Resolver situação-problema cuja modelagem envolva conhecimentos algébricos.\n  H22: Utilizar conhecimentos algébricos/geométricos como recurso para a construção de argumentação.\n  H23: Avaliar propostas de intervenção na realidade utilizando conhecimentos algébricos.\nC6 — Interpretar informações de natureza científica e social obtidas da leitura de gráficos e tabelas, realizando previsão de tendência, extrapolação, interpolação e interpretação.\n  H24: Utilizar informações expressas em gráficos ou tabelas para fazer inferências.\n  H25: Resolver problema com dados apresentados em tabelas ou gráficos.\n  H26: Analisar informações expressas em gráficos ou tabelas como recurso para a construção de argumentos.\nC7 — Compreender o caráter aleatório e não determinístico dos fenômenos naturais e sociais, e utilizar instrumentos adequados para medidas, determinação de amostras e cálculos de probabilidade para interpretar informações de variáveis apresentadas em uma distribuição estatística.\n  H27: Calcular medidas de tendência central ou de dispersão de um conjunto de dados expressos em uma tabela de frequências de dados agrupados (não em classes) ou em gráficos.\n  H28: Resolver situação-problema que envolva conhecimentos de estatística e probabilidade.\n  H29: Utilizar conhecimentos de estatística e probabilidade como recurso para a construção de argumentação.\n  H30: Avaliar propostas de intervenção na realidade utilizando conhecimentos de estatística e probabilidade.\nObjetos de conhecimento (grupos): Conhecimentos numéricos | Conhecimentos geométricos | Conhecimentos de estatística e probabilidade | Conhecimentos algébricos | Conhecimentos algébricos/geométricos\n\n## CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS\nC1 — Compreender as ciências naturais e as tecnologias a elas associadas como construções humanas, percebendo seus papéis nos processos de produção e no desenvolvimento econômico e social da humanidade.\n  H1: Reconhecer características ou propriedades de fenômenos ondulatórios ou oscilatórios, relacionando-os a seus usos em diferentes contextos.\n  H2: Associar a solução de problemas de comunicação, transporte, saúde ou outro, com o correspondente desenvolvimento científico e tecnológico.\n  H3: Confrontar interpretações científicas com interpretações baseadas no senso comum, ao longo do tempo ou em diferentes culturas.\n  H4: Avaliar propostas de intervenção no ambiente, considerando a qualidade da vida humana ou as medidas de conservação, recuperação ou utilização sustentável da biodiversidade.\nC2 — Identificar a presença e aplicar as tecnologias associadas às ciências naturais em diferentes contextos.\n  H5: Dimensionar circuitos ou dispositivos elétricos de uso cotidiano.\n  H6: Relacionar informações para compreender manuais de instalação ou utilização de aparelhos ou sistemas tecnológicos de uso comum.\n  H7: Selecionar testes de controle, parâmetros ou critérios para a comparação de materiais e produtos, tendo em vista a defesa do consumidor, a saúde do trabalhador ou a qualidade de vida.\nC3 — Associar intervenções que resultam em degradação ou conservação ambiental a processos produtivos e sociais e a instrumentos ou ações científico-tecnológicos.\n  H8: Identificar etapas em processos de obtenção, transformação, utilização ou reciclagem de recursos naturais, energéticos ou matérias-primas, considerando processos biológicos, químicos ou físicos neles envolvidos.\n  H9: Compreender a importância dos ciclos biogeoquímicos ou do fluxo de energia para a vida ou da ação de agentes ou fenômenos que possam causar alterações nesses processos.\n  H10: Analisar perturbações ambientais, identificando fontes, transporte e(ou) destino dos poluentes ou prevendo efeitos em sistemas naturais, produtivos ou sociais.\n  H11: Reconhecer benefícios, limitações e aspectos éticos da biotecnologia, considerando estruturas e processos biológicos envolvidos em produtos biotecnológicos.\n  H12: Avaliar impactos em ambientes naturais decorrentes de atividades sociais ou econômicas, considerando interesses contraditórios.\nC4 — Compreender interações entre organismos e ambiente, em particular aquelas relacionadas à saúde humana, relacionando conhecimentos científicos, aspectos culturais e características individuais.\n  H13: Reconhecer mecanismos de transmissão da vida, prevendo ou explicando a manifestação de características dos seres vivos.\n  H14: Identificar padrões em fenômenos e processos vitais dos organismos, como manutenção do equilíbrio interno, defesa, relações com o ambiente, sexualidade, entre outros.\n  H15: Interpretar modelos e experimentos para explicar fenômenos ou processos biológicos em qualquer nível de organização dos sistemas biológicos.\n  H16: Compreender o papel da evolução na produção de padrões, processos biológicos ou na organização taxonômica dos seres vivos.\nC5 — Entender métodos e procedimentos próprios das ciências naturais e aplicá-los em diferentes contextos.\n  H17: Relacionar informações apresentadas em diferentes formas de linguagem e representação usadas nas ciências físicas, químicas ou biológicas, como texto discursivo, gráficos, tabelas, relações matemáticas ou linguagem simbólica.\n  H18: Relacionar propriedades físicas, químicas ou biológicas de produtos, sistemas ou procedimentos tecnológicos às finalidades a que se destinam.\n  H19: Avaliar métodos, processos ou procedimentos das ciências naturais que contribuam para diagnosticar ou solucionar problemas de ordem social, econômica ou ambiental.\nC6 — Apropriar-se de conhecimentos da física para, em situações-problema, interpretar, avaliar ou planejar intervenções científico-tecnológicas.\n  H20: Caracterizar causas ou efeitos dos movimentos de partículas, substâncias, objetos ou corpos celestes.\n  H21: Utilizar leis físicas e(ou) químicas para interpretar processos naturais ou tecno- lógicos inseridos no contexto da termodinâmica e(ou) do eletromagnetismo.\n  H22: Compreender fenômenos decorrentes da interação entre a radiação e a matéria em suas manifestações em processos naturais ou tecnológicos, ou em suas implicações biológicas, sociais, econômicas ou ambientais.\n  H23: Avaliar possibilidades de geração, uso ou transformação de energia em ambientes específicos, considerando implicações éticas, ambientais, sociais e(ou) econômicas.\nC7 — Apropriar-se de conhecimentos da química para, em situações-problema, interpretar, avaliar ou planejar intervenções científico-tecnológicas.\n  H24: Utilizar códigos e nomenclatura da química para caracterizar materiais, substâncias ou transformações químicas.\n  H25: Caracterizar materiais ou substâncias, identificando etapas, rendimentos ou implicações biológicas, sociais, econômicas ou ambientais de sua obtenção ou produção.\n  H26: Avaliar implicações sociais, ambientais e(ou) econômicas na produção ou no consumo de recursos energéticos ou minerais, identificando transformações químicas ou de energia envolvidas nesses processos.\n  H27: Avaliar propostas de intervenção no meio ambiente aplicando conhecimentos químicos, observando riscos ou benefícios.\nC8 — Apropriar-se de conhecimentos da biologia para, em situações-problema, interpretar, avaliar ou planejar intervenções científico-tecnológicas.\n  H28: Associar características adaptativas dos organismos com seu modo de vida ou com seus limites de distribuição em diferentes ambientes, em especial em ambientes brasileiros.\n  H29: Interpretar experimentos ou técnicas que utilizam seres vivos, analisando implicações para o ambiente, a saúde, a produção de alimentos, as matérias- primas ou os produtos industriais.\n  H30: Avaliar propostas de alcance individual ou coletivo, identificando aquelas que visam à preservação e à implementação da saúde individual, coletiva ou do ambiente.\nObjetos de conhecimento (grupos): FÍSICA Conhecimentos básicos e fundamentais | O movimento, o equilíbrio e a descoberta de leis físicas | Energia, trabalho e potência | A Mecânica e o funcionamento do Universo | Fenômenos Elétricos e Magnéticos | Oscilações, ondas, óptica e radiação | O calor e os fenômenos térmicos | QUÍMICA Transformações químicas | Representação das transformações químicas | Materiais, suas propriedades e usos | Água | Transformações químicas e energia | Dinâmica das transformações químicas | Transformação Química e Equilíbrio | Compostos de Carbono | Relações da Química com as tecnologias, a sociedade e o meio ambiente | Energias químicas no cotidiano | BIOLOGIA Moléculas, células e tecidos | Hereditariedade e diversidade da vida | Identidade dos seres vivos | Ecologia e ciências ambientais | Origem e evolução da vida | Qualidade de vida das populações humanas\n\n## CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS\nC1 — Compreender os elementos culturais que constituem as identidades.\n  H1: Interpretar historicamente e(ou) geograficamente fontes documentais acerca de aspectos da cultura.\n  H2: Analisar a produção da memória pelas sociedades humanas.\n  H3: Associar as manifestações culturais do presente aos seus processos históricos.\n  H4: Comparar pontos de vista expressos em diferentes fontes sobre determinado aspecto da cultura.\n  H5: Identificar as manifestações ou representações da diversidade do patrimônio cultural e artístico em diferentes sociedades.\nC2 — Compreender as transformações dos espaços geográficos como produto das relações socioeconômicas e culturais de poder.\n  H6: Interpretar diferentes representações gráficas e cartográficas dos espaços geográficos.\n  H7: Identificar os significados histórico-geográficos das relações de poder entre as nações.\n  H8: Analisar a ação dos Estados nacionais no que se refere à dinâmica dos fluxos populacionais e no enfrentamento de problemas de ordem econômico-social.\n  H9: Comparar o significado histórico-geográfico das organizações políticas e socioeconômicas em escala local, regional ou mundial.\n  H10: Reconhecer a dinâmica da organização dos movimentos sociais e a importância da participação da coletividade na transformação da realidade histórico-geográfica.\nC3 — Compreender a produção e o papel histórico das instituições sociais, políticas e econômicas, associando-as aos diferentes grupos, conflitos e movimentos sociais.\n  H11: Identificar registros de práticas de grupos sociais no tempo e no espaço.\n  H12: Analisar o papel da justiça como instituição na organização das sociedades.\n  H13: Analisar a atuação dos movimentos sociais que contribuíram para mudanças ou rupturas em processos de disputa pelo poder.\n  H14: Comparar diferentes pontos de vista, presentes em textos analíticos e interpretativos, sobre situação ou fatos de natureza histórico-geográfica acerca das instituições sociais, políticas e econômicas.\n  H15: Avaliar criticamente conflitos culturais, sociais, políticos, econômicos ou ambientais ao longo da história.\nC4 — Entender as transformações técnicas e tecnológicas e seu impacto nos processos de produção, no desenvolvimento do conhecimento e na vida social.\n  H16: Identificar registros sobre o papel das técnicas e tecnologias na organização do trabalho e(ou) da vida social.\n  H17: Analisar fatores que explicam o impacto das novas tecnologias no processo de territorialização da produção.\n  H18: Analisar diferentes processos de produção ou circulação de riquezas e suas implicações sócio-espaciais.\n  H19: Reconhecer as transformações técnicas e tecnológicas que determinam as várias formas de uso e apropriação dos espaços rural e urbano.\n  H20: Selecionar argumentos favoráveis ou contrários às modificações impostas pelas novas tecnologias à vida social e ao mundo do trabalho.\nC5 — Utilizar os conhecimentos históricos para compreender e valorizar os fundamentos da cidadania e da democracia, favorecendo uma atuação consciente do indivíduo na sociedade.\n  H21: Identificar o papel dos meios de comunicação na construção da vida social.\n  H22: Analisar as lutas sociais e conquistas obtidas no que se refere às mudanças nas legislações ou nas políticas públicas.\n  H23: Analisar a importância dos valores éticos na estruturação política das sociedades.\n  H24: Relacionar cidadania e democracia na organização das sociedades.\n  H25: Identificar estratégias que promovam formas de inclusão social.\nC6 — Compreender a sociedade e a natureza, reconhecendo suas interações no espaço em diferentes contextos históricos e geográficos.\n  H26: Identificar em fontes diversas o processo de ocupação dos meios físicos e as relações da vida humana com a paisagem.\n  H27: Analisar de maneira crítica as interações da sociedade com o meio físico, levando em consideração aspectos históricos e(ou) geográficos.\n  H28: Relacionar o uso das tecnologias com os impactos sócio-ambientais em diferentes contextos histórico-geográficos.\n  H29: Reconhecer a função dos recursos naturais na produção do espaço geográfico, relacionando-os com as mudanças provocadas pelas ações humanas.\n  H30: Avaliar as relações entre preservação e degradação da vida no planeta nas diferentes escalas.\nObjetos de conhecimento (grupos): Diversidade cultural, conflitos e vida em sociedade | Formas de organização social, movimentos sociais, pensamento político e ação do Estado | Características e transformações das estruturas produtivas | Os domínios naturais e a relação do ser humano com o ambiente | Representação espacial\n\nREDAÇÃO: 5 competências (C1 norma culta; C2 compreensão da proposta e tema/gênero; C3 seleção e organização de argumentos; C4 coesão; C5 proposta de intervenção respeitando direitos humanos), 0–200 cada, total 1000.";
+
+/* ============ área da matéria (frente) de cada questão ============ */
+/* Listas fechadas para o Claude escolher e para os gráficos agruparem sem variação de nome. */
+const SUBS = {
+  'Português': {
+    'Leitura e interpretação': ['Interpretação de texto verbal', 'Texto não verbal e imagem (charge, tirinha, cartaz, infográfico)', 'Inferência e implícitos', 'Ideia central e tese', 'Relação entre textos (intertextualidade)', 'Argumentação e recursos argumentativos', 'Ironia, humor e crítica'],
+    'Gêneros e tipologia': ['Gêneros jornalísticos (notícia, reportagem, editorial, artigo)', 'Gêneros publicitários e campanhas', 'Cartas, e-mails e textos instrucionais', 'Gêneros digitais (meme, post, rede social)', 'Crônica, conto e narrativa', 'Tipos e sequências textuais'],
+    'Linguagem e uso': ['Funções da linguagem', 'Variação linguística', 'Preconceito linguístico e identidade', 'Linguagem e tecnologias da informação', 'Patrimônio linguístico e língua indígena/africana'],
+    'Gramática': ['Morfologia e classes de palavras', 'Sintaxe do período e da oração', 'Concordância verbal e nominal', 'Regência e crase', 'Pontuação', 'Ortografia e acentuação', 'Pronomes, tempos e modos verbais', 'Formação de palavras'],
+    'Texto e sentido': ['Coesão e conectivos', 'Coerência e progressão temática', 'Semântica (polissemia, denotação e conotação)', 'Figuras de linguagem', 'Recursos expressivos e estilo', 'Paródia e paráfrase']
+  },
+  'Literatura': {
+    'Origens': ['Trovadorismo e Humanismo', 'Quinhentismo', 'Barroco', 'Arcadismo'],
+    'Século XIX': ['Romantismo: poesia', 'Romantismo: prosa', 'Realismo e Naturalismo', 'Parnasianismo', 'Simbolismo'],
+    'Século XX': ['Pré-Modernismo', 'Vanguardas e Semana de 22', 'Modernismo: 1ª fase', 'Modernismo: 2ª fase (poesia e romance de 30)', 'Modernismo: 3ª fase (Geração de 45, Rosa, Clarice)', 'Literatura contemporânea', 'Literatura marginal, afro-brasileira e indígena'],
+    'Outras literaturas': ['Literatura portuguesa', 'Literaturas africanas de língua portuguesa'],
+    'Teoria e diálogos': ['Gêneros literários (lírico, épico, dramático)', 'Versificação e recursos poéticos', 'Teatro', 'Canção e MPB', 'Literatura e outras artes (cinema, pintura)', 'Intertextualidade literária']
+  },
+  'Inglês': {
+    'Leitura': ['Interpretação de texto', 'Ideia central e inferência', 'Texto não verbal e imagem', 'Letra de música e poema', 'Gêneros (notícia, e-mail, anúncio, rede social)'],
+    'Língua': ['Vocabulário e palavras cognatas', 'Expressões idiomáticas e phrasal verbs', 'Gramática (tempos verbais, pronomes, conectivos)', 'Registro e marcas de linguagem', 'Cultura, identidade e língua franca']
+  },
+  'Espanhol': {
+    'Leitura': ['Interpretação de texto', 'Ideia central e inferência', 'Texto não verbal e imagem', 'Letra de música e poema', 'Gêneros (notícia, e-mail, anúncio, rede social)'],
+    'Língua': ['Vocabulário e palavras cognatas', 'Falsos cognatos e expressões', 'Gramática (tempos verbais, pronomes, conectivos)', 'Registro e marcas de linguagem', 'Cultura e identidade latino-americana']
+  },
+  'Artes': {
+    'Linguagens artísticas': ['Artes visuais (pintura, escultura, fotografia)', 'Música', 'Teatro e dança', 'Cinema e audiovisual', 'Arte contemporânea e tecnologia'],
+    'Arte e cultura': ['Movimentos artísticos', 'Arte brasileira', 'Cultura popular e tradicional', 'Patrimônio cultural e identidade', 'Arte, política e sociedade']
+  },
+  'Educação Física': {
+    'Cultura corporal': ['Esporte: modalidades e regras', 'Jogos e brincadeiras', 'Ginástica e dança', 'Lutas', 'Práticas corporais de aventura'],
+    'Corpo e sociedade': ['Corpo, saúde e atividade física', 'Esporte, mídia e consumo', 'Esporte, inclusão e preconceito', 'Capacidades físicas e desempenho', 'Lazer e qualidade de vida']
+  },
+  'Matemática': {
+    'Números e grandezas': ['Operações e conjuntos numéricos', 'Divisibilidade, MMC e MDC', 'Razão e proporção', 'Regra de três', 'Porcentagem', 'Juros simples e compostos', 'Potenciação, radiciação e notação científica', 'Escalas, unidades e conversões', 'Grandezas: velocidade, densidade e vazão'],
+    'Álgebra e funções': ['Equações e sistemas do 1º grau', 'Função afim', 'Função quadrática', 'Função exponencial', 'Função logarítmica', 'Função modular e definida por partes', 'Inequações', 'Polinômios e equações algébricas', 'Gráficos e análise de funções', 'Sequências, PA e PG', 'Matrizes, determinantes e sistemas lineares', 'Otimização (máximo e mínimo)'],
+    'Geometria plana': ['Ângulos e polígonos', 'Triângulos: semelhança, Tales e Pitágoras', 'Áreas de figuras planas', 'Circunferência e círculo', 'Perímetro, ladrilhamento e simetria'],
+    'Geometria espacial': ['Prismas e cilindros', 'Pirâmides e cones', 'Esfera', 'Poliedros e relação de Euler', 'Volume e capacidade', 'Planificações, vistas e sólidos de revolução'],
+    'Trigonometria': ['Triângulo retângulo e razões', 'Ciclo trigonométrico', 'Funções trigonométricas', 'Leis dos senos e cossenos'],
+    'Geometria analítica': ['Ponto, distância e plano cartesiano', 'Retas', 'Circunferência', 'Cônicas'],
+    'Estatística': ['Leitura de gráficos e tabelas', 'Média, mediana e moda', 'Variância e desvio padrão', 'Distribuição de frequências'],
+    'Combinatória e probabilidade': ['Princípio fundamental da contagem', 'Permutações e arranjos', 'Combinações', 'Probabilidade simples', 'Probabilidade condicional e eventos', 'Raciocínio lógico']
+  },
+  'Física': {
+    'Mecânica': ['Cinemática: MU e MUV', 'Queda livre e lançamentos', 'Movimento circular', 'Vetores', 'Leis de Newton e dinâmica', 'Atrito e plano inclinado', 'Trabalho, energia e potência', 'Conservação da energia', 'Impulso, quantidade de movimento e colisões', 'Estática, torque e alavancas', 'Gravitação universal', 'Hidrostática (pressão e empuxo)', 'Hidrodinâmica'],
+    'Termologia': ['Temperatura e dilatação', 'Calorimetria', 'Mudanças de estado', 'Propagação do calor', 'Gases e transformações gasosas', 'Termodinâmica e máquinas térmicas', 'Efeito estufa e clima'],
+    'Ondas e óptica': ['Movimento harmônico e pêndulo', 'Ondas: características e fenômenos', 'Som e acústica', 'Óptica geométrica e reflexão', 'Refração, lentes e instrumentos ópticos', 'Espelhos', 'Interferência e difração', 'Espectro eletromagnético'],
+    'Eletricidade e magnetismo': ['Eletrostática', 'Campo e potencial elétrico', 'Corrente, resistência e Leis de Ohm', 'Circuitos elétricos', 'Potência e consumo de energia elétrica', 'Capacitores', 'Campo magnético e força magnética', 'Indução eletromagnética', 'Geradores, motores e transformadores'],
+    'Física moderna': ['Radioatividade e física nuclear', 'Efeito fotoelétrico e quântica', 'Relatividade', 'Energia nuclear'],
+    'Física e aplicações': ['Fontes e matrizes energéticas', 'Física no cotidiano e tecnologia', 'Astronomia e Sistema Solar', 'Física do corpo humano e medicina', 'Unidades, ordem de grandeza e análise dimensional', 'Gráficos e interpretação de experimentos']
+  },
+  'Química': {
+    'Química geral': ['Matéria, substâncias e misturas', 'Separação de misturas', 'Modelos atômicos', 'Tabela periódica e propriedades', 'Ligações químicas', 'Geometria e polaridade molecular', 'Forças intermoleculares', 'Estados físicos e mudanças de estado'],
+    'Inorgânica': ['Ácidos, bases, sais e óxidos', 'Reações inorgânicas', 'pH e indicadores', 'Metais e ligas', 'Número de oxidação e oxirredução'],
+    'Físico-química': ['Estequiometria', 'Gases', 'Soluções e concentração', 'Propriedades coligativas', 'Termoquímica', 'Cinética química', 'Equilíbrio químico', 'Equilíbrio iônico', 'Eletroquímica: pilhas', 'Eletroquímica: eletrólise', 'Radioatividade'],
+    'Orgânica': ['Cadeias carbônicas e hibridização', 'Funções orgânicas', 'Nomenclatura orgânica', 'Isomeria', 'Reações orgânicas', 'Polímeros', 'Biomoléculas (carboidratos, lipídios, proteínas)', 'Petróleo e combustíveis', 'Química de alimentos e fármacos'],
+    'Química aplicada': ['Química ambiental (poluição, chuva ácida, ozônio)', 'Água, tratamento e saneamento', 'Energia e biocombustíveis', 'Materiais e nanotecnologia', 'Química do cotidiano (sabões, cosméticos)', 'Processos industriais', 'Reciclagem e resíduos']
+  },
+  'Biologia': {
+    'Citologia': ['Bioquímica celular', 'Membrana e transporte', 'Organelas e metabolismo energético', 'Fotossíntese', 'Respiração celular e fermentação', 'Núcleo e ciclo celular (mitose e meiose)', 'Ácidos nucleicos e síntese proteica'],
+    'Genética': ['1ª e 2ª Leis de Mendel', 'Grupos sanguíneos e heredogramas', 'Herança ligada ao sexo', 'Interação gênica e ligação gênica', 'Genética de populações', 'Biotecnologia e engenharia genética', 'Mutações e doenças genéticas', 'Técnicas de DNA (PCR, sequenciamento)', 'Células-tronco e clonagem'],
+    'Evolução': ['Origem da vida', 'Teorias evolutivas (Darwin e Lamarck)', 'Seleção natural e especiação', 'Evolução humana', 'Filogenia e classificação'],
+    'Ecologia': ['Cadeias e teias alimentares', 'Fluxo de energia e pirâmides ecológicas', 'Ciclos biogeoquímicos', 'Dinâmica de populações', 'Relações ecológicas', 'Sucessão ecológica', 'Biomas', 'Impactos ambientais e poluição', 'Biodiversidade e conservação', 'Sustentabilidade e agroecologia'],
+    'Fisiologia humana': ['Sistema digestório e nutrição', 'Sistema respiratório', 'Sistema circulatório', 'Sistema excretor e homeostase', 'Sistema nervoso e sentidos', 'Sistema endócrino e hormônios', 'Reprodução e sexualidade', 'Imunologia e vacinas', 'Sistema locomotor'],
+    'Saúde e doenças': ['Doenças virais e bacterianas', 'Parasitoses e protozoários', 'Saneamento e saúde pública', 'Epidemiologia e pandemias', 'Drogas e dependência', 'Métodos contraceptivos e ISTs', 'Câncer'],
+    'Seres vivos': ['Vírus e bactérias', 'Protistas e fungos', 'Botânica: morfologia e fisiologia', 'Zoologia de invertebrados', 'Zoologia de vertebrados', 'Embriologia', 'Histologia']
+  },
+  'História': {
+    'Antiguidade e Idade Média': ['Pré-história e primeiras civilizações', 'Grécia antiga', 'Roma antiga', 'Feudalismo e Idade Média', 'Islamismo e Oriente'],
+    'Idade Moderna': ['Renascimento e Reformas', 'Absolutismo e mercantilismo', 'Expansão marítima e colonização da América', 'Iluminismo', 'Revolução Industrial', 'Revoluções burguesas', 'Independências na América'],
+    'Brasil': ['Brasil colonial: economia e sociedade', 'Escravidão e resistência', 'Povos indígenas', 'Independência e Primeiro Reinado', 'Segundo Reinado', 'Abolição e Proclamação da República', 'República Velha', 'Era Vargas', 'República de 1945 a 1964', 'Ditadura militar', 'Redemocratização e Brasil atual'],
+    'Mundo contemporâneo': ['Imperialismo e neocolonialismo', 'Primeira Guerra Mundial', 'Revolução Russa', 'Crise de 1929', 'Totalitarismos', 'Segunda Guerra Mundial', 'Guerra Fria', 'Descolonização da África e da Ásia', 'Oriente Médio', 'Globalização e mundo atual'],
+    'Temas': ['Cultura, religião e arte', 'Patrimônio e memória', 'Gênero e mulheres na história', 'Trabalho e movimento operário', 'Movimentos sociais e direitos', 'Esporte e história']
+  },
+  'Geografia': {
+    'Cartografia': ['Orientação e coordenadas', 'Escalas e projeções', 'Leitura de mapas, gráficos e tabelas', 'Sensoriamento remoto e geoprocessamento'],
+    'Geografia física': ['Relevo e geomorfologia', 'Solos', 'Clima e meteorologia', 'Hidrografia e bacias', 'Vegetação e domínios morfoclimáticos', 'Geologia e tectônica'],
+    'Questões ambientais': ['Mudanças climáticas', 'Recursos hídricos', 'Desmatamento e queimadas', 'Poluição e resíduos', 'Unidades de conservação', 'Desastres naturais', 'Sustentabilidade'],
+    'Geografia humana': ['Demografia e população', 'Migrações', 'Urbanização e cidades', 'Problemas urbanos e metropolização', 'Espaço rural e agropecuária', 'Questão agrária e conflitos no campo', 'Povos e comunidades tradicionais'],
+    'Economia e território': ['Industrialização', 'Energia e matriz energética', 'Transportes e logística', 'Comércio e globalização', 'Revolução técnico-científica e trabalho', 'Mineração e recursos minerais', 'Regionalização do Brasil'],
+    'Geopolítica': ['Ordem mundial e blocos econômicos', 'Conflitos territoriais e fronteiras', 'Oriente Médio e Ásia', 'África', 'Europa', 'Américas', 'Brasil no mundo']
+  },
+  'Filosofia e Sociologia': {
+    'Filosofia antiga e medieval': ['Mito e pré-socráticos', 'Sócrates, Platão e Aristóteles', 'Helenismo e filosofia medieval'],
+    'Filosofia moderna': ['Renascimento e filosofia política moderna', 'Racionalismo e empirismo', 'Iluminismo e Kant', 'Idealismo e Hegel'],
+    'Filosofia contemporânea': ['Marx e crítica do capitalismo', 'Nietzsche', 'Existencialismo', 'Fenomenologia', 'Escola de Frankfurt e indústria cultural', 'Foucault e poder', 'Arendt e política', 'Filosofia da linguagem'],
+    'Temas de filosofia': ['Ética e moral', 'Política e Estado', 'Estética', 'Epistemologia e ciência', 'Lógica', 'Filosofia e tecnologia'],
+    'Sociologia': ['Origens da sociologia e positivismo', 'Durkheim', 'Weber', 'Marx e luta de classes', 'Cultura e identidade', 'Ideologia e mídia', 'Estratificação e desigualdade', 'Trabalho e capitalismo', 'Movimentos sociais', 'Cidadania e direitos', 'Violência e poder', 'Gênero, raça e etnia', 'Globalização e tecnologia', 'Instituições sociais (família, religião, escola)', 'Meio ambiente e sociedade']
+  }
+};
+/* matérias que o ENEM cobra dentro de uma área mas que o modelo do usuário pode não listar */
+const EXTRA_MAT = { 'Educação Física': 'Linguagens', 'Espanhol': 'Linguagens', 'Artes': 'Linguagens' };
+const subGroups = mat => Object.entries(SUBS[mat] || {});
+const subsOf = mat => subGroups(mat).flatMap(([, l]) => l);
+const subGuia = mats => mats.filter(m => subsOf(m).length).map(m => `- ${m}:\n` + subGroups(m).map(([g, l]) => `  ${g}: ${l.join('; ')}`).join('\n')).join('\n');
+const subNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+/* a lista é só um guia: se o Claude achar um assunto que não está nela (pode cair qualquer coisa), o texto livre dele é mantido */
+const subPick = (mat, v) => { const L = subsOf(mat), k = subNorm(v); const hit = L.find(x => subNorm(x) === k) || L.find(x => k && k.length > 3 && (subNorm(x).startsWith(k) || k.startsWith(subNorm(x)))); if (hit) return hit; const t = String(v || '').replace(/\s+/g, ' ').trim().slice(0, 80); return t.length >= 4 && !/^(n\/?a|nenhum|outro|outra|-+)$/i.test(t) ? t : ''; };
+/* área do caderno (ex.: Linguagens, Ciências Humanas) a que a questão n pertence, pela numeração; null se não der para saber */
+function areaOfN(M, items) {
+  if (!M || M.legacy || !(M.areas || []).length) return () => null;
+  const tq = modQ(M), ns = items.map(q => +q.n).filter(Boolean);
+  if (!tq || ns.length < tq * 0.6 || ns.some(n => n < 1 || n > tq * 2)) return () => null;
+  return n => { let p = (n - 1) % tq; for (const a of M.areas) { if (p < (+a.q || 0)) return a; p -= (+a.q || 0); } return null; };
+}
+const areaDeQ = (M, q) => (q.area && (M.areas || []).some(a => a.n === q.area)) ? q.area : areaDeMat(M, q.mat || 'Outra');
+const matsDaArea = a => { const L = [...(a.mats || [])]; Object.entries(EXTRA_MAT).forEach(([m, an]) => { if (an === a.n && !L.includes(m)) L.push(m); }); return L; };
+
+/* ============ frequência: quantas questões caíram de cada assunto ============ */
+const assKey = q => ((q.sub || q.ass || '') + '').trim();
+function simFreq(doc) {
+  const out = {};
+  (doc && doc.itens || []).forEach(q => { const k = assKey(q); if (!k) return; const m = q.mat || 'Outra'; const o = (out[m] = out[m] || {}); const x = (o[k] = o[k] || { nome: k, n: 0, e: 0, c: 0, a: 0, q: [] }); x.n++; x.q.push(q.n); if (q.st === 'e') x.e++; else if (q.st === 'c') x.c++; else if (q.st === 'a') x.a++; });
+  return Object.entries(out).map(([m, o]) => ({ m, tot: Object.values(o).reduce((s, x) => s + x.n, 0), L: Object.values(o).sort((a, b) => b.n - a.n || (b.e + b.c) - (a.e + a.c)) }))
+    .sort((a, b) => (S.cfg.materias.indexOf(a.m) + 99 * (S.cfg.materias.indexOf(a.m) < 0)) - (S.cfg.materias.indexOf(b.m) + 99 * (S.cfg.materias.indexOf(b.m) < 0)));
+}
+const freqFrase = x => `${x.n} ${x.n === 1 ? 'questão' : 'questões'} de ${x.nome}`;
+function freqPack(sim, doc, tit) {
+  if (!enemOn()) tit = tit.replace(/ e compare com o Raio-X/, '').replace(/, e compare com a incidência no Raio-X/, '');
+  const F = simFreq(doc); if (!F.length) return '';
+  return `${tit}\n` + F.map(g => `- ${g.m} (${g.tot} questões classificadas): ${g.L.slice(0, 12).map(x => `${x.nome} ${x.n}${x.e + x.c ? ` (${x.e + x.c} erradas/chutes)` : ''}`).join('; ')}`).join('\n');
+}
+function freqAllPack() {
+  const d = D(), docs = Object.entries(d.simq || {}).filter(([sid]) => simsAllSorted().some(s => s.id === sid)); if (docs.length < 2) return '';
+  const all = { itens: docs.flatMap(([, doc]) => doc.itens || []) }, F = simFreq(all);
+  return F.length ? `FREQUÊNCIA DOS ASSUNTOS EM ${docs.length} SIMULADOS COM QUESTÕES:\n` + F.map(g => `- ${g.m}: ${g.L.slice(0, 8).map(x => `${x.nome} ${x.n}`).join('; ')}`).join('\n') : '';
+}
+function freqHTML(doc) {
+  const F = simFreq(doc); if (!F.length) return '';
+  const rx = typeof rxMat === 'function' && simEnem(S.sims.find(x => x.id === S.ui.simSel)) ? rxMat : () => null;
+  return `<section class="card"><div class="row" style="align-items:center"><span class="lbl">O que caiu neste simulado</span><span class="sub" style="margin-left:auto">assuntos por matéria, com quantas questões caíram</span></div><div style="display:grid;gap:14px;margin-top:12px">` + F.map(g => {
+    const r = rx(g.m);
+    return `<div><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><b>${esc(g.m)}</b><span class="sub mono">${g.tot} questões</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">${g.L.map(x => { const hit = r && typeof rxAssunto === 'function' ? rxAssunto(r, x.nome) : null; const ruim = x.e + x.c; return `<span class="tag ${x.n > 1 ? 'solid' : ''}" title="${esc(freqFrase(x))}${ruim ? ` · você errou ou chutou ${ruim}` : ''}${hit ? ` · no ENEM: ${nf(hit.p, 1)}% dos itens de ${r.n}` : ''}">${esc(x.nome)} <b class="mono">×${x.n}</b>${ruim ? ` <span style="color:var(--bad,#e5646b)">· ${ruim} ${ruim === 1 ? 'erro' : 'erros'}</span>` : ''}</span>`; }).join('')}</div></div>`;
+  }).join('') + `</div></section>`;
+}
+
+/* ============ gabarito, alternativa marcada e competências/habilidades (Matriz ENEM) ============ */
+const mxKey = n => { const k = subNorm(n); return /^ling/.test(k) ? 'lin' : /human/.test(k) ? 'hum' : /natureza/.test(k) ? 'nat' : /^mat/.test(k) ? 'mat' : ''; };
+const mxRaw = {};
+const MX = (() => {
+  const out = {}; let cur = null, cc = 0;
+  MATRIZ_TXT.split('\n').forEach(l => {
+    let m; if ((m = l.match(/^## (.+)/))) { const k = mxKey(m[1]); cur = k ? (out[k] = { nome: m[1], C: {}, H: {} }) : null; if (k) mxRaw[k] = l + '\n'; return; }
+    if (!cur) return; const k = Object.keys(out).find(x => out[x] === cur); mxRaw[k] += l + '\n';
+    if ((m = l.match(/^C(\d+) — (.+)/))) { cc = +m[1]; cur.C[cc] = m[2]; return; }
+    if ((m = l.match(/^\s+H(\d+): (.+)/))) cur.H[+m[1]] = { t: m[2], c: cc };
+  });
+  return out;
+})();
+const isEnem = M => !!M && /enem/i.test((M.id || '') + ' ' + (M.nome || ''));
+const enemOn = () => isEnem(activeModelo());
+const simEnem = sim => !!sim && isEnem(modeloOf(sim));
+const chNum = v => { const m = String(v == null ? '' : v).match(/\d+/); return m ? +m[0] : 0; };
+const chLabel = (key, k, n) => { const x = MX[key] && (k === 'C' ? MX[key].C[n] : (MX[key].H[n] || {}).t); return x || ''; };
+function chSet(key, c, h) {
+  c = chNum(c); h = chNum(h); const X = MX[key];
+  if (X) { if (h && !X.H[h]) h = 0; if (h && !c) c = X.H[h].c; if (c && !X.C[c]) c = 0; }
+  return { c, h };
+}
+/* quando o gabarito e a alternativa marcada existem, acerto/erro/chute saem da comparação */
+function deriveSt(q) {
+  if (q.gab && q.resp) { if (q.st && !q.dv && q.st0 == null) q.st0 = q.st; q.st = q.resp === q.gab ? (q.ch ? 'c' : 'a') : 'e'; q.dv = true; }
+  else if (q.gab && !q.resp && q.dv) { q.st = ''; q.dv = false; }
+  return q;
+}
+const hasKey = doc => ((doc && doc.itens) || []).some(x => x.gab);
+const keyStats = doc => { let k = 0, r = 0, w = 0; ((doc && doc.itens) || []).forEach(q => { if (q.gab) k++; if (q.resp && !q.gab) w++; if (q.gab && q.resp) r++; }); return { k, r, w }; };
+function divergentes(doc) { return ((doc && doc.itens) || []).filter(q => q.dv && q.st0 != null && (q.st0 === 'e') !== (q.st === 'e')); }
+
+/* ---- ler o gabarito (PDF ou imagem) com o Claude ---- */
+function alignKey(G, nums) {
+  const have = n => Object.keys(G).length && nums.filter(x => G[x]).length, lo = Math.min(...nums), ks = Object.keys(G).map(Number);
+  if (!ks.length || nums.length < 2) return { G, shift: 0 };
+  if (have() >= nums.length * .5 || Math.min(...ks) > 1 || lo <= 1) return { G, shift: 0 };
+  const sh = lo - 1, G2 = {}; ks.forEach(k => { G2[k + sh] = G[k]; });
+  return nums.filter(x => G2[x]).length >= nums.length * .6 ? { G: G2, shift: sh } : { G, shift: 0 };
+}
+async function readKeyFile(file, nums, ui) {
+  const G = {}, lo = Math.min(...nums), hi = Math.max(...nums), isPdf = /pdf/i.test(file.type) || /\.pdf$/i.test(file.name);
+  const ask = async (a, b, text, blobs) => {
+    const out = await S.ai.json(`Estas são as páginas ${a} a ${b} de um GABARITO de simulado (ENEM ou vestibular), com o texto extraído e, quando houver, as imagens das páginas. Extraia cada questão listada: o número da questão, a letra do gabarito (A a E) e, só se o gabarito trouxer, a competência e a habilidade da questão (apenas o número: C5 vira 5, H17 vira 17). Use os mesmos números do caderno: este simulado tem as questões ${lo} a ${hi}. Ignore questões anuladas ou sem letra. Não invente competência nem habilidade que não estejam escritas na página; use null quando faltar.\nResponda só com um array JSON de objetos {"n": número, "gab": letra, "c": número ou null, "h": número ou null}.\n\nTEXTO DAS PÁGINAS:\n${text || '(sem texto; leia as imagens)'}`, { modelTier: 'default', signal: ui.ctl.signal, ...(blobs && blobs.length ? { images: blobs } : {}) });
+    (Array.isArray(out) ? out : []).forEach(o => { const n = chNum(o && o.n), g = String((o && o.gab) || '').trim().toUpperCase(); if (n && /^[A-E]$/.test(g)) G[n] = { gab: g, c: chNum(o.c), h: chNum(o.h) }; });
+  };
+  if (isPdf) {
+    const { pages, doc } = await readPdf(file), vis = await visOf(doc).catch(() => null), per = vis ? vis.per : 4;
+    for (let p = 0; p < pages.length; p += per) {
+      const idx = []; for (let k = p; k < Math.min(pages.length, p + per); k++) idx.push(k + 1);
+      ui.log(`Lendo o gabarito, páginas ${idx[0]} a ${idx.at(-1)} de ${pages.length}…`);
+      let blobs = null; if (vis) { try { blobs = await vis.render(idx); } catch (e) { blobs = null; } }
+      await ask(idx[0], idx.at(-1), idx.map(i => pages[i - 1]).join('\n').slice(0, 7000), blobs);
+    }
+  } else { ui.log('Lendo a imagem do gabarito…'); await ask(1, 1, '', [file]); }
+  return G;
+}
+function mergeKey(doc, G, R, M) {
+  const nd = clone(doc); let nG = 0, nCH = 0, nR = 0;
+  nd.itens.forEach(q => {
+    const g = G[q.n];
+    if (g) { q.gab = g.gab; nG++; if (g.c || g.h) { const r = chSet(mxKey(areaDeQ(M, q)), g.c, g.h); if (r.c || r.h) { q.comp = r.c; q.hab = r.h; q.chSrc = 'gab'; nCH++; } } }
+    if (R[q.n]) { q.resp = R[q.n]; nR++; }
+    deriveSt(q);
+  });
+  return { nd, nG, nCH, nR };
+}
+
+/* ---- competência e habilidade pela Matriz, quando o gabarito não traz ---- */
+async function classifyCH(items, M, ui, vis) {
+  const res = new Map(), areaOf = areaOfN(M, items), areaKey = q => mxKey((areaOf(q.n) || {}).n || areaDeQ(M, q));
+  const withPg = vis ? items.filter(q => q.pg).sort((a, b) => a.pg - b.pg || a.n - b.n) : [], rest = vis ? items.filter(q => !q.pg) : items.slice(), batches = [];
+  for (let i = 0; i < withPg.length;) { const p0 = withPg[i].pg, list = []; while (i < withPg.length && withPg[i].pg < p0 + vis.per && list.length < 10) list.push(withPg[i++]); batches.push({ list, pages: Array.from({ length: Math.min(vis.per, vis.doc.numPages - p0 + 1) }, (_, k) => p0 + k) }); }
+  for (let i = 0; i < rest.length; i += 12) batches.push({ list: rest.slice(i, i + 12), pages: null });
+  for (const bt of batches) {
+    const batch = bt.list, keys = [...new Set(batch.map(areaKey).filter(k => MX[k]))];
+    ui.log(`Competências e habilidades: questões ${batch[0].n} a ${batch.at(-1).n}${bt.pages ? ' (texto e imagens)' : ''}…`);
+    const mk = img => `Classifique cada questão de um simulado do ENEM pela COMPETÊNCIA de área (C) e pela HABILIDADE (H) da Matriz de Referência abaixo. As habilidades são numeradas de 1 a 30 dentro de cada área e cada habilidade pertence a uma competência. Escolha a habilidade mais provável e informe a competência a que ela pertence. Use só números que existem na matriz da área da questão. Se houver mais de uma possibilidade, escolha a habilidade que melhor descreve o que a questão pede do aluno.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem; use as figuras, gráficos e tabelas junto com o texto.\n` : ''}\n${keys.map(k => mxRaw[k]).join('\n')}\nQUESTÕES (área do caderno, matéria e assunto entre parênteses):\n` + batch.map(q => `[${q.n}] (${(areaOf(q.n) || {}).n || areaDeQ(M, q)} · ${q.mat || '?'}${q.ass ? ' · ' + q.ass : ''}) ${trunc(q.raw, 800)}`).join('\n\n') + '\n\nResponda só com um array JSON de objetos {"n": número, "c": número da competência, "h": número da habilidade}, um por questão.';
+    let blobs = null; if (bt.pages) { try { blobs = await vis.render(bt.pages); } catch (e) { blobs = null; } }
+    let out = null;
+    try { out = await S.ai.json(mk(blobs), { modelTier: 'default', signal: ui.ctl.signal, ...(blobs ? { images: blobs } : {}) }); }
+    catch (e) {
+      if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e;
+      if (blobs) { try { out = await S.ai.json(mk(null), { modelTier: 'default', signal: ui.ctl.signal }); } catch (e2) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e2 && e2.code)) throw e2; ui.log('Falhou neste bloco: ' + aiMsg(e2), 'warn'); } } else ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn');
+    }
+    (Array.isArray(out) ? out : []).forEach(o => { const n = chNum(o && o.n), q = batch.find(x => x.n === n); if (!q) return; const r = chSet(areaKey(q), o.c, o.h); if (r.h || r.c) res.set(n, r); });
+  }
+  return res;
+}
+/* roda em cima do documento de questões: só as que ainda não têm competência/habilidade (ou todas, menos as que vieram do gabarito) */
+async function fillCH(doc, sim, M, ui, all, pre) {
+  const pend = doc.itens.filter(q => all ? !['gab', 'manual'].includes(q.chSrc) : !(q.comp || q.hab)); if (!pend.length) return { res: new Map(), n: 0 };
+  let pages = pre ? pre.pages : null, vis = pre ? pre.vis : null;
+  if (!pre && sim && sim.pdfId && S.assets) { try { const pdf = await loadSimPdf(sim); if (pdf) { pages = await pdfPages(pdf); vis = await visOf(pdf); } } catch (e) { vis = null; } }
+  const items = pend.map(q => ({ n: q.n, mat: q.mat, ass: q.ass, raw: q.txt || '', pg: q.pg || (pages ? pageOfQ(pages, q.n) : 0) }));
+  const res = await classifyCH(items, M, ui, vis); return { res, n: res.size };
+}
+/* aplica o resultado em cima do documento mais recente (o aluno pode ter marcado letras enquanto o Claude trabalhava) */
+function applyCH(doc, res) {
+  let n = 0; doc.itens.forEach(q => { const r = res.get(q.n); if (r && !['gab', 'manual'].includes(q.chSrc)) { q.comp = r.c; q.hab = r.h; q.chSrc = 'claude'; n++; } }); return n;
+}
+/* grava o documento de questões já, sem deixar um clique antigo (com espera de 700 ms) sobrescrever depois */
+async function putQDoc(sid, nd) { clearTimeout(S.qTimers[sid]); S.qDirty[sid] = false; S.simq[sid] = nd; await dbSet('simq', sid, nd); }
+
+/* ---- análise: em quais competências e habilidades mais erro ---- */
+const chRowsOf = (doc, M) => ((doc && doc.itens) || []).map(q => ({ q, M }));
+const chAllRows = back => { let L = simsSorted().filter(s => isEnem(modeloOf(s)) && (D().simq[s.id] || {}).itens && D().simq[s.id].itens.some(q => q.st)); if (back) L = L.slice(0, Math.max(0, L.length - back)); return L.flatMap(s => chRowsOf(D().simq[s.id], modeloOf(s))); };
+function chAgg(rows) {
+  const by = {};
+  rows.forEach(({ q, M }) => {
+    if (!q.st || !(q.comp || q.hab)) return; const area = areaDeQ(M, q), a = by[area] = by[area] || { area, key: mxKey(area), C: {}, H: {} };
+    [['C', q.comp], ['H', q.hab]].forEach(([k, v]) => { if (!v) return; const x = a[k][v] = a[k][v] || { n: v, t: 0, e: 0, c: 0 }; x.t++; if (q.st === 'e') x.e++; else if (q.st === 'c') x.c++; });
+  });
+  const so = o => Object.values(o).filter(x => x.e + x.c > 0).sort((a, b) => b.e - a.e || b.e / b.t - a.e / a.t || b.c - a.c);
+  return Object.values(by).map(a => ({ ...a, Cl: so(a.C), Hl: so(a.H) })).filter(a => a.Cl.length || a.Hl.length).sort((a, b) => a.area.localeCompare(b.area));
+}
+const chLine = (a, k, x) => `${k}${x.n} · ${x.e} ${x.e === 1 ? 'erro' : 'erros'}${x.c ? ` e ${x.c} ${x.c === 1 ? 'chute' : 'chutes'}` : ''} em ${x.t} (${nf(x.e / x.t * 100, 0)}%)`;
+function chPack(rows, tit) {
+  const A = chAgg(rows); if (!A.length) return '';
+  return `${tit}\n` + A.map(a => `- ${a.area}:\n  competências: ${a.Cl.slice(0, 5).map(x => `${chLine(a, 'C', x)} — ${trunc(chLabel(a.key, 'C', x.n), 90)}`).join(' | ') || '(sem erros)'}\n  habilidades: ${a.Hl.slice(0, 6).map(x => `${chLine(a, 'H', x)} — ${trunc(chLabel(a.key, 'H', x.n), 90)}`).join(' | ') || '(sem erros)'}`).join('\n');
+}
+function chBlock(rows) {
+  const A = chAgg(rows); if (!A.length) return '<p class="sub">Ainda sem erros ou chutes em questões com competência e habilidade.</p>';
+  const li = (a, k, x) => `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="tag solid mono">${k}${x.n}</span><span class="mono" style="font-size:12px">${x.e} ${x.e === 1 ? 'erro' : 'erros'}${x.c ? ` + ${x.c} ${x.c === 1 ? 'chute' : 'chutes'}` : ''} em ${x.t} · ${nf(x.e / x.t * 100, 0)}%</span><span class="sub" style="flex-basis:100%;margin:-2px 0 4px 2px">${esc(chLabel(a.key, k, x.n))}</span></div>`;
+  return A.map(a => `<div style="margin-top:12px"><b>${esc(a.area)}</b><div class="sub" style="margin:6px 0 4px">Competências</div><div style="display:grid;gap:4px">${a.Cl.slice(0, 4).map(x => li(a, 'C', x)).join('') || '<span class="sub">sem erros</span>'}</div><div class="sub" style="margin:10px 0 4px">Habilidades</div><div style="display:grid;gap:4px">${a.Hl.slice(0, 6).map(x => li(a, 'H', x)).join('') || '<span class="sub">sem erros</span>'}</div></div>`).join('');
+}
+function chHTML(doc, sim) {
+  const M = sim ? modeloOf(sim) : activeModelo(); if (!isEnem(M) || !(doc.itens || []).some(q => q.comp || q.hab)) return '';
+  const falta = doc.itens.filter(q => !(q.comp || q.hab)).length, todos = chAllRows(), outros = Object.entries(D().simq || {}).filter(([id, d]) => sim && id !== sim.id && (d.itens || []).some(q => q.comp || q.hab)).length;
+  return `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Competências e habilidades em que você mais erra</span><span class="sub" style="margin-left:auto">Matriz de Referência do ENEM</span></div>
+    ${chBlock(chRowsOf(doc, M))}${falta ? `<p class="sub" style="margin:12px 0 0">${falta} ${falta === 1 ? 'questão ainda está' : 'questões ainda estão'} sem competência e habilidade.</p>` : ''}
+    ${outros ? `<details style="margin-top:14px"><summary class="sub" style="cursor:pointer">Em todos os simulados ENEM com competência e habilidade</summary>${chBlock(todos)}${chPrevHTML(todos, chAllRows(1))}</details>` : ''}</section>`;
+}
+
+async function chFillAction() {
+  const sid = S.ui.simSel, doc = S.simq[sid], sim = S.sims.find(x => x.id === sid); if (!doc || !S.ai) return;
+  const M = sim ? modeloOf(sim) : activeModelo(); if (!isEnem(M)) { toast('A Matriz de Referência é do ENEM; este simulado não é de modelo ENEM.', 'err'); return; }
+  const falta = doc.itens.filter(q => !(q.comp || q.hab)).length; if (!falta) { toast('Todas as questões já têm competência e habilidade.'); return; }
+  toast(`Classificando competências e habilidades de ${falta} questões…`); const ui = { ctl: new AbortController(), log: () => { }, prog: () => { } };
+  try { const f = await fillCH(doc, sim, M, ui, false); if (!f.n) { toast('O Claude não devolveu classificação; tente de novo.', 'err'); return; } const cur = clone(S.simq[sid] || doc), n = applyCH(cur, f.res); await putQDoc(sid, cur); toast(`${n} questões com competência e habilidade.`); } catch (e) { toast(aiMsg(e), 'err'); }
+}
+
+/* ---- o que mudou: a informação antiga continua visível embaixo da nova, menor e translúcida ---- */
+function prevRank(cur, prev, key, fmt, k, label) {
+  if (!prev || !prev.length) return '';
+  const sg = L => L.slice(0, k).map(x => key(x) + ':' + Math.round(x.p == null ? (x.e / (x.t || 1) * 100) : x.p)).join('|');
+  if (sg(cur) === sg(prev)) return '';
+  return `<div class="prev-rank"><div class="prev-t">${esc(label || 'Antes do último simulado')}</div>${prev.slice(0, k).map(fmt).join(' · ')}</div>`;
+}
+function chPrevHTML(cur, prev) {
+  const A = chAgg(cur), B = chAgg(prev); if (!B.length) return '';
+  const sg = L => L.map(a => a.area + ':' + a.Cl.slice(0, 4).map(x => x.n + '/' + x.e).join(',') + '|' + a.Hl.slice(0, 6).map(x => x.n + '/' + x.e).join(',')).join(';');
+  if (sg(A) === sg(B)) return '';
+  return `<div class="prev-rank"><div class="prev-t">Antes do último simulado</div>${B.map(a => `<div>${esc(a.area)} · competências ${a.Cl.slice(0, 4).map(x => `C${x.n} (${x.e}/${x.t})`).join(', ') || '–'} · habilidades ${a.Hl.slice(0, 6).map(x => `H${x.n} (${x.e}/${x.t})`).join(', ') || '–'}</div>`).join('')}</div>`;
+}
+
+/* A a E ou A a D, conforme a prova; se já houver resposta ou gabarito fora do intervalo, a letra continua aparecendo */
+const altLetters = (doc, q) => { const n = Math.max(4, Math.min(5, (doc && doc.alt) || 5)); let L = 'ABCDE'.slice(0, n).split(''); if (q) [q.resp, q.gab].forEach(x => { if (x && !L.includes(x) && /^[A-E]$/.test(x)) L = 'ABCDE'.slice(0, Math.max(L.length, 'ABCDE'.indexOf(x) + 1)).split(''); }); return L; };
+function detectAlt(items) {
+  const has = (q, L) => new RegExp('(^|\\n)\\s*\\(?' + L + '[\\).\\-–]\\s*\\S').test(q.raw || ''), d = items.filter(q => has(q, 'D')).length, e = items.filter(q => has(q, 'E')).length;
+  return d >= items.length * .3 && e < d * .3 ? 4 : 5;
 }
 
 /* ============ formulários e janelas ============ */
@@ -1979,21 +2387,34 @@ function parseKey(str) {
 }
 function keyModal(sid) {
   const doc = S.simq[sid]; if (!doc) return;
-  const first = (doc.itens[0] || {}).n || 1;
-  const box = modal(`<h2>Gabarito e respostas</h2><p class="lead">Cole o gabarito oficial e as suas respostas. Aceito "1-A 2-C 3-B" ou só as letras em sequência, a partir da questão ${first}. O painel marca acertos e erros sozinho.</p>
-    <form class="form" id="f"><label class="field"><span>Gabarito oficial</span><textarea id="f-gab" rows="3" placeholder="1-A 2-C 3-B…"></textarea></label>
-      <label class="field"><span>Minhas respostas</span><textarea id="f-res" rows="3" placeholder="1-A 2-D 3-B…"></textarea></label>
+  const first = (doc.itens[0] || {}).n || 1, sim = S.sims.find(x => x.id === sid), M = sim ? modeloOf(sim) : activeModelo(), nums = doc.itens.map(q => q.n);
+  const box = modal(`<h2>Gabarito</h2><p class="lead">Envie o gabarito em PDF ou foto, ou cole o texto. Se ele trouxer a competência e a habilidade de cada questão, o Claude lê isso também; se não trouxer, ele classifica pela Matriz do ENEM. Depois você marca na lista a alternativa que escolheu em cada questão e o painel compara com o gabarito.</p>
+    <form class="form" id="f">${S.ai ? `<label class="field"><span>Gabarito em PDF ou imagem</span><input type="file" id="f-file" accept="application/pdf,.pdf,image/*"></label>` : ''}
+      <label class="field"><span>${S.ai ? 'Ou cole o gabarito oficial' : 'Cole o gabarito oficial'}</span><textarea id="f-gab" rows="3" placeholder="1-A 2-C 3-B… (ou só as letras em sequência, a partir da questão ${first})"></textarea></label>
+      <label class="field"><span>Minhas respostas (opcional)</span><textarea id="f-res" rows="2" placeholder="Se preferir, marque direto na lista de questões"></textarea></label>
       <div class="total-line" id="f-prev"></div>
-      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Marcar questões</button></div></form>`);
-  const parse = txt => { const t = String(txt).trim(); let k = parseKey(t); if (!Object.keys(k).length) { const l = t.toUpperCase().replace(/[^A-E]/g, ''); l.split('').forEach((c, i) => { k[first + i] = c; }); } return k; };
-  const prev = () => { const g = parse($('#f-gab', box).value), r = parse($('#f-res', box).value); const n = doc.itens.filter(q => g[q.n] && r[q.n]).length; $('#f-prev', box).textContent = `${n} questões casadas entre gabarito e respostas.`; return { g, r }; };
+      ${S.ai ? '<p class="sub">O gabarito em PDF usa o limite de uso do Claude: uma chamada a cada poucas páginas, mais uma a cada 10 ou 12 questões se for preciso classificar competência e habilidade.</p>' : ''}
+      <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar gabarito</button></div></form>`);
+  const ctl = new AbortController(), parse = txt => { const t = String(txt).trim(); let k = parseKey(t); if (!Object.keys(k).length) { const l = t.toUpperCase().replace(/[^A-E]/g, ''); l.split('').forEach((c, i) => { k[first + i] = c; }); } return k; };
+  const prev = () => { const g = parse($('#f-gab', box).value), r = parse($('#f-res', box).value); $('#f-prev', box).textContent = Object.keys(g).length || Object.keys(r).length ? `${doc.itens.filter(q => g[q.n]).length} questões com gabarito e ${doc.itens.filter(q => r[q.n]).length} com resposta no texto.` : ''; return { g, r }; };
   box.addEventListener('input', prev); prev();
-  box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) closeModal(); });
+  box.addEventListener('click', e => { if (e.target.closest('[data-x=cancel]')) { ctl.abort(); closeModal(); } });
   $('#f', box).onsubmit = async e => {
-    e.preventDefault(); const { g, r } = prev(); const nd = clone(doc); let n = 0;
-    nd.itens.forEach(q => { if (g[q.n]) q.gab = g[q.n]; if (r[q.n]) q.resp = r[q.n]; if (g[q.n] && r[q.n]) { const was = q.st; q.st = g[q.n] === r[q.n] ? (was === 'c' ? 'c' : 'a') : 'e'; n++; } });
-    if (!n) { toast('Nenhuma questão casou. Confira o formato.', 'err'); return; }
-    try { await dbSet('simq', sid, nd); closeModal(); toast(`${n} questões marcadas.`); } catch (e2) { }
+    e.preventDefault(); const { g, r } = prev(), file = $('#f-file', box) && $('#f-file', box).files[0], btn = $('button[type=submit]', box), pv = $('#f-prev', box); btn.disabled = true;
+    const ui = { ctl, log: m => { pv.textContent = m; }, prog: () => { } };
+    try {
+      const G = {}; Object.entries(g).forEach(([n, l]) => { G[n] = { gab: l, c: 0, h: 0 }; });
+      let shift = 0;
+      if (file) { const raw = await readKeyFile(file, nums, ui), al = alignKey(raw, nums); shift = al.shift; Object.entries(al.G).forEach(([n, o]) => { G[n] = { ...(G[n] || {}), ...o }; }); }
+      const { nd, nG, nCH, nR } = mergeKey(S.simq[sid] || doc, G, r, M);
+      if (!nG && !nR) { toast(file ? 'Não consegui ler o gabarito desse arquivo. Tente outro arquivo ou cole o texto.' : 'Nenhuma questão casou. Confira o formato.', 'err'); btn.disabled = false; return; }
+      await putQDoc(sid, nd);
+      let chN = 0, fin = nd;
+      if (S.ai && isEnem(M) && nd.itens.some(q => !(q.comp || q.hab))) { ui.log('Classificando competências e habilidades pela Matriz do ENEM…'); try { const f2 = await fillCH(nd, sim, M, ui, false); if (f2.n) { fin = clone(S.simq[sid] || nd); chN = applyCH(fin, f2.res); await putQDoc(sid, fin); } } catch (e3) { if (e3 && e3.code === 'cancelled') throw e3; } }
+      closeModal();
+      const st = qStats(fin), dv = divergentes(fin), faltam = nd.itens.length - nG;
+      toast(`Gabarito em ${nG} de ${nd.itens.length} questões${nCH ? `, ${nCH} com competência e habilidade do gabarito` : ''}${chN ? `, ${chN} classificadas pela Matriz` : ''}${shift ? `. Numeração ajustada em ${shift}` : ''}${st.marked ? `. ${st.marked} conferidas: ${st.marked - st.e} acertos e ${st.e} erros` : ''}${dv.length ? `. ${dv.length} diferem do que você tinha marcado` : ''}${faltam > 0 && nG ? `. Faltam ${faltam} sem gabarito` : ''}.`);
+    } catch (e2) { if (!(e2 && e2.code === 'cancelled')) toast(typeof aiMsg === 'function' ? aiMsg(e2) : 'Não deu certo.', 'err'); btn.disabled = false; }
   };
 }
 
@@ -2515,8 +2936,9 @@ function setQDoc(sid, doc) {
 function refreshQ(n) {
   const doc = D().simq[S.ui.simSel]; if (!doc) return;
   const st = $('#qstats'); if (st) st.innerHTML = qStatsHTML(doc);
+  const fq = $('#qfreq'); if (fq) fq.innerHTML = freqHTML(doc); const fa = $('#qalert'); if (fa && typeof alertasHTML === 'function') fa.innerHTML = alertasHTML(doc); const fc = $('#qch'); if (fc) fc.innerHTML = chHTML(doc, S.sims.find(x => x.id === S.ui.simSel));
   const q = doc.itens.find(x => String(x.n) === String(n)), el = document.getElementById('q-' + n);
-  if (q && el) el.outerHTML = qCardHTML(q, S.cfg.materias);
+  if (q && el) el.outerHTML = qCardHTML(q, S.cfg.materias, doc);
 }
 async function cadPost(id, ask) {
   const ta = $('#cmp'), text = (ta && ta.value || '').trim();
@@ -2534,19 +2956,35 @@ async function applyScores() {
   if (!ok) return;
   try {
     const M = modeloOf(sim), g = {};
-    Object.entries(st.by).forEach(([m, v]) => { const k = areaDeMat(M, m); g[k] = g[k] || { m: k, a: 0, t: 0 }; g[k].a += v.a; g[k].t += v.t; });
+    doc.itens.forEach(q => { if (!q.st) return; const k = areaDeQ(M, q); g[k] = g[k] || { m: k, a: 0, t: 0 }; g[k].t++; if (q.st !== 'e') g[k].a++; });
     const nd = { ...strip(sim), mats: Object.values(g) }; delete nd.mm;
     await dbSet('sim', sid, nd); toast('Notas do simulado atualizadas.');
   } catch (e) { }
 }
-async function reclassify() {
+async function reclassify(all) {
   const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc || !S.ai) return;
-  const todo = doc.itens.filter(q => !q.mat || q.mat === 'Outra'); if (!todo.length) return;
-  toast(`Classificando ${todo.length} questões…`); const ctl = new AbortController();
+  const sim = S.sims.find(x => x.id === sid), M = sim ? modeloOf(sim) : activeModelo();
+  const todo = all ? doc.itens : doc.itens.filter(q => !q.mat || q.mat === 'Outra'); if (!todo.length) return;
+  if (all && !await confirmBox({ title: 'Reclassificar todas as questões?', text: 'O Claude refaz a matéria, a área da matéria e o assunto de cada questão, olhando o enunciado, as imagens do PDF e a parte da prova. Se faltarem questões no PDF lido (como a 17 a 20), ele tenta achá-las pelas imagens. Suas marcações de acertei, errei ou chute e as respostas não mudam. Edições manuais de matéria, área e assunto serão substituídas.', ok: 'Reclassificar' })) return;
+  toast(`Classificando ${todo.length} questões…`); const ctl = new AbortController(), ui = { ctl, log: () => { }, prog: () => { } };
   try {
-    const res = await classify(todo.map(q => ({ n: q.n, raw: q.txt || '' })), { ctl, log: () => { }, prog: () => { } });
-    const nd = clone(doc); nd.itens.forEach(q => { const r = res.get(q.n); if (r && (!q.mat || q.mat === 'Outra')) { q.mat = r.mat; if (!q.ass) q.ass = r.ass; } });
-    await dbSet('simq', sid, nd); toast('Questões classificadas.');
+    let pdf = null, pages = null, vis = null, why = '';
+    if (all && sim && sim.pdfId && S.assets) {
+      try { pdf = await loadSimPdf(sim); if (pdf) { pages = await pdfPages(pdf); vis = await visOf(pdf); } } catch (e) { pdf = null; }
+      if (!pdf) why = ' Não consegui abrir o PDF guardado, então usei só o texto; para olhar as imagens, use "Trocar PDF".';
+    } else if (all) why = ' Este simulado não tem o PDF guardado, então usei só o texto.';
+    const items = todo.map(q => ({ n: q.n, raw: q.txt || '', pg: q.pg || (pages ? pageOfQ(pages, q.n) : 0) }));
+    let extra = [];
+    if (all && vis) { extra = await rescueMissing(pages, M, doc.itens.map(q => ({ n: q.n, pg: q.pg || pageOfQ(pages, q.n) })), ui, vis); extra.forEach(e => items.push({ n: e.n, raw: e.raw, pg: e.pg })); }
+    const res = await classify(items, ui, M, vis);
+    const nd = clone(S.simq[sid] || doc); let n = 0;
+    nd.itens.forEach(q => { const it = items.find(x => x.n === q.n), r = res.get(q.n); if (it && it.pg && !q.pg) q.pg = it.pg; if (!r) return; if (all) { q.mat = r.mat; q.sub = r.sub; q.area = r.area; if (r.ass) q.ass = r.ass; n++; } else if (!q.mat || q.mat === 'Outra') { q.mat = r.mat; q.sub = r.sub; q.area = r.area; if (!q.ass) q.ass = r.ass; n++; } });
+    extra.forEach(e => { const r = res.get(e.n) || e; nd.itens.push({ n: e.n, mat: r.mat || 'Outra', sub: r.sub || '', area: r.area || '', pg: e.pg || 0, ass: r.ass || '', txt: cleanTxt(e.raw || '').slice(0, 1400), st: '', gab: '', resp: '' }); });
+    nd.itens.sort((a, b) => a.n - b.n);
+    let chN = 0; if (all && isEnem(M)) { try { const f = await fillCH(nd, sim, M, ui, false, { pages, vis }); chN = applyCH(nd, f.res); } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; } }
+    await putQDoc(sid, nd);
+    if (!n && !extra.length) toast('O Claude não devolveu classificação; tente de novo.', 'err');
+    else toast(`${n} questões classificadas${chN ? `, ${chN} com competência e habilidade` : ''}${extra.length ? ` e ${extra.length} recuperadas (${fmtNums(extra.map(e => e.n).sort((a, b) => a - b))})` : ''}.${why}`, why ? 'err' : undefined);
   } catch (e) { toast(aiMsg(e), 'err'); }
 }
 
@@ -2582,12 +3020,21 @@ const ACT = {
   redNew: () => redForm(), redOpen: el => redDetail(el.dataset.id),
   analisar: el => runAnalysis(el.dataset.k),
   pdfNew: el => pdfModal(el.dataset.sim || null),
+  qLet: el => {
+    const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return; const nd = clone(doc), q = nd.itens.find(x => String(x.n) === el.dataset.n); if (!q) return;
+    q.resp = q.resp === el.dataset.v ? '' : el.dataset.v; deriveSt(q); setQDoc(sid, nd); refreshQ(el.dataset.n);
+  },
+  qChute: el => {
+    const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return; const nd = clone(doc), q = nd.itens.find(x => String(x.n) === el.dataset.n); if (!q) return;
+    q.ch = !q.ch; deriveSt(q); setQDoc(sid, nd); refreshQ(el.dataset.n);
+  },
+  qCHFill: () => chFillAction(),
   qSt: el => {
     const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return; const nd = clone(doc), q = nd.itens.find(x => String(x.n) === el.dataset.n); if (!q) return;
     q.st = q.st === el.dataset.v ? '' : el.dataset.v; setQDoc(sid, nd); refreshQ(el.dataset.n);
   },
   qComent: el => threadModal({ k: 'q', id: `${S.ui.simSel}:${el.dataset.n}` }, '', false),
-  qApply: () => applyScores(), qReclass: () => reclassify(), keyNew: () => keyModal(S.ui.simSel),
+  qApply: () => applyScores(), qReclass: () => reclassify(), qReclassAll: () => reclassify(true), keyNew: () => keyModal(S.ui.simSel),
   qMatF: el => { S.ui.qMat = el.dataset.k; render(true); },
   qStF: el => { S.ui.qSt = el.dataset.k; render(true); },
   cadNew: () => threadModal({ k: 'geral' }, '', false),
@@ -2610,10 +3057,16 @@ document.addEventListener('change', e => {
   if (b === 'cmp') { S.ui.cmp = t.value; render(true); return; }
   if (b === 'simSel') { S.ui.simSel = t.value; S.ui.qMat = 'todas'; S.ui.qSt = 'todas'; S.ui.qSearch = ''; render(true); return; }
   const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return;
-  if (b === 'qMat' || b === 'qAss') {
+  if (b === 'qAlt') { const nd = clone(doc); nd.alt = +t.value === 4 ? 4 : 5; setQDoc(sid, nd); render(true); return; }
+  if (b === 'qCH') {
+    const nd = clone(doc), q = nd.itens.find(x => String(x.n) === t.dataset.n); if (!q) return; const sim = S.sims.find(x => x.id === sid), key = sim ? mxKey(areaDeQ(modeloOf(sim), q)) : '';
+    const r = chSet(key, (t.value.match(/C\s*(\d+)/i) || [])[1], (t.value.match(/H\s*(\d+)/i) || [])[1]);
+    q.comp = r.c || 0; q.hab = r.h || 0; q.chSrc = r.c || r.h ? 'manual' : ''; t.value = [q.comp ? 'C' + q.comp : '', q.hab ? 'H' + q.hab : ''].filter(Boolean).join(' '); setQDoc(sid, nd); const fc = $('#qch'); if (fc) fc.innerHTML = chHTML(nd, S.sims.find(x => x.id === sid)); return;
+  }
+  if (b === 'qMat' || b === 'qAss' || b === 'qSub') {
     const nd = clone(doc), q = nd.itens.find(x => String(x.n) === t.dataset.n); if (!q) return;
-    if (b === 'qMat') q.mat = t.value; else q.ass = t.value.trim().slice(0, 80);
-    setQDoc(sid, nd); if (b === 'qMat') render(true);
+    if (b === 'qMat') { q.mat = t.value; if (q.sub && !subsOf(q.mat).includes(q.sub)) q.sub = ''; } else if (b === 'qSub') q.sub = t.value; else q.ass = t.value.trim().slice(0, 80);
+    setQDoc(sid, nd); if (b === 'qMat' || b === 'qSub') render(true);
   }
 });
 document.addEventListener('input', e => {
@@ -2803,6 +3256,14 @@ function liteData() {
 /* ============ Raio-X ENEM: assuntos mais cobrados (2009–2025) e cruzamento com os seus erros ============ */
 /* Fonte: SAS Educação, "Raio X ENEM 2009–2025". a = [assunto, frequência]; it = itens analisados da matéria. */
 const RAIOX = [{"id":"lin","curto":"Linguagens","nome":"Linguagens, Códigos e suas Tecnologias","mats":[{"n":"Arte","it":26,"a":[["Idade Contemporânea - compreensão do papel social da arte e a análise de contextos históricos culturais",8],["Culturas que aparecem em tempos variados",6],["Arte e comunicação - linguagem, estética e impacto sociocultural",4],["Artes Integradas - articulação entre linguagens na construção de sentidos estéticos e culturais",3],["Arte e identidade - relações entre produções artísticas e a construção de identidades visuais e coletivas",2],["Arte e resistência - arte como forma de resistência cultural, social e política em diferentes contextos",2],["Arte e meio ambiente - relação entre arte, natureza e sustentabilidade",1]]},{"n":"Educação Física","it":21,"a":[["Conceituação de jogos, brincadeiras e esporte",3],["Corpo e cultura de movimento",3],["Conceituação de saúde e atividade física",3],["Fatores de risco à saúde",2],["Promoção da saúde nas várias faixas etárias",2],["Esporte e mídia",2],["Luta - manifestação cultural corporal",2],["Esporte e espetáculo",1],["Padrões e estereótipos de beleza corporal",1],["Alimentação, exercício físico e obesidade",1],["Esporte e inclusão social",1]]},{"n":"Espanhol","it":120,"a":[["Apreensão de sentido",55],["Definição, reconhecimento e interpretação de estruturas linguísticas e aspectos discursivos em textos",21],["Habilidades de leitura",18],["Identificação de pontos de vista do autor",7],["Variedades linguísticas",7],["Expresiones idiomáticas/Frases hechas",5],["Publicitário",2],["Verbos",2],["Equivalencia de vocablos",1],["Número",1],["Poesia",1]]},{"n":"Inglês","it":137,"a":[["Definição, reconhecimento e interpretação de estruturas linguísticas e aspectos discursivos em textos",58],["Habilidades de leitura",33],["Apreensão de sentido",20],["Apreensão de sentidos globais e específicos em textos de Língua Inglesa",13],["Leitura e interpretação de dados, articulando informações verbais e não verbais",5],["Vocabulário - reconhecimento e compreensão em contexto",5],["Advérbios",1],["Marcadores discursivos na construção de sentidos do texto",1],["Significado de expressões em contexto com uso linguístico adequado",1]]},{"n":"Português","it":1233,"a":[["Competência leitora",570],["Apreensão de sentido",139],["Definição, reconhecimento e interpretação de estruturas linguísticas e aspectos discursivos em textos",82],["Competência linguística",56],["Elementos da comunicação",52],["Estratégias de convencimento",51],["Habilidades de leitura",51],["Gêneros textuais - estrutura, finalidade e contexto de produção",31],["Impacto e função das Tecnologias da Informação e Comunicação",24],["Literatura brasileira",19]]}]},{"id":"hum","curto":"Humanas","nome":"Ciências Humanas e suas Tecnologias","mats":[{"n":"Filosofia","it":188,"a":[["Filosofia política",24],["Moral e ética",15],["Aristóteles",10],["Origens da modernidade",8],["Descartes",8],["Filosofia medieval",8],["Naturalistas ou filósofos de Physis",8],["Cultura e sociedade",7],["Epistemologia",7],["Filosofia antiga",7],["Filosofia contemporânea",7],["Kant",7]]},{"n":"Geografia","it":501,"a":[["Urbanização",34],["Agropecuária",32],["Ruralidade",26],["Desenvolvimento Econômico",24],["Geopolítica e relações internacionais",21],["Geomorfologia",19],["Migrações",19],["Interpretação de Mapas",18],["Climatologia",18],["Geologia",14]]},{"n":"História","it":514,"a":[["Brasil colonial",46],["Primeira República",31],["Era Vargas",26],["Brasil Império: Segundo reinado",23],["História Pública",22],["Ditadura Civil-Militar no Brasil",21],["Civilizações da Antiguidade Clássica",13],["Revolução Industrial",13],["Abolição da Escravidão",12],["Absolutismo monárquico",9],["República Nova",9],["Trabalho escravo",9],["América Latina no século XX",9]]},{"n":"Sociologia","it":237,"a":[["Direito, cidadania e movimentos sociais",48],["Cultura e sociedade",27],["Identidade e diversidade",25],["Política e Estado",23],["Trabalho e sociedade",21],["Meios de comunicação",14],["Desigualdade",11],["Patrimônio cultural",8],["Estrutura social e desigualdade",8],["Dilemas da sociedade contemporânea",7],["Violência",7]]}]},{"id":"nat","curto":"Natureza","nome":"Ciências da Natureza e suas Tecnologias","mats":[{"n":"Biologia","it":551,"a":[["Desequilíbrio em ecossistemas",64],["Doenças causadas por vírus (viroses)",23],["DNA – material genético e genética do funcionamento dos genes",22],["Bioquímica",18],["Biologia celular",18],["Ciclos biogeoquímicos",17],["Relações ecológicas",16],["Cadeias e teias alimentares",15],["Doenças causadas por protozoários (protozooses)",13],["Doenças causadas por bactérias (bacterioses)",12],["Relações Interespecíficas",12],["Saúde",12]]},{"n":"Física","it":482,"a":[["Calorimetria",36],["Circuitos Elétricos",32],["Termodinâmica",24],["Forças e movimento",24],["Consumo de energia elétrica",17],["Reflexão e Refração",15],["Trabalho, energia e os teoremas",13],["Propriedades Físicas do Som",13],["Aplicações das Propriedades das Ondas",13],["Lançamento Vertical, Horizontal e Oblíquo",11]]},{"n":"Química","it":599,"a":[["Funções orgânicas",36],["Reações orgânicas",28],["Aplicações da Cinética Química",25],["Pilhas",19],["Processos de separação de misturas",19],["Tecnologias Ambientais",18],["Controle de Poluição",17],["Concentração de soluções",17],["Poluição da Água",16],["Tipos de Reações Químicas",15]]}]},{"id":"mat","curto":"Matemática","nome":"Matemática e suas Tecnologias","mats":[{"n":"Matemática","it":1507,"a":[["Proporcionalidade Direta e Indireta",223],["Estatística",190],["Geometria Plana",111],["Geometria Espacial",99],["Probabilidade",83],["Funções",81],["Razão",57],["Volume",56],["Análise combinatória",56],["Unidades de medida",49]]}]}];
+/* os assuntos do Raio-X (Calorimetria, Circuitos Elétricos, Filosofia política…) viram opções de área da matéria, para a classificação das questões falar a mesma língua do ENEM */
+(function () {
+  const alvo = { 'Arte': ['Artes'], 'Filosofia': ['Filosofia e Sociologia'], 'Sociologia': ['Filosofia e Sociologia'] }, nrm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  RAIOX.forEach(a => a.mats.forEach(m => (alvo[m.n] || [m.n]).forEach(k => {
+    const g = SUBS[k]; if (!g) return; const have = new Set(Object.values(g).flat().map(nrm)), novos = m.a.map(x => x[0]).filter(n => !have.has(nrm(n)));
+    if (novos.length) g['Mais cobrados no ENEM (Raio-X)'] = [...(g['Mais cobrados no ENEM (Raio-X)'] || []), ...novos];
+  })));
+})();
 const RX_FONTE = 'SAS Educação · Raio X ENEM 2009–2025';
 const rxNrm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const RX_ALIAS = { 'lingua portuguesa': 'Português', portugues: 'Português', literatura: 'Português', gramatica: 'Português', 'lingua inglesa': 'Inglês', ingles: 'Inglês', 'lingua espanhola': 'Espanhol', espanhol: 'Espanhol', matematica: 'Matemática', fisica: 'Física', quimica: 'Química', biologia: 'Biologia', historia: 'História', geografia: 'Geografia', filosofia: 'Filosofia', sociologia: 'Sociologia', arte: 'Arte', artes: 'Arte', 'educacao fisica': 'Educação Física' };
@@ -2835,7 +3296,7 @@ const rxCorte = rx => rx.a.length ? rx.a[rx.a.length - 1][1] / rx.it * 100 : 0;
 /* desempenho por matéria (todos os simulados) cruzado com o peso no ENEM */
 function rxCross() {
   const meta = +S.cfg.metaAcerto || 75, by = {};
-  simsAllSorted().forEach(s => matRows(s).forEach(r => {
+  simsAllSorted().filter(s => isEnem(modeloOf(s))).forEach(s => matRows(s).forEach(r => {
     const t = +r.t; if (!(t > 0)) return; const rx = rxMat(r.m); if (!rx) return;
     (by[rx.n] = by[rx.n] || { rx, h: [] }).h.push({ d: s.data, a: +r.a || 0, t });
   }));
@@ -2856,13 +3317,35 @@ function rxText(r, X) {
   return `Acima da meta (${p}). Só manter o ritmo${r.rx.cls === 'baixa' ? '' : `; ${nm} tem peso ${r.rx.cls === 'alta' ? 'alto' : 'médio'} no ENEM`}.`;
 }
 /* assuntos em que o aluno mais erra (só quando há questões marcadas) x frequência no Raio-X */
-function rxAssCross() {
-  const out = [];
-  errRank(9999).ass.slice(0, 40).forEach(x => {
-    const rx = rxMat(x.m); if (!rx) return; const hit = rxAssunto(rx, x.n);
-    out.push({ ...x, rx, hit, corte: rxCorte(rx) });
+/* agrupa as questões por assunto (área da matéria; ou o assunto digitado) e cruza com o Raio-X, que só traz os mais frequentes: assunto fora dele continua valendo */
+function rxAssAgg(itens) {
+  const M = {};
+  (itens || []).forEach(q => {
+    const nome = ((q.sub || q.ass || '') + '').trim(); if (!nome || !q.mat) return;
+    const rx = rxMat(q.mat), hit = rx ? rxAssunto(rx, nome) : null, nm = hit ? hit.n : nome, k = q.mat + '|' + rxNrm(nm);
+    const x = M[k] = M[k] || { n: nm, m: q.mat, rx, hit, err: 0, t: 0, nums: [] };
+    if (q.st) { x.t++; if (q.st === 'e' || q.st === 'c') { x.err++; x.nums.push(q.n); } }
   });
-  return out.slice(0, 12);
+  return Object.values(M).map(x => ({ ...x, p: x.t ? x.err / x.t * 100 : 0, corte: x.rx ? rxCorte(x.rx) : 0 }));
+}
+const rxAlertas = itens => rxAssAgg(itens).filter(x => x.err > 0 && x.hit).sort((a, b) => b.hit.p - a.hit.p || b.err - a.err);
+function rxAssCross(back) {
+  if (!enemOn()) return [];
+  let L = simsSorted().filter(s => (D().simq[s.id] || {}).itens && D().simq[s.id].itens.some(q => q.st)); if (back) L = L.slice(0, Math.max(0, L.length - back));
+  const itens = L.flatMap(s => D().simq[s.id].itens || []);
+  return rxAssAgg(itens).filter(x => x.err > 0).sort((a, b) => (!!b.hit - !!a.hit) || b.err - a.err || b.p - a.p).slice(0, 12);
+}
+function alertasPack(itens, tit) {
+  if (!enemOn()) return '';
+  const L = rxAlertas(itens || simsSorted().flatMap(s => (D().simq[s.id] || {}).itens || [])).slice(0, 10); if (!L.length) return '';
+  return `ERROS EM ASSUNTOS FREQUENTES NO ENEM (${tit || 'todos os simulados'}) — o aluno errou ou chutou questões de assuntos que costumam cair bastante; avisar e incluir na sugestão de estudo:\n` + L.map(x => `- ${x.n} (${x.m}): ${x.err} erro(s)/chute(s) em ${x.t} questões marcadas; aparece ${x.hit.f}x no Raio-X (${nf(x.hit.p, 1)}% dos itens de ${x.rx.n})`).join('\n');
+}
+function alertasHTML(doc) {
+  if (!simEnem(S.sims.find(x => x.id === S.ui.simSel))) return '';
+  const L = rxAlertas(doc && doc.itens).slice(0, 8); if (!L.length) return '';
+  return `<section class="card" style="border-color:var(--bad,#e5646b)"><div class="row" style="align-items:center"><span class="lbl">Atenção: você errou assuntos que caem muito no ENEM</span></div>
+    <div style="display:grid;gap:8px;margin-top:10px">${L.map(x => `<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><b>${esc(x.n)}</b><span class="sub">${esc(x.m)} · ${x.err} ${x.err === 1 ? 'erro ou chute' : 'erros ou chutes'} em ${x.t}</span><span class="tag solid" title="Quantas vezes o assunto aparece no Raio-X 2009–2025">${x.hit.f} questões no ENEM · ${nf(x.hit.p, 1)}% de ${esc(x.rx.n)}</span></div>`).join('')}</div>
+    <p class="sub" style="margin:12px 0 0">Entram na sua fila de estudo: como esses assuntos costumam cair, vale revisar a teoria e refazer questões deles antes de seguir.${S.ai ? ' <button class="link" data-act="simAsk" data-id="' + esc(S.ui.simSel) + '">Pedir um plano de estudo ao Claude</button>' : ''}</p></section>`;
 }
 
 /* texto para o Claude (versão com IA) */
@@ -2892,8 +3375,8 @@ function rxCrossCard(compact) {
   const X = rxCross();
   if (!X.rows.length) return compact ? '' : `<section class="card"><div class="lbl">Seu desempenho × peso no ENEM</div><div class="empty" style="padding:18px 0 6px"><b>Ainda sem notas por matéria</b>Lance as notas por matéria (Biologia, Física, História…) nos simulados e o painel diz onde vale gastar tempo e o que pode esperar.</div></section>`;
   const rows = (compact ? X.rows.slice(0, 6) : X.rows).map(r => `<div class="rx-x"><div class="rx-xm"><b>${esc(r.rx.n)}</b><small>${rxBadge(r.rx.cls)}</small></div><div class="rx-xa"><b>${nf(r.acc, 0)}%</b><small>acerto</small></div><div class="rx-xt"><span class="rx-st ${r.st}">${{ prior: 'Priorizar', wait: 'Pode esperar', ok: 'Em dia' }[r.st]}</span><p>${esc(rxText(r, X))}</p></div></div>`).join('');
-  const ac = compact ? [] : rxAssCross();
-  const ass = ac.length ? `<div class="lbl" style="margin-top:22px">Assuntos em que você mais erra × Raio-X</div><div class="rx-as">${ac.map(x => `<div class="rx-x"><div class="rx-xm"><b>${esc(trunc(x.n, 60))}</b><small>${esc(x.m)} · ${x.err} erro${x.err === 1 ? '' : 's'} em ${x.t}</small></div><div class="rx-xt"><p>${x.hit ? `Aparece <b>${x.hit.f}</b> vez${x.hit.f === 1 ? '' : 'es'} no Raio-X: ${nf(x.hit.p, 1)}% dos itens de ${esc(x.rx.n)}.` : `Fora dos assuntos mais cobrados de ${esc(x.rx.n)} (menos de ${nf(x.corte, 1)}% dos itens). Pode esperar.`}</p></div></div>`).join('')}</div>` : '';
+  const ac = compact ? [] : rxAssCross(), acPrev = compact ? [] : rxAssCross(1);
+  const ass = ac.length ? `<div class="lbl" style="margin-top:22px">Assuntos em que você mais erra × Raio-X</div><div class="rx-as">${ac.map(x => `<div class="rx-x"><div class="rx-xm"><b>${esc(x.n)}</b><small>${esc(x.m)} · ${x.err} erro${x.err === 1 ? '' : 's'} em ${x.t}</small></div><div class="rx-xt"><p>${x.hit ? `Aparece <b>${x.hit.f}</b> vez${x.hit.f === 1 ? '' : 'es'} no Raio-X: ${nf(x.hit.p, 1)}% dos itens de ${esc(x.rx.n)}.` : `Fora dos assuntos mais cobrados de ${esc(x.rx.n)} (menos de ${nf(x.corte, 1)}% dos itens). Pode esperar.`}</p></div></div>`).join('')}</div>${prevRank(ac, acPrev, x => x.m + x.n, x => `${esc(x.n)} (${x.err}/${x.t})`, 6, 'Antes do último simulado')}` : '';
   return `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Seu desempenho × peso no ENEM${helpBtn('raiox')}</span>${compact ? `<button class="btn sm" style="margin-left:auto" data-act="go" data-id="raiox">Abrir Raio-X</button>` : ''}</div>
     <div class="rx-xl">${rows}</div>${ass}<div class="rx-note">Acerto = últimos 3 simulados com a matéria. Meta: ${nf(X.meta, 0)}%. O peso vem do Raio-X, não do seu caderno de erros.</div></section>`;
 }
@@ -2906,7 +3389,7 @@ VIEWS.raiox = function () {
     `<div class="rx-bar">${chips}</div>` +
     
     `<div id="rx-none" class="empty" hidden><b>Nenhum assunto encontrado</b>Tente outra palavra.</div>` +
-    areas.map(a => `<div class="rx-area" data-a="${a.id}"><h2 class="rx-ah">${esc(a.nome)}</h2><div class="rx-grid">${a.mats.map(m => rxCard(a, m)).join('')}</div></div>`).join('') +
+    areas.map(a => `<div class="rx-area" data-a="${a.id}"><h2 class="rx-ah">${esc(a.nome)}</h2><div class="rx-grid">${[...a.mats].sort((x, y) => y.it - x.it).map(m => rxCard(a, m)).join('')}</div></div>`).join('') +
     `<div class="rx-note" style="margin:10px 4px 24px;text-align:center">Fonte: ${RX_FONTE}.</div>`;
 };
 function rxFilter(q) {
