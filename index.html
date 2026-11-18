@@ -610,6 +610,12 @@ input.q-ch { width: 96px; }
 .md.cols > :first-child { margin-top: 0; }
 @media (max-width: 1280px) { .md.cols { column-count: 2; } }
 @media (max-width: 800px) { .md.cols { column-count: 1; max-width: 78ch; column-rule: 0; } }
+.fold > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary .sub { margin-left: auto; text-align: right; }
+.fold > summary::after { content: ""; flex: none; width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); transition: transform .2s; margin: -3px 2px 0 4px; }
+.fold[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
+.fold > summary:hover::after { border-color: var(--ink); }
 
 </style>
 </head>
@@ -2022,10 +2028,10 @@ function freqAllPack() {
 function freqHTML(doc) {
   const F = simFreq(doc); if (!F.length) return '';
   const rx = typeof rxMat === 'function' && simEnem(S.sims.find(x => x.id === S.ui.simSel)) ? rxMat : () => null;
-  return `<section class="card"><div class="row" style="align-items:center"><span class="lbl">O que caiu neste simulado</span><span class="sub" style="margin-left:auto">assuntos por matéria, com quantas questões caíram</span></div><div style="display:grid;gap:14px;margin-top:12px">` + F.map(g => {
+  return `<section class="card"><details class="fold" data-k="qfreq" ${foldOpen('qfreq')}><summary><span class="lbl">O que caiu neste simulado</span><span class="sub">assuntos por matéria, com quantas questões caíram</span></summary><div style="display:grid;gap:14px;margin-top:12px">` + F.map(g => {
     const r = rx(g.m);
     return `<div><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><b>${esc(g.m)}</b><span class="sub mono">${g.tot} questões</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">${g.L.map(x => { const hit = r && typeof rxAssunto === 'function' ? rxAssunto(r, x.nome) : null; const ruim = x.e + x.c; return `<span class="tag ${x.n > 1 ? 'solid' : ''}" title="${esc(freqFrase(x))}${ruim ? ` · você errou ou chutou ${ruim}` : ''}${hit ? ` · no ENEM: ${nf(hit.p, 1)}% dos itens de ${r.n}` : ''}">${esc(x.nome)} <b class="mono">×${x.n}</b>${ruim ? ` <span style="color:var(--bad,#e5646b)">· ${ruim} ${ruim === 1 ? 'erro' : 'erros'}</span>` : ''}</span>`; }).join('')}</div></div>`;
-  }).join('') + `</div></section>`;
+  }).join('') + `</div></details></section>`;
 }
 
 /* matérias que podem aparecer nesta prova: as do modelo (ex.: ENEM Dia 1 = Linguagens + Humanas) e as que valem em qualquer parte (Educação Física, Espanhol, Artes).
@@ -2074,6 +2080,9 @@ async function fixMatsDoc(doc, M, ui) {
   if (bad.length && !n) return { nd: doc, n: 0, skip: 1 };
   nd.mfx = 2; return { nd, n };
 }
+
+/* blocos que abrem e fecham; o estado é lembrado mesmo quando o bloco é redesenhado */
+const foldOpen = k => (S.ui.fold && S.ui.fold[k] === false) ? '' : 'open';
 
 /* ============ gabarito, alternativa marcada e competências/habilidades (Matriz ENEM) ============ */
 const mxKey = n => { const k = subNorm(n); return /^ling/.test(k) ? 'lin' : /human/.test(k) ? 'hum' : /natureza/.test(k) ? 'nat' : /^mat/.test(k) ? 'mat' : ''; };
@@ -2218,9 +2227,9 @@ function chBlock(rows) {
 function chHTML(doc, sim) {
   const M = sim ? modeloOf(sim) : activeModelo(); if (!isEnem(M) || !(doc.itens || []).some(q => q.comp || q.hab)) return '';
   const falta = doc.itens.filter(q => !(q.comp || q.hab)).length, todos = chAllRows(), outros = Object.entries(D().simq || {}).filter(([id, d]) => sim && id !== sim.id && (d.itens || []).some(q => q.comp || q.hab)).length;
-  return `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Competências e habilidades em que você mais erra</span><span class="sub" style="margin-left:auto">Matriz de Referência do ENEM</span></div>
+  return `<section class="card"><details class="fold" data-k="qch" ${foldOpen('qch')}><summary><span class="lbl">Competências e habilidades em que você mais erra</span><span class="sub">Matriz de Referência do ENEM</span></summary>
     ${chBlock(chRowsOf(doc, M))}${falta ? `<p class="sub" style="margin:12px 0 0">${falta} ${falta === 1 ? 'questão ainda está' : 'questões ainda estão'} sem competência e habilidade.</p>` : ''}
-    ${outros ? `<details style="margin-top:14px"><summary class="sub" style="cursor:pointer">Em todos os simulados ENEM com competência e habilidade</summary>${chBlock(todos)}${chPrevHTML(todos, chAllRows(1))}</details>` : ''}</section>`;
+    ${outros ? `<details style="margin-top:14px"><summary class="sub" style="cursor:pointer">Em todos os simulados ENEM com competência e habilidade</summary>${chBlock(todos)}${chPrevHTML(todos, chAllRows(1))}</details>` : ''}</details></section>`;
 }
 
 async function chFillAction() {
@@ -3160,6 +3169,8 @@ async function init() {
 
 
 try { if (localStorage.getItem('pe-side') === 'off') { document.body.classList.add('side-off'); const b = document.getElementById('menuBtn'); if (b) { b.setAttribute('aria-label', 'Abrir menu lateral'); b.title = 'Abrir menu lateral'; } } } catch (e) { }
+
+document.addEventListener('toggle', e => { const d = e.target; if (d && d.classList && d.classList.contains('fold') && d.dataset.k) { S.ui.fold = S.ui.fold || {}; S.ui.fold[d.dataset.k] = d.open; } }, true);
 
 /* ============ versão LITE (site estático, sem Claude) ============ */
 const LITE_KEY = 'pe-lite-v1';
