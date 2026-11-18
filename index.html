@@ -168,7 +168,7 @@ table.tbl { width: 100%; border-collapse: collapse; min-width: 640px; }
 .empty b { color: var(--ink-2); font-weight: 500; display: block; margin-bottom: 4px; }
 .bars { display: grid; gap: 12px; }
 .bar-row { display: grid; grid-template-columns: minmax(90px, 150px) 1fr 64px; align-items: center; gap: 12px; }
-.bar-row .n { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-row .n { color: var(--ink-2); white-space: normal; overflow: visible; overflow-wrap: anywhere; }
 .bar-row .tr { height: 10px; background: var(--track); border-radius: 4px; position: relative; overflow: visible; }
 .bar-row .fl { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; min-width: 2px; }
 .bar-row .mk { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--mk); }
@@ -605,6 +605,11 @@ tr.rd-below td{box-shadow:inset 0 -2px 0 var(--accent,#6aa8ff)}
 input.q-ch { width: 96px; }
 .prev-rank { margin-top: 10px; opacity: .5; font-size: 11px; line-height: 1.5; color: var(--ink-2); }
 .prev-rank .prev-t { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 2px; }
+.md.cols { max-width: none; column-count: 3; column-gap: 32px; column-rule: 1px solid var(--line); }
+.md.cols > * { break-inside: avoid; }
+.md.cols > :first-child { margin-top: 0; }
+@media (max-width: 1280px) { .md.cols { column-count: 2; } }
+@media (max-width: 800px) { .md.cols { column-count: 1; max-width: 78ch; column-rule: 0; } }
 
 </style>
 </head>
@@ -968,7 +973,7 @@ function renderBar() {
   $('#crumb').textContent = routeLabel(S.route);
   const wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][TODAY.getDay()];
   $('#today').textContent = `${wd}, ${TODAY.getDate()} ${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][TODAY.getMonth()]}`;
-  const ms = $('#modelSel'); if (ms) { const all = modelosAll(), cur = activeModelo().id; ms.hidden = /^red-|^sim-conjuntos$|^sim-notas$/.test(S.route); ms.innerHTML = all.map(m => `<option value="${esc(m.id)}" ${m.id === cur ? 'selected' : ''}>${esc(m.nome)}</option>`).join('') + '<option value="__manage">Editar modelos…</option>'; }
+  const ms = $('#modelSel'); if (ms) { const all = modelosAll(), cur = activeModelo().id; ms.hidden = /^red-|^sim-conjuntos$|^sim-notas$|^sim-questoes$/.test(S.route); ms.innerHTML = all.map(m => `<option value="${esc(m.id)}" ${m.id === cur ? 'selected' : ''}>${esc(m.nome)}</option>`).join('') + '<option value="__manage">Editar modelos…</option>'; }
   tickCd();
 }
 /* ---------- tema e contagem regressiva ---------- */
@@ -1496,12 +1501,13 @@ function confHTML(doc) {
 }
 function qStatsHTML(doc) { return confHTML(doc) + qStatsInner(doc); }
 function qListHTML(doc) {
-  const mats = S.cfg.materias; const f = S.ui.qSt, mm = S.ui.qMat, s = S.ui.qSearch.trim().toLowerCase();
+  const sm = S.sims.find(x => x.id === S.ui.simSel), mats = matsPermitidas(sm ? modeloOf(sm) : activeModelo()); const f = S.ui.qSt, mm = S.ui.qMat, s = S.ui.qSearch.trim().toLowerCase();
   const items = (doc.itens || []).filter(q => (mm === 'todas' || (q.mat || 'Outra') === mm) && (f === 'todas' || (f === 'n' ? !q.st : q.st === f)) && (!s || `${q.n} ${q.ass || ''} ${q.txt || ''}`.toLowerCase().includes(s)));
   return items.length ? items.map(q => qCardHTML(q, mats, doc)).join('') : '<div class="empty"><b>Nenhuma questão com esses filtros</b></div>';
 }
 VIEWS['sim-questoes'] = function () {
   const { sid, sim, doc } = currentSim();
+  if (doc && sim && !doc.mfx) setTimeout(async () => { const cur = S.simq[sid]; if (!cur || cur.mfx) return; const { nd, n } = fixMatsDoc(cur, modeloOf(sim)); await putQDoc(sid, nd); if (n && S.ui.simSel === sid) render(true); }, 0);
   if (!sim) return head('Notas', 'Esse simulado não existe mais.', `<button class="btn" data-act="go" data-id="sim-notas">${ic('chev', 14)} Voltar às notas</button>`);
   const M = modeloOf(sim), t = simStat(sim);
   const acts = `<button class="btn" data-act="go" data-id="sim-notas">← Notas</button><button class="btn" data-act="simEdit" data-id="${sid}">Editar</button><button class="btn" data-act="simAsk" data-id="${sid}">Comentar</button><button class="btn danger" data-act="simDel" data-id="${sid}">${ic('trash', 14)}</button>`;
@@ -1536,7 +1542,7 @@ function msgHTML(m) {
   return m.r === 'c' ? `<div class="msg"><div class="who">Claude <span class="tm">${hm(m.ts)}</span></div><div class="md">${md(m.t)}</div></div>`
     : `<div class="msg me"><div class="who">Você <span class="tm">${hm(m.ts)}</span></div><div class="body">${esc(m.t)}</div></div>`;
 }
-function liveHTML(text) { return `<div class="msg" id="live"><div class="who">Claude <span class="stream-dot"></span></div><div class="md" id="live-body">${text ? md(text) : '<span class="sub">Pensando…</span>'}</div></div>`; }
+function liveHTML(text) { return `<div class="msg" id="live"><div class="who">Claude <span class="stream-dot"></span></div><div class="md cols" id="live-body">${text ? md(text) : '<span class="sub">Pensando…</span>'}</div></div>`; }
 VIEWS.caderno = function () {
   const d = D(), threads = [...d.cad].sort((a, b) => (a.aberto === false) - (b.aberto === false) || (b.upd || 0) - (a.upd || 0));
   let tid = S.ui.thread; if (!threads.some(t => t.id === tid)) tid = threads[0]?.id || null; S.ui.thread = tid;
@@ -1559,9 +1565,9 @@ const AN_NOME = { geral: 'Análise geral', plano: 'Plano de 7 dias', simulados: 
 VIEWS.plano = function () {
   const d = D(), er = errMap(errRank().ids), mats = Object.entries(er).sort((a, b) => (b[1].e + b[1].c) - (a[1].e + a[1].c));
   const map = mats.length ? `<div class="g-2">${mats.map(([m, v]) => { const top = Object.values(v.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 6); return `<div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:500"><span class="pill" style="padding:0;border:0;pointer-events:none"><span class="dot" style="background:${matColor(m)}"></span></span>${esc(m)}</b><span class="mono ink2">${v.e} ${v.e === 1 ? 'erro' : 'erros'}${v.c ? ` · ${v.c} ${v.c === 1 ? 'chute' : 'chutes'}` : ''}</span></div><div class="chips" style="margin-top:10px">${top.map(a => `<span class="tag">${esc(a.nome)} <span class="mono">${a.e + a.c}</span></span>`).join('')}</div>${Object.keys(v.sub || {}).length ? `<div class="sub" style="margin-top:10px">Áreas da matéria: ${Object.values(v.sub).sort((a, b) => (b.e + b.c) - (a.e + a.c)).slice(0, 5).map(a => `${esc(a.nome)} (${a.e + a.c})`).join(' · ')}</div>` : ''}</div>`; }).join('')}</div>` : '<p class="sub">Ainda não há erros marcados. Abra um simulado em Notas, adicione o PDF e marque "Errei" ou "Chute" e este mapa mostra os assuntos que mais pesam.</p>';
-  const live = S.stream && S.stream.an ? `<section class="card"><div class="lbl">${AN_NOME[S.stream.tipo]} · gerando<span class="stream-dot"></span></div><div class="md" id="live-body" style="margin-top:12px">${S.stream.text ? md(S.stream.text) : '<span class="sub">Lendo seus dados…</span>'}</div><div style="margin-top:14px"><button class="btn sm" data-act="cadStop">Parar</button></div></section>` : '';
+  const live = S.stream && S.stream.an ? `<section class="card"><div class="lbl">${AN_NOME[S.stream.tipo]} · gerando<span class="stream-dot"></span></div><div class="md cols" id="live-body" style="margin-top:12px">${S.stream.text ? md(S.stream.text) : '<span class="sub">Lendo seus dados…</span>'}</div><div style="margin-top:14px"><button class="btn sm" data-act="cadStop">Parar</button></div></section>` : '';
   const list = [...d.ans].sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  const hist = list.map((a, i) => `<section class="card"><div class="hero-head" style="align-items:center"><div><div class="lbl">${AN_NOME[a.tipo] || 'Análise'}</div><div class="sub">${hm(a.ts)}${a.ref ? ` · ${a.ref.sims} simulados, ${a.ref.reds} redações` : ''}</div></div><div style="display:flex;gap:8px"><button class="btn sm" data-act="anComent" data-id="${a.id}">Comentar</button><button class="btn sm danger" data-act="anDel" data-id="${a.id}" aria-label="Apagar análise">${ic('trash', 14)}</button></div></div>${i === 0 && !live ? `<div class="md" style="margin-top:14px">${md(a.texto)}</div>` : `<details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Abrir análise</summary><div class="md" style="margin-top:12px">${md(a.texto)}</div></details>`}</section>`).join('');
+  const hist = list.map((a, i) => `<section class="card"><div class="hero-head" style="align-items:center"><div><div class="lbl">${AN_NOME[a.tipo] || 'Análise'}</div><div class="sub">${hm(a.ts)}${a.ref ? ` · ${a.ref.sims} simulados, ${a.ref.reds} redações` : ''}</div></div><div style="display:flex;gap:8px"><button class="btn sm" data-act="anComent" data-id="${a.id}">Comentar</button><button class="btn sm danger" data-act="anDel" data-id="${a.id}" aria-label="Apagar análise">${ic('trash', 14)}</button></div></div>${i === 0 && !live ? `<div class="md cols" style="margin-top:14px">${md(a.texto)}</div>` : `<details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Abrir análise</summary><div class="md" style="margin-top:12px">${md(a.texto)}</div></details>`}</section>`).join('');
   const busy = !!S.stream;
   const rk = errRank(), rp = errRank(null, 1), sc = ['last', 'last3'].includes(S.ui.errScope) ? S.ui.errScope : 'all';
   const rkCard = `<section class="card"><div class="row" style="align-items:center"><span class="lbl">Onde mais erro${helpBtn('onde')}</span><div class="chips" style="margin-left:auto">${[['all', 'Todos os simulados'], ['last3', 'Últimos 3'], ['last', 'Último']].map(([k, l]) => `<button class="pill" data-act="errScope" data-k="${k}" aria-pressed="${sc === k}">${l}</button>`).join('')}</div></div>
@@ -1761,7 +1767,7 @@ async function rescueMissing(pages, M, items, ui, vis) {
   if (!miss.length || !vis) return [];
   ui.log(`Faltam ${fmtNums(miss)} no texto; procurando nas imagens das páginas…`);
   const runs = []; miss.forEach(n => { const r = runs.at(-1); if (r && n === r.b + 1) r.b = n; else runs.push({ a: n, b: n }); });
-  const mats = [...new Set([...S.cfg.materias, ...((M && M.areas) || []).flatMap(a => a.mats || []), ...Object.keys(EXTRA_MAT)])].filter(m => !/^outra$/i.test(m)).concat('Outra');
+  const mats = matsPermitidas(M).filter(m => !/^outra$/i.test(m)).concat('Outra');
   const found = [], N = vis.doc.numPages;
   for (const r of runs) {
     const prev = [...present].filter(x => x < r.a).sort((x, y) => y - x)[0], next = [...present].filter(x => x > r.b).sort((x, y) => x - y)[0];
@@ -1806,14 +1812,14 @@ async function splitByAI(full, ui) {
 async function classify(items, ui, M, vis) {
   const res = new Map(), areaOf = areaOfN(M, items);
   /* qualquer matéria pode aparecer em qualquer parte do caderno (ex.: Educação Física em Natureza ou Humanas) */
-  const mats = [...new Set([...S.cfg.materias, ...((M && M.areas) || []).flatMap(a => a.mats || []), ...Object.keys(EXTRA_MAT)])].filter(m => !/^outra$/i.test(m)).concat('Outra');
+  const mats = matsPermitidas(M).filter(m => !/^outra$/i.test(m)).concat('Outra');
   const guia = subGuia(mats), withPg = vis ? items.filter(q => q.pg).sort((a, b) => a.pg - b.pg || a.n - b.n) : [], rest = vis ? items.filter(q => !q.pg) : items.slice(), batches = [];
   for (let i = 0; i < withPg.length;) { const p0 = withPg[i].pg, list = []; while (i < withPg.length && withPg[i].pg < p0 + vis.per && list.length < 12) list.push(withPg[i++]); batches.push({ list, pages: Array.from({ length: Math.min(vis.per, vis.doc.numPages - p0 + 1) }, (_, k) => p0 + k) }); }
   for (let i = 0; i < rest.length; i += 15) batches.push({ list: rest.slice(i, i + 15), pages: null });
   let done = 0;
   for (const bt of batches) {
     const batch = bt.list; ui.log(`Classificando questões ${batch[0].n} a ${batch.at(-1).n}${bt.pages ? ' (texto e imagens)' : ''}…`); ui.prog(0.35 + 0.55 * (done / items.length));
-    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto}, um por questão, na mesma ordem.\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
+    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}. ${(M && M.areas && M.areas.length > 1) ? `Matérias de cada parte do caderno (Educação Física vale em qualquer parte): ${M.areas.map(a => a.n + ': ' + (a.mats || []).join(', ')).join('; ')}. ` : ''}Só existem questões dessas matérias nesta prova: se o tema parecer de uma matéria que não está na lista (por exemplo, ambiente ou saúde numa prova de Linguagens e Humanas), escolha a matéria permitida que trata o tema (Geografia, História, Filosofia e Sociologia…). Matérias diferentes podem compartilhar assuntos.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto}, um por questão, na mesma ordem.\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
     let blobs = null; if (bt.pages) { try { blobs = await vis.render(bt.pages); } catch (e) { blobs = null; } }
     let out = null;
     try { out = await S.ai.json(mk(blobs), { modelTier: 'default', signal: ui.ctl.signal, ...(blobs ? { images: blobs } : {}) }); }
@@ -1822,7 +1828,7 @@ async function classify(items, ui, M, vis) {
       if (blobs) { try { ui.log('Não consegui enviar as imagens deste bloco; usando só o texto.', 'warn'); out = await S.ai.json(mk(null), { modelTier: 'default', signal: ui.ctl.signal }); } catch (e2) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e2 && e2.code)) throw e2; ui.log('Falhou neste bloco: ' + aiMsg(e2), 'warn'); } }
       else ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn');
     }
-    (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const mat = mats.includes(o.mat) ? o.mat : 'Outra', a = areaOf(n); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '' }); });
+    (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const a = areaOf(n), mat = fixMat(M, a ? a.n : '', mats.includes(o.mat) ? o.mat : (S.cfg.materias.includes(o.mat) ? o.mat : 'Outra')); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '' }); });
     done += batch.length;
   }
   return res;
@@ -2019,6 +2025,34 @@ function freqHTML(doc) {
   }).join('') + `</div></section>`;
 }
 
+/* matérias que podem aparecer nesta prova: as do modelo (ex.: ENEM Dia 1 = Linguagens + Humanas) e as que valem em qualquer parte (Educação Física, Espanhol, Artes).
+   Matérias de outro dia ou de outro modelo (Biologia no Dia 1) ficam de fora; matérias que você criou e não pertencem a nenhum modelo continuam. */
+function matsPermitidas(M) {
+  const mine = ((M && M.areas) || []).flatMap(a => a.mats || []);
+  if (!mine.length) return [...new Set([...S.cfg.materias, ...Object.keys(EXTRA_MAT)])];
+  const outras = new Set(modelos().flatMap(m => (m.areas || []).flatMap(a => a.mats || [])));
+  return [...new Set([...mine, ...S.cfg.materias.filter(m => !outras.has(m)), ...Object.keys(EXTRA_MAT)])];
+}
+
+/* cada parte do caderno só tem as matérias dela (Educação Física vale em qualquer parte). Matéria de outra parte vira a matéria que costuma dividir assunto com ela. */
+const MAT_FALLBACK = { lin: 'Português', hum: 'Geografia', nat: 'Biologia', mat: 'Matemática' };
+const matConhecida = m => modelos().some(x => (x.areas || []).some(a => (a.mats || []).includes(m)));
+function fixMat(M, area, mat) {
+  if (!mat || mat === 'Outra') return mat;
+  if (area) {
+    const a = ((M && M.areas) || []).find(x => x.n === area); if (!a) return mat;
+    return (a.mats || []).includes(mat) || mat === 'Educação Física' || !matConhecida(mat) ? mat : (MAT_FALLBACK[mxKey(area)] || mat);
+  }
+  if (matsPermitidas(M).includes(mat) || !matConhecida(mat)) return mat;
+  const mine = ((M && M.areas) || []).flatMap(x => x.mats || []);
+  return mine.includes('Geografia') ? 'Geografia' : mine.includes('Biologia') ? 'Biologia' : 'Outra';
+}
+function fixMatsDoc(doc, M) {
+  const nd = clone(doc), areaOf = areaOfN(M, nd.itens); let n = 0;
+  nd.itens.forEach(q => { const a = areaOf ? areaOf(q.n) : null, m = fixMat(M, a ? a.n : '', q.mat); if (m !== q.mat) { q.mat = m; if (q.sub && !subsOf(m).includes(q.sub)) q.sub = ''; n++; } });
+  nd.mfx = 1; return { nd, n };
+}
+
 /* ============ gabarito, alternativa marcada e competências/habilidades (Matriz ENEM) ============ */
 const mxKey = n => { const k = subNorm(n); return /^ling/.test(k) ? 'lin' : /human/.test(k) ? 'hum' : /natureza/.test(k) ? 'nat' : /^mat/.test(k) ? 'mat' : ''; };
 const mxRaw = {};
@@ -2063,16 +2097,27 @@ function alignKey(G, nums) {
 async function readKeyFile(file, nums, ui) {
   const G = {}, lo = Math.min(...nums), hi = Math.max(...nums), isPdf = /pdf/i.test(file.type) || /\.pdf$/i.test(file.name);
   const ask = async (a, b, text, blobs) => {
-    const out = await S.ai.json(`Estas são as páginas ${a} a ${b} de um GABARITO de simulado (ENEM ou vestibular), com o texto extraído e, quando houver, as imagens das páginas. Extraia cada questão listada: o número da questão, a letra do gabarito (A a E) e, só se o gabarito trouxer, a competência e a habilidade da questão (apenas o número: C5 vira 5, H17 vira 17). Use os mesmos números do caderno: este simulado tem as questões ${lo} a ${hi}. Ignore questões anuladas ou sem letra. Não invente competência nem habilidade que não estejam escritas na página; use null quando faltar.\nResponda só com um array JSON de objetos {"n": número, "gab": letra, "c": número ou null, "h": número ou null}.\n\nTEXTO DAS PÁGINAS:\n${text || '(sem texto; leia as imagens)'}`, { modelTier: 'default', signal: ui.ctl.signal, ...(blobs && blobs.length ? { images: blobs } : {}) });
+    const out = await S.ai.json(`Estas são as páginas ${a} a ${b} de um GABARITO de simulado (ENEM ou vestibular), com o texto extraído e, quando houver, as imagens das páginas. Extraia cada questão listada: o número da questão, a letra do gabarito (A a E) e, só se o gabarito trouxer, a competência e a habilidade da questão (apenas o número: C5 vira 5, H17 vira 17). Use os mesmos números do caderno: este simulado tem as questões ${lo} a ${hi}. As explicações das questões não interessam: ignore-as e pegue só a letra, a competência e a habilidade. Ignore questões anuladas ou sem letra. Não invente competência nem habilidade que não estejam escritas na página; use null quando faltar.\nResponda só com um array JSON de objetos {"n": número, "gab": letra, "c": número ou null, "h": número ou null}.\n\nTRECHOS DO GABARITO (as explicações já foram removidas):\n${text || '(sem texto; leia as imagens)'}`, { modelTier: 'default', signal: ui.ctl.signal, ...(blobs && blobs.length ? { images: blobs } : {}) });
     (Array.isArray(out) ? out : []).forEach(o => { const n = chNum(o && o.n), g = String((o && o.gab) || '').trim().toUpperCase(); if (n && /^[A-E]$/.test(g)) G[n] = { gab: g, c: chNum(o.c), h: chNum(o.h) }; });
   };
   if (isPdf) {
-    const { pages, doc } = await readPdf(file), vis = await visOf(doc).catch(() => null), per = vis ? vis.per : 4;
-    for (let p = 0; p < pages.length; p += per) {
-      const idx = []; for (let k = p; k < Math.min(pages.length, p + per); k++) idx.push(k + 1);
-      ui.log(`Lendo o gabarito, páginas ${idx[0]} a ${idx.at(-1)} de ${pages.length}…`);
-      let blobs = null; if (vis) { try { blobs = await vis.render(idx); } catch (e) { blobs = null; } }
-      await ask(idx[0], idx.at(-1), idx.map(i => pages[i - 1]).join('\n').slice(0, 7000), blobs);
+    const { pages, doc } = await readPdf(file);
+    /* só as linhas com número da questão, letra, competência ou habilidade; as explicações ficam de fora e cada linha é cortada no começo */
+    const KEEP = /quest[ãa]o|gabarito|resposta|alternativa|compet[êe]ncia|habilidade|\bC\s*\d|\bH\s*\d|^\s*\d{1,3}\s*[-–.:)]?\s*\(?[A-E]\b/i;
+    const lines = pages.flatMap((t, k) => t.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(l => l && KEEP.test(l)).map(l => l.slice(0, 160)));
+    if (lines.length >= nums.length * .5) {
+      const chunks = []; let cur = '';
+      lines.forEach(l => { if (cur.length + l.length > 9000) { chunks.push(cur); cur = ''; } cur += l + '\n'; }); if (cur) chunks.push(cur);
+      for (let c = 0; c < chunks.length; c++) { ui.log(`Lendo o gabarito (só respostas, competências e habilidades)${chunks.length > 1 ? `, parte ${c + 1} de ${chunks.length}` : ''}…`); await ask(1, pages.length, chunks[c], null); }
+    } else {
+      /* sem texto aproveitável (PDF escaneado): lê as imagens das páginas */
+      const vis = await visOf(doc).catch(() => null), per = vis ? vis.per : 4;
+      for (let p = 0; p < pages.length; p += per) {
+        const idx = []; for (let k = p; k < Math.min(pages.length, p + per); k++) idx.push(k + 1);
+        ui.log(`Lendo o gabarito pelas imagens, páginas ${idx[0]} a ${idx.at(-1)} de ${pages.length}…`);
+        let blobs = null; if (vis) { try { blobs = await vis.render(idx); } catch (e) { blobs = null; } }
+        await ask(idx[0], idx.at(-1), idx.map(i => pages[i - 1]).join('\n').slice(0, 3000), blobs);
+      }
     }
   } else { ui.log('Lendo a imagem do gabarito…'); await ask(1, 1, '', [file]); }
   return G;
@@ -2131,19 +2176,21 @@ function chAgg(rows) {
   const by = {};
   rows.forEach(({ q, M }) => {
     if (!q.st || !(q.comp || q.hab)) return; const area = areaDeQ(M, q), a = by[area] = by[area] || { area, key: mxKey(area), C: {}, H: {} };
-    [['C', q.comp], ['H', q.hab]].forEach(([k, v]) => { if (!v) return; const x = a[k][v] = a[k][v] || { n: v, t: 0, e: 0, c: 0 }; x.t++; if (q.st === 'e') x.e++; else if (q.st === 'c') x.c++; });
+    [['C', q.comp], ['H', q.hab]].forEach(([k, v]) => { if (!v) return; const x = a[k][v] = a[k][v] || { n: v, t: 0, e: 0, c: 0, cc: k === 'H' ? (q.comp || ((MX[a.key] && MX[a.key].H[v]) || {}).c || 0) : v }; x.t++; if (q.st === 'e') x.e++; else if (q.st === 'c') x.c++; });
   });
   const so = o => Object.values(o).filter(x => x.e + x.c > 0).sort((a, b) => b.e - a.e || b.e / b.t - a.e / a.t || b.c - a.c);
   return Object.values(by).map(a => ({ ...a, Cl: so(a.C), Hl: so(a.H) })).filter(a => a.Cl.length || a.Hl.length).sort((a, b) => a.area.localeCompare(b.area));
 }
-const chLine = (a, k, x) => `${k}${x.n} · ${x.e} ${x.e === 1 ? 'erro' : 'erros'}${x.c ? ` e ${x.c} ${x.c === 1 ? 'chute' : 'chutes'}` : ''} em ${x.t} (${nf(x.e / x.t * 100, 0)}%)`;
+const chCode = (k, x) => k === 'H' && x.cc ? `C${x.cc}H${x.n}` : `${k}${x.n}`;
+const chTxt = x => `${x.e ? `errou ${x.e} ${x.e === 1 ? 'vez' : 'vezes'} em ${x.t}` : `acertou ${x.t} só no chute`}${x.c && x.e ? ` · ${x.c} ${x.c === 1 ? 'chute' : 'chutes'}` : ''} (${nf(x.e / x.t * 100, 0)}%)`;
+const chLine = (a, k, x) => `${chCode(k, x)} — ${chTxt(x)}`;
 function chPack(rows, tit) {
   const A = chAgg(rows); if (!A.length) return '';
-  return `${tit}\n` + A.map(a => `- ${a.area}:\n  competências: ${a.Cl.slice(0, 5).map(x => `${chLine(a, 'C', x)} — ${trunc(chLabel(a.key, 'C', x.n), 90)}`).join(' | ') || '(sem erros)'}\n  habilidades: ${a.Hl.slice(0, 6).map(x => `${chLine(a, 'H', x)} — ${trunc(chLabel(a.key, 'H', x.n), 90)}`).join(' | ') || '(sem erros)'}`).join('\n');
+  return `${tit}\n` + A.map(a => `- ${a.area}:\n  competências: ${a.Cl.slice(0, 5).map(x => `${chLine(a, 'C', x)}: ${trunc(chLabel(a.key, 'C', x.n), 90)}`).join(' | ') || '(sem erros)'}\n  habilidades: ${a.Hl.slice(0, 6).map(x => `${chLine(a, 'H', x)}: ${trunc(chLabel(a.key, 'H', x.n), 90)}`).join(' | ') || '(sem erros)'}`).join('\n');
 }
 function chBlock(rows) {
   const A = chAgg(rows); if (!A.length) return '<p class="sub">Ainda sem erros ou chutes em questões com competência e habilidade.</p>';
-  const li = (a, k, x) => `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="tag solid mono">${k}${x.n}</span><span class="mono" style="font-size:12px">${x.e} ${x.e === 1 ? 'erro' : 'erros'}${x.c ? ` + ${x.c} ${x.c === 1 ? 'chute' : 'chutes'}` : ''} em ${x.t} · ${nf(x.e / x.t * 100, 0)}%</span><span class="sub" style="flex-basis:100%;margin:-2px 0 4px 2px">${esc(chLabel(a.key, k, x.n))}</span></div>`;
+  const li = (a, k, x) => `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="tag solid mono">${chCode(k, x)}</span><span class="mono" style="font-size:12px">${chTxt(x)}</span><span class="sub" style="flex-basis:100%;margin:-2px 0 4px 2px">${esc(chLabel(a.key, k, x.n))}</span></div>`;
   return A.map(a => `<div style="margin-top:12px"><b>${esc(a.area)}</b><div class="sub" style="margin:6px 0 4px">Competências</div><div style="display:grid;gap:4px">${a.Cl.slice(0, 4).map(x => li(a, 'C', x)).join('') || '<span class="sub">sem erros</span>'}</div><div class="sub" style="margin:10px 0 4px">Habilidades</div><div style="display:grid;gap:4px">${a.Hl.slice(0, 6).map(x => li(a, 'H', x)).join('') || '<span class="sub">sem erros</span>'}</div></div>`).join('');
 }
 function chHTML(doc, sim) {
@@ -2158,6 +2205,7 @@ async function chFillAction() {
   const sid = S.ui.simSel, doc = S.simq[sid], sim = S.sims.find(x => x.id === sid); if (!doc || !S.ai) return;
   const M = sim ? modeloOf(sim) : activeModelo(); if (!isEnem(M)) { toast('A Matriz de Referência é do ENEM; este simulado não é de modelo ENEM.', 'err'); return; }
   const falta = doc.itens.filter(q => !(q.comp || q.hab)).length; if (!falta) { toast('Todas as questões já têm competência e habilidade.'); return; }
+  if (!await confirmBox({ title: 'Classificar competências e habilidades?', text: `O Claude vai indicar a competência e a habilidade da Matriz do ENEM para as ${falta} ${falta === 1 ? 'questão' : 'questões'} que ainda estão sem. As que vieram do gabarito ou que você editou não mudam. Isso gasta o limite do Claude, com várias chamadas.`, ok: 'Classificar' })) return;
   toast(`Classificando competências e habilidades de ${falta} questões…`); const ui = { ctl: new AbortController(), log: () => { }, prog: () => { } };
   try { const f = await fillCH(doc, sim, M, ui, false); if (!f.n) { toast('O Claude não devolveu classificação; tente de novo.', 'err'); return; } const cur = clone(S.simq[sid] || doc), n = applyCH(cur, f.res); await putQDoc(sid, cur); toast(`${n} questões com competência e habilidade.`); } catch (e) { toast(aiMsg(e), 'err'); }
 }
@@ -2173,7 +2221,7 @@ function chPrevHTML(cur, prev) {
   const A = chAgg(cur), B = chAgg(prev); if (!B.length) return '';
   const sg = L => L.map(a => a.area + ':' + a.Cl.slice(0, 4).map(x => x.n + '/' + x.e).join(',') + '|' + a.Hl.slice(0, 6).map(x => x.n + '/' + x.e).join(',')).join(';');
   if (sg(A) === sg(B)) return '';
-  return `<div class="prev-rank"><div class="prev-t">Antes do último simulado</div>${B.map(a => `<div>${esc(a.area)} · competências ${a.Cl.slice(0, 4).map(x => `C${x.n} (${x.e}/${x.t})`).join(', ') || '–'} · habilidades ${a.Hl.slice(0, 6).map(x => `H${x.n} (${x.e}/${x.t})`).join(', ') || '–'}</div>`).join('')}</div>`;
+  return `<div class="prev-rank"><div class="prev-t">Antes do último simulado</div>${B.map(a => `<div>${esc(a.area)} · competências ${a.Cl.slice(0, 4).map(x => `${chCode('C', x)} (${x.e}/${x.t})`).join(', ') || '–'} · habilidades ${a.Hl.slice(0, 6).map(x => `${chCode('H', x)} (${x.e}/${x.t})`).join(', ') || '–'}</div>`).join('')}</div>`;
 }
 
 /* A a E ou A a D, conforme a prova; se já houver resposta ou gabarito fora do intervalo, a letra continua aparecendo */
@@ -2393,7 +2441,7 @@ function keyModal(sid) {
       <label class="field"><span>${S.ai ? 'Ou cole o gabarito oficial' : 'Cole o gabarito oficial'}</span><textarea id="f-gab" rows="3" placeholder="1-A 2-C 3-B… (ou só as letras em sequência, a partir da questão ${first})"></textarea></label>
       <label class="field"><span>Minhas respostas (opcional)</span><textarea id="f-res" rows="2" placeholder="Se preferir, marque direto na lista de questões"></textarea></label>
       <div class="total-line" id="f-prev"></div>
-      ${S.ai ? '<p class="sub">O gabarito em PDF usa o limite de uso do Claude: uma chamada a cada poucas páginas, mais uma a cada 10 ou 12 questões se for preciso classificar competência e habilidade.</p>' : ''}
+      ${S.ai ? '<p class="sub">O Claude lê só a resposta, a competência e a habilidade de cada questão e ignora as explicações. Em geral é uma chamada curta, só com texto. Se o gabarito não trouxer competência e habilidade, ele classifica pela Matriz, o que gasta mais chamadas.</p>' : ''}
       <div class="foot"><button type="button" class="btn" data-x="cancel">Cancelar</button><button class="btn primary" type="submit">Salvar gabarito</button></div></form>`);
   const ctl = new AbortController(), parse = txt => { const t = String(txt).trim(); let k = parseKey(t); if (!Object.keys(k).length) { const l = t.toUpperCase().replace(/[^A-E]/g, ''); l.split('').forEach((c, i) => { k[first + i] = c; }); } return k; };
   const prev = () => { const g = parse($('#f-gab', box).value), r = parse($('#f-res', box).value); $('#f-prev', box).textContent = Object.keys(g).length || Object.keys(r).length ? `${doc.itens.filter(q => g[q.n]).length} questões com gabarito e ${doc.itens.filter(q => r[q.n]).length} com resposta no texto.` : ''; return { g, r }; };
@@ -2938,7 +2986,7 @@ function refreshQ(n) {
   const st = $('#qstats'); if (st) st.innerHTML = qStatsHTML(doc);
   const fq = $('#qfreq'); if (fq) fq.innerHTML = freqHTML(doc); const fa = $('#qalert'); if (fa && typeof alertasHTML === 'function') fa.innerHTML = alertasHTML(doc); const fc = $('#qch'); if (fc) fc.innerHTML = chHTML(doc, S.sims.find(x => x.id === S.ui.simSel));
   const q = doc.itens.find(x => String(x.n) === String(n)), el = document.getElementById('q-' + n);
-  if (q && el) el.outerHTML = qCardHTML(q, S.cfg.materias, doc);
+  if (q && el) el.outerHTML = qCardHTML(q, matsPermitidas(modeloOf(S.sims.find(x => x.id === S.ui.simSel) || {})), doc);
 }
 async function cadPost(id, ask) {
   const ta = $('#cmp'), text = (ta && ta.value || '').trim();
@@ -2965,7 +3013,8 @@ async function reclassify(all) {
   const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc || !S.ai) return;
   const sim = S.sims.find(x => x.id === sid), M = sim ? modeloOf(sim) : activeModelo();
   const todo = all ? doc.itens : doc.itens.filter(q => !q.mat || q.mat === 'Outra'); if (!todo.length) return;
-  if (all && !await confirmBox({ title: 'Reclassificar todas as questões?', text: 'O Claude refaz a matéria, a área da matéria e o assunto de cada questão, olhando o enunciado, as imagens do PDF e a parte da prova. Se faltarem questões no PDF lido (como a 17 a 20), ele tenta achá-las pelas imagens. Suas marcações de acertei, errei ou chute e as respostas não mudam. Edições manuais de matéria, área e assunto serão substituídas.', ok: 'Reclassificar' })) return;
+  const enemM = isEnem(M), qtd = todo.length;
+  if (!await confirmBox(all ? { title: 'Reclassificar matéria e área?', text: `O Claude vai refazer a matéria, a área da matéria e o assunto das ${qtd} questões, olhando o enunciado e as imagens do PDF, e procurar questões que estejam faltando (como a 17 a 20).${enemM ? ' Também preenche competência e habilidade das que estiverem sem.' : ''} Suas letras, chutes, gabarito e as competências e habilidades que já existem não mudam. O que você tiver corrigido na mão em matéria, área e assunto será substituído. Isso gasta o limite do Claude, com várias chamadas.`, ok: 'Reclassificar' } : { title: `Classificar ${qtd} ${qtd === 1 ? 'questão' : 'questões'} sem matéria?`, text: 'O Claude classifica só as questões que estão sem matéria, olhando o enunciado e as imagens do PDF. As que já têm matéria não mudam. Isso gasta o limite do Claude.', ok: 'Classificar' })) return;
   toast(`Classificando ${todo.length} questões…`); const ctl = new AbortController(), ui = { ctl, log: () => { }, prog: () => { } };
   try {
     let pdf = null, pages = null, vis = null, why = '';
