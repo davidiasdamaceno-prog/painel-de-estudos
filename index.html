@@ -1257,7 +1257,7 @@ function analysisCard(ms, sims, reds) {
   const cs = compStats(reds).filter(c => c.all != null).sort((a, b) => (a.recent ?? 0) - (b.recent ?? 0) || (a.recentRaw ?? 0) - (b.recentRaw ?? 0))[0];
   const lastSim = sims.at(-1), lastRed = reds.at(-1);
   const er = errMap(errRank().ids); const nErr = Object.values(er).reduce((x, m) => x + m.e + m.c, 0);
-  const lastAn = [...D().ans].sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
+  const chTopT = chTop(), lastAn = [...D().ans].sort((a, b) => (b.ts || 0) - (a.ts || 0))[0];
   const snip = lastAn ? trunc(lastAn.texto.replace(/[#*_`|>-]/g, ' '), 150) : '';
   return `<section class="card" aria-label="Conclusões">
     <div class="lbl">Conclusões · Claude</div>
@@ -1265,7 +1265,8 @@ function analysisCard(ms, sims, reds) {
     <div class="kv" style="margin:22px 0 0;padding-top:16px;border-top:1px solid var(--line)">
       <div><span>Matéria mais forte</span><b>${best ? esc(best.m) + ' ' + pct0(best.recent) : '—'}</b></div>
       <div><span>Matéria mais fraca</span><b>${worst ? esc(worst.m) + ' ' + pct0(worst.recent) : '—'}</b></div>
-      <div><span>Competência mais fraca</span><b>${cs ? cs.c + ' · ' + nf(cs.recent, 0) : '—'}</b></div>
+      <div><span>Competência da redação mais fraca</span><b>${cs ? cs.c + ' · ' + nf(cs.recent, 0) : '—'}</b></div>
+      <div><span>Habilidade que mais erro</span><b title="${chTopT ? esc(chTopT.area + ': ' + chTopT.txt) : ''}">${chTopT ? chTopT.code + ' · ' + chTopT.e + ' ' + (chTopT.e === 1 ? 'erro' : 'erros') + ' em ' + chTopT.t : '—'}</b></div>
       <div><span>Meta de aproveitamento</span><b>${metaShort(activeModelo())}</b></div>
     </div>
     <div class="mini">
@@ -2214,7 +2215,7 @@ async function putQDoc(sid, nd) { clearTimeout(S.qTimers[sid]); S.qDirty[sid] = 
 
 /* ---- análise: em quais competências e habilidades mais erro ---- */
 const chRowsOf = (doc, M) => ((doc && doc.itens) || []).map(q => ({ q, M }));
-const chAllRows = back => { let L = simsSorted().filter(s => isEnem(modeloOf(s)) && (D().simq[s.id] || {}).itens && D().simq[s.id].itens.some(q => q.st)); if (back) L = L.slice(0, Math.max(0, L.length - back)); return L.flatMap(s => chRowsOf(D().simq[s.id], modeloOf(s))); };
+const chAllRows = back => { let L = simsAllSorted().filter(s => isEnem(modeloOf(s)) && (D().simq[s.id] || {}).itens && D().simq[s.id].itens.some(q => q.st)); if (back) L = L.slice(0, Math.max(0, L.length - back)); return L.flatMap(s => chRowsOf(D().simq[s.id], modeloOf(s))); };
 function chAgg(rows) {
   const by = {};
   rows.forEach(({ q, M }) => {
@@ -2231,10 +2232,19 @@ function chPack(rows, tit) {
   const A = chAgg(rows); if (!A.length) return '';
   return `${tit}\n` + A.map(a => `- ${a.area}:\n  competências: ${a.Cl.slice(0, 5).map(x => `${chLine(a, 'C', x)}: ${trunc(chLabel(a.key, 'C', x.n), 90)}`).join(' | ') || '(sem erros)'}\n  habilidades: ${a.Hl.slice(0, 6).map(x => `${chLine(a, 'H', x)}: ${trunc(chLabel(a.key, 'H', x.n), 90)}`).join(' | ') || '(sem erros)'}`).join('\n');
 }
+const chVezes = (x, k) => `${x.e ? `errou ${x.e}×` : `chutou ${x.c}×`} ${k === 'H' ? 'a habilidade' : 'a competência'}`;
+const chMeta = x => `em ${x.t} ${x.t === 1 ? 'questão' : 'questões'} · ${nf(x.e / x.t * 100, 0)}% de erro${x.c && x.e ? ` · ${x.c} ${x.c === 1 ? 'chute' : 'chutes'}` : ''}`;
 function chBlock(rows) {
   const A = chAgg(rows); if (!A.length) return '<p class="sub">Ainda sem erros ou chutes em questões com competência e habilidade.</p>';
-  const li = (a, k, x) => `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="tag solid mono">${chCode(k, x)}</span><span class="mono" style="font-size:12px">${chTxt(x)}</span><span class="sub" style="flex-basis:100%;margin:-2px 0 4px 2px">${esc(chLabel(a.key, k, x.n))}</span></div>`;
-  return A.map(a => `<div style="margin-top:12px"><b>${esc(a.area)}</b><div class="sub" style="margin:6px 0 4px">Competências</div><div style="display:grid;gap:4px">${a.Cl.slice(0, 4).map(x => li(a, 'C', x)).join('') || '<span class="sub">sem erros</span>'}</div><div class="sub" style="margin:10px 0 4px">Habilidades</div><div style="display:grid;gap:4px">${a.Hl.slice(0, 6).map(x => li(a, 'H', x)).join('') || '<span class="sub">sem erros</span>'}</div></div>`).join('');
+  /* a habilidade já carrega a competência (C5H24), então uma lista só; competência solta só quando o gabarito não traz habilidade */
+  const li = (a, k, x) => `<div style="margin-top:8px"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span>${chVezes(x, k)}</span><span class="tag solid mono">${chCode(k, x)}</span><span class="sub mono" style="font-size:12px">${chMeta(x)}</span></div><div class="sub" style="margin:2px 0 0 2px">${esc(chLabel(a.key, k, x.n))}</div></div>`;
+  return A.map(a => { const k = a.Hl.length ? 'H' : 'C', L = k === 'H' ? a.Hl : a.Cl; return `<div style="margin-top:14px"><b>${esc(a.area)}</b>${L.slice(0, 8).map(x => li(a, k, x)).join('')}</div>`; }).join('');
+}
+/* a habilidade (com a competência dela) em que mais erro, somando os simulados ENEM com competência e habilidade */
+function chTop() {
+  const A = chAgg(chAllRows()); let best = null;
+  A.forEach(a => (a.Hl.length ? a.Hl : a.Cl).forEach(x => { const k = a.Hl.length ? 'H' : 'C'; if (!x.e) return; if (!best || x.e > best.x.e || (x.e === best.x.e && x.e / x.t > best.x.e / best.x.t)) best = { a, k, x }; }));
+  return best && { code: chCode(best.k, best.x), e: best.x.e, t: best.x.t, area: best.a.area, txt: chLabel(best.a.key, best.k, best.x.n) };
 }
 function chHTML(doc, sim) {
   const M = sim ? modeloOf(sim) : activeModelo(); if (!isEnem(M) || !(doc.itens || []).some(q => q.comp || q.hab)) return '';
@@ -2264,7 +2274,7 @@ function chPrevHTML(cur, prev) {
   const A = chAgg(cur), B = chAgg(prev); if (!B.length) return '';
   const sg = L => L.map(a => a.area + ':' + a.Cl.slice(0, 4).map(x => x.n + '/' + x.e).join(',') + '|' + a.Hl.slice(0, 6).map(x => x.n + '/' + x.e).join(',')).join(';');
   if (sg(A) === sg(B)) return '';
-  return `<div class="prev-rank"><div class="prev-t">Antes do último simulado</div>${B.map(a => `<div>${esc(a.area)} · competências ${a.Cl.slice(0, 4).map(x => `${chCode('C', x)} (${x.e}/${x.t})`).join(', ') || '–'} · habilidades ${a.Hl.slice(0, 6).map(x => `${chCode('H', x)} (${x.e}/${x.t})`).join(', ') || '–'}</div>`).join('')}</div>`;
+  return `<div class="prev-rank"><div class="prev-t">Antes do último simulado</div>${B.map(a => `<div>${esc(a.area)} · ${(a.Hl.length ? a.Hl : a.Cl).slice(0, 6).map(x => `${chCode(a.Hl.length ? 'H' : 'C', x)} (${x.e}/${x.t})`).join(', ') || '–'}</div>`).join('')}</div>`;
 }
 
 /* A a E ou A a D, conforme a prova; se já houver resposta ou gabarito fora do intervalo, a letra continua aparecendo */
