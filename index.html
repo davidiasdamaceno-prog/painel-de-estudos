@@ -1526,7 +1526,7 @@ function qListHTML(doc) {
 }
 VIEWS['sim-questoes'] = function () {
   const { sid, sim, doc } = currentSim();
-  if (doc && sim && !(doc.mfx >= 2) && !S._mfx) { S._mfx = 1; setTimeout(async () => { try { const cur = S.simq[sid]; if (!cur || cur.mfx >= 2) return; const { nd, n, skip } = await fixMatsDoc(cur, modeloOf(sim)); if (skip) return; const now = S.simq[sid] || cur; await putQDoc(sid, { ...nd, itens: nd.itens.map(q => { const o = now.itens.find(x => x.n === q.n); return o && o.mat === (cur.itens.find(x => x.n === q.n) || {}).mat ? q : o || q; }) }); if (n && S.ui.simSel === sid) render(true); } catch (e) {} finally { S._mfx = 0; } }, 0); }
+  if (doc && sim && !(doc.mfx >= 2) && !S._mfx) { S._mfx = 1; setTimeout(async () => { try { const cur = S.simq[sid]; if (!cur || cur.mfx >= 2) return; const { nd, n, skip } = await fixMatsDoc(cur, modeloOf(sim), null, sim); if (skip) return; const now = S.simq[sid] || cur; await putQDoc(sid, { ...nd, itens: nd.itens.map(q => { const o = now.itens.find(x => x.n === q.n); return o && o.mat === (cur.itens.find(x => x.n === q.n) || {}).mat ? q : o || q; }) }); if (n && S.ui.simSel === sid) render(true); } catch (e) {} finally { S._mfx = 0; } }, 0); }
   if (!sim) return head('Notas', 'Esse simulado não existe mais.', `<button class="btn" data-act="go" data-id="sim-notas">${ic('chev', 14)} Voltar às notas</button>`);
   const M = modeloOf(sim), t = simStat(sim);
   const acts = `<button class="btn" data-act="go" data-id="sim-notas">← Notas</button><button class="btn" data-act="simEdit" data-id="${sid}">Editar</button><button class="btn" data-act="simAsk" data-id="${sid}">Comentar</button><button class="btn danger" data-act="simDel" data-id="${sid}">${ic('trash', 14)}</button>`;
@@ -2134,25 +2134,38 @@ function matPorAssunto(M, area, q) {
   return pool.find(m => subsOf(m).some(x => subNorm(x) === k)) || null;
 }
 /* itens: [{n, area, mat, sub, ass, txt}] → Map n → {mat, sub}; só devolve os que mudaram de matéria */
-async function reassignMats(M, itens, ui) {
+async function reassignMats(M, itens, ui, sim) {
   const out = new Map(), left = [];
   itens.forEach(q => { const m = matPorAssunto(M, q.area, q); if (m) out.set(q.n, { mat: m, sub: subPick(m, q.sub || q.ass) }); else left.push(q); });
-  if (left.length && S.ai) {
-    const lista = left.map(q => `Questão ${q.n} (marcada como ${q.mat}; assunto: ${q.sub || q.ass || '?'}): ${String(q.txt || q.raw || '').replace(/\s+/g, ' ').slice(0, 600)}`).join('\n');
-    const permit = [...new Set(left.flatMap(q => matsDoDia(M, q.area)))].concat('Educação Física', 'Outra');
+  /* análise mista: com o PDF guardado, o Claude relê o texto E olha as páginas (figuras, gráficos, mapas) antes de escolher a matéria */
+  if (left.length && S.ai && sim && sim.pdfId && S.assets) {
+    try {
+      const pdf = await loadSimPdf(sim);
+      if (pdf) {
+        const pages = trimRed(await pdfPages(pdf)), vis = await visOf(pdf, pages), its = left.map(q => ({ n: q.n, raw: q.txt || q.raw || '', pg: pageOfQ(pages, q.n) }));
+        baseFor(its, pages);
+        const res = await classify(its, ui && ui.ctl ? ui : { ctl: new AbortController(), log() { }, prog() { } }, M, vis);
+        res.forEach((v, n) => { const q = left.find(x => x.n === n); if (q && v.mat && v.mat !== 'Outra' && !matInvalida(M, q.area, v.mat)) out.set(n, { mat: v.mat, sub: v.sub }); });
+      }
+    } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; }
+  }
+  const resto = left.filter(q => !out.has(q.n));
+  if (resto.length && S.ai) {
+    const lista = resto.map(q => `Questão ${q.n} (marcada como ${q.mat}; assunto: ${q.sub || q.ass || '?'}): ${String(q.txt || q.raw || '').replace(/\s+/g, ' ').slice(0, 600)}`).join('\n');
+    const permit = [...new Set(resto.flatMap(q => matsDoDia(M, q.area)))].concat('Educação Física', 'Outra');
     const guia = subGuia(permit);
     try {
       const r = await S.ai.json(`Estas questões de um simulado foram classificadas em matérias que NÃO existem nesta parte da prova. Analise o conteúdo de cada uma e diga em qual das matérias permitidas ela também se encaixa (matérias compartilham assuntos: por exemplo, ambiente, clima, energia, população, saúde e gráficos podem cair em Geografia, História ou Filosofia e Sociologia; não force Geografia nem outra matéria se outra encaixar melhor). Matérias permitidas (use exatamente um destes nomes): ${permit.join('; ')}.\nGuia de assuntos (pode usar outro se não estiver na lista):\n${guia}\n\n${lista}\n\nResponda só com um array JSON: [{"n":número,"mat":"matéria permitida","sub":"assunto"}]`, { modelTier: 'default', ...(ui && ui.ctl ? { signal: ui.ctl.signal } : {}) });
-      (Array.isArray(r) ? r : []).forEach(o => { const q = left.find(x => x.n === +(o && o.n)); if (q && permit.includes(o.mat) && o.mat !== 'Outra') out.set(q.n, { mat: o.mat, sub: subPick(o.mat, o.sub) }); });
+      (Array.isArray(r) ? r : []).forEach(o => { const q = resto.find(x => x.n === +(o && o.n)); if (q && permit.includes(o.mat) && o.mat !== 'Outra') out.set(q.n, { mat: o.mat, sub: subPick(o.mat, o.sub) }); });
     } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; }
   }
   left.forEach(q => { if (!out.has(q.n)) out.set(q.n, { mat: 'Outra', sub: '' }); });
   return out;
 }
-async function fixMatsDoc(doc, M, ui) {
+async function fixMatsDoc(doc, M, ui, sim) {
   const nd = clone(doc), areaOf = areaOfN(M, nd.itens); let n = 0;
   const bad = nd.itens.filter(q => matInvalida(M, (areaOf(q.n) || {}).n || '', q.mat)).map(q => ({ n: q.n, area: (areaOf(q.n) || {}).n || '', mat: q.mat, sub: q.sub, ass: q.ass, txt: q.txt }));
-  if (bad.length) { const r = await reassignMats(M, bad, ui).catch(() => null); if (r) nd.itens.forEach(q => { const v = r.get(q.n); if (v) { q.mat = v.mat; q.sub = v.sub || ''; n++; } }); }
+  if (bad.length) { const r = await reassignMats(M, bad, ui, sim).catch(() => null); if (r) nd.itens.forEach(q => { const v = r.get(q.n); if (v) { q.mat = v.mat; q.sub = v.sub || ''; n++; } }); }
   if (bad.length && !n) return { nd: doc, n: 0, skip: 1 };
   nd.mfx = 2; return { nd, n };
 }
@@ -3194,10 +3207,10 @@ async function reclassify(all) {
   toast(`Classificando ${todo.length} questões…`); const ctl = new AbortController(), ui = { ctl, log: () => { }, prog: () => { } };
   try {
     let pdf = null, pages = null, vis = null, why = '';
-    if (all && sim && sim.pdfId && S.assets) {
+    if (sim && sim.pdfId && S.assets) {
       try { pdf = await loadSimPdf(sim); if (pdf) { pages = trimRed(await pdfPages(pdf)); vis = await visOf(pdf, pages); } } catch (e) { pdf = null; }
       if (!pdf) why = ' Não consegui abrir o PDF guardado, então usei só o texto; para olhar as imagens, use "Trocar PDF".';
-    } else if (all) why = ' Este simulado não tem o PDF guardado, então usei só o texto.';
+    } else why = ' Este simulado não tem o PDF guardado, então usei só o texto.';
     const items = todo.map(q => ({ n: q.n, raw: q.txt || '', pg: q.pg || (pages ? pageOfQ(pages, q.n) : 0) }));
     if (pages) baseFor(items, pages);
     let extra = [];
