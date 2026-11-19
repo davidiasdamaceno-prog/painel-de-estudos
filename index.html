@@ -1766,12 +1766,55 @@ async function renderPages(doc, idxs, scale) {
   }
   return out;
 }
-async function visOf(doc) {
+/* ---- páginas de redação (Dia 1) são ignoradas: o foco são as questões ---- */
+function trimRed(pages) {
+  const norm = x => String(x).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+  const RED = /^(PROPOSTA DE REDACAO|REDACAO( DO ENEM| ENEM)?|FOLHA (DE )?(RASCUNHO|REDACAO)[^\n]*|TEXTOS? MOTIVADORES?|(INSTRUCOES|ORIENTACOES) PARA (A )?REDACAO|CADERNO DE REDACAO)\s*[:.]?$|A PARTIR DA LEITURA DOS TEXTOS MOTIVADORES|REDIJA UM TEXTO DISSERTATIVO/;
+  const QH = /(^|\n)\s*QUEST[ÃA]O\s*[:\-–]?\s*\d+/i, qIdx = pages.map((t, i) => QH.test(t) ? i : -1).filter(i => i >= 0), lastQ = qIdx.length ? qIdx.at(-1) : -1;
+  const out = pages.slice(); out.lim = pages.length; out.red = 0;
+  if (lastQ < 0) return out;
+  for (let i = 0; i < pages.length; i++) {
+    const L = String(pages[i] || '').split('\n'), j = L.findIndex(l => RED.test(norm(l)));
+    if (j < 0) continue;
+    if (QH.test(L.slice(j + 1).join('\n')) || i < lastQ) continue; /* se ainda vem questão depois, não é o fim da prova */
+    const keep = L.slice(0, j).join('\n'); for (let k = i; k < pages.length; k++) out[k] = k === i ? keep : '';
+    out.lim = keep.replace(/\s/g, '').length > 40 ? i + 1 : i; out.red = pages.length - out.lim; return out;
+  }
+  return out;
+}
+/* ---- texto-base compartilhado: "Texto para as questões de 06 a 10" ---- */
+const BASE_RE1 = /(?:texto|enunciado|figura|gr[áa]fico|imagem|tirinha|charge|mapa|poema|poesia|leia|utilize|use|observe|considere|base)[^\n]{0,90}?quest[õo]es?\s*(?:de\s+|n[º°o.]*\s*)?0*(\d{1,3})\s*(?:a|à|até|ao|e|–|-)\s*0*(\d{1,3})\b/i;
+const BASE_RE2 = /quest[õo]es?\s+0*(\d{1,3})\s*(?:a|à|até|e|–|-)\s*0*(\d{1,3})\s+(?:referem|s[ãa]o baseadas|tomam|utilizam|usam)/i;
+function findBases(pages) {
+  const out = [], hdr = /^\s*QUEST[ÃA]O\b/i;
+  (pages || []).forEach((t, pi) => {
+    const lines = String(t || '').split('\n');
+    lines.forEach((l, i) => {
+      if (l.length > 240 || hdr.test(l)) return;
+      const m = BASE_RE1.exec(l) || BASE_RE2.exec(l); if (!m) return;
+      const a = +m[1], b = +m[2]; if (!(b > a) || b - a > 12) return;
+      const body = []; let p = pi, k = i + 1, n = 0;
+      while (p < pages.length && n < 1600) { const P = String(pages[p] || '').split('\n'); if (k >= P.length) { p++; k = 0; continue; } if (hdr.test(P[k])) break; body.push(P[k]); n += P[k].length + 1; k++; }
+      out.push({ a, b, page: pi + 1, line: l, text: cleanTxt(body.join('\n')).slice(0, 1500) });
+    });
+  });
+  return out;
+}
+/* marca cada questão que usa um texto-base (q.base, q.bs = [de, até], q.bp = página do texto); cut: tira o texto-base do final da questão anterior */
+function baseFor(items, pages, cut) {
+  const B = findBases(pages); if (!B.length) return B;
+  items.forEach(q => { const x = B.find(b => q.n >= b.a && q.n <= b.b); if (x) { q.base = x.text; q.bs = [x.a, x.b]; q.bp = x.page; } });
+  if (cut) items.forEach(q => B.forEach(x => { const i = q.raw ? q.raw.indexOf(x.line) : -1; if (i > 30) q.raw = q.raw.slice(0, i); }));
+  return B;
+}
+const baseTag = q => q.bs ? (/\[Texto-base/.test(q.raw || '') ? '' : q.base ? ` [Texto-base das questões ${q.bs[0]} a ${q.bs[1]}: ${trunc(q.base, 700)}]` : ` [As questões ${q.bs[0]} a ${q.bs[1]} compartilham um texto-base que está nas imagens, antes da questão ${q.bs[0]}]`) : '';
+const baseSave = q => q.base ? `\n\n[Texto-base das questões ${q.bs[0]} a ${q.bs[1]}] ${q.base.slice(0, 500)}` : '';
+async function visOf(doc, pages) {
   if (!S.ai || !doc) return null;
   const lim = await S.ai.limits().catch(() => null); if (!lim || !lim.images) return null;
   const per = Math.max(1, Math.min(3, lim.images.maxCount || 3)), max = lim.images.maxInputBytes || 8e6;
   const render = async idxs => { let sc = 1.25, bl = []; for (let t = 0; t < 3; t++) { bl = await renderPages(doc, idxs, sc); if (bl.reduce((a, b) => a + b.size, 0) <= max * 0.9) break; sc *= 0.75; } return bl; };
-  return { doc, per, render };
+  return { doc, per, render, lim: pages && pages.lim ? pages.lim : doc.numPages };
 }
 const pageOfQ = (pages, n) => { const re = new RegExp('(?:^|\\n)\\s*QUEST[ÃA]O\\s*[:\\-–]?\\s*0*' + n + '\\b', 'i'); const i = pages.findIndex(t => re.test(t)); return i < 0 ? 0 : i + 1; };
 function missingNums(M, present) {
@@ -1789,7 +1832,7 @@ async function rescueMissing(pages, M, items, ui, vis) {
   ui.log(`Faltam ${fmtNums(miss)} no texto; procurando nas imagens das páginas…`);
   const runs = []; miss.forEach(n => { const r = runs.at(-1); if (r && n === r.b + 1) r.b = n; else runs.push({ a: n, b: n }); });
   const mats = matsPermitidas(M).filter(m => !/^outra$/i.test(m)).concat('Outra');
-  const found = [], N = vis.doc.numPages;
+  const found = [], N = vis.lim || vis.doc.numPages;
   for (const r of runs) {
     const prev = [...present].filter(x => x < r.a).sort((x, y) => y - x)[0], next = [...present].filter(x => x > r.b).sort((x, y) => x - y)[0];
     const p0 = Math.max(1, prev != null ? (have.get(prev).pg || 1) : 1), p1 = Math.min(N, next != null ? (have.get(next).pg || N) : N), to = Math.min(p1, p0 + 7);
@@ -1840,13 +1883,13 @@ async function classify(items, ui, M, vis) {
   const res = new Map(), areaOf = areaOfN(M, items);
   /* qualquer matéria pode aparecer em qualquer parte do caderno (ex.: Educação Física em Natureza ou Humanas) */
   const mats = matsPermitidas(M).filter(m => !/^outra$/i.test(m)).concat('Outra');
-  const guia = subGuia(mats), withPg = vis ? items.filter(q => q.pg).sort((a, b) => a.pg - b.pg || a.n - b.n) : [], rest = vis ? items.filter(q => !q.pg) : items.slice(), batches = [];
-  for (let i = 0; i < withPg.length;) { const p0 = withPg[i].pg, list = []; while (i < withPg.length && withPg[i].pg < p0 + vis.per && list.length < 12) list.push(withPg[i++]); batches.push({ list, pages: Array.from({ length: Math.min(vis.per, vis.doc.numPages - p0 + 1) }, (_, k) => p0 + k) }); }
+  const guia = subGuia(mats), pgx = q => q.bp && q.pg && q.bp < q.pg ? q.bp : q.pg, withPg = vis ? items.filter(q => q.pg).sort((a, b) => pgx(a) - pgx(b) || a.n - b.n) : [], rest = vis ? items.filter(q => !q.pg) : items.slice(), batches = [];
+  for (let i = 0; i < withPg.length;) { const p0 = pgx(withPg[i]), list = []; while (i < withPg.length && withPg[i].pg < p0 + vis.per && list.length < 12) list.push(withPg[i++]); batches.push({ list, pages: Array.from({ length: Math.max(1, Math.min(vis.per, (vis.lim || vis.doc.numPages) - p0 + 1)) }, (_, k) => p0 + k) }); }
   for (let i = 0; i < rest.length; i += 15) batches.push({ list: rest.slice(i, i + 15), pages: null });
   let done = 0;
   for (const bt of batches) {
     const batch = bt.list; ui.log(`Classificando questões ${batch[0].n} a ${batch.at(-1).n}${bt.pages ? ' (texto e imagens)' : ''}…`); ui.prog(0.35 + 0.55 * (done / items.length));
-    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}. ${(M && M.areas && M.areas.length > 1) ? `Matérias de cada parte do caderno (Educação Física vale em qualquer parte): ${M.areas.map(a => a.n + ': ' + (a.mats || []).join(', ')).join('; ')}. ` : ''}Só existem questões dessas matérias nesta prova: se o tema parecer de uma matéria que não está na lista (por exemplo, ambiente ou saúde numa prova de Linguagens e Humanas), escolha a matéria permitida que trata o tema (Geografia, História, Filosofia e Sociologia…). Matérias diferentes podem compartilhar assuntos.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto, "ex": [...]}, um por questão, na mesma ordem. "sub" e "ass" são o assunto PRINCIPAL. Se a questão cobra de verdade mais de um assunto (por exemplo, interdisciplinar), liste os outros em "ex" como [{"mat": matéria, "sub": área da matéria, "ass": assunto}], do mais importante para o menos importante, no máximo 2; se cobra um só, omita "ex".${AV_ITEM}\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
+    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História. Algumas questões compartilham um texto-base (indicado como "Texto para as questões de X a Y"): ele aparece entre colchetes junto da questão ou nas imagens, antes da primeira questão da série. Classifique TODAS as questões do intervalo usando esse texto-base e o comando de cada uma; a falta do texto-base na própria questão NÃO é motivo de dúvida.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}. ${(M && M.areas && M.areas.length > 1) ? `Matérias de cada parte do caderno (Educação Física vale em qualquer parte): ${M.areas.map(a => a.n + ': ' + (a.mats || []).join(', ')).join('; ')}. ` : ''}Só existem questões dessas matérias nesta prova: se o tema parecer de uma matéria que não está na lista (por exemplo, ambiente ou saúde numa prova de Linguagens e Humanas), escolha a matéria permitida que trata o tema (Geografia, História, Filosofia e Sociologia…). Matérias diferentes podem compartilhar assuntos.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto, "ex": [...]}, um por questão, na mesma ordem. "sub" e "ass" são o assunto PRINCIPAL. Se a questão cobra de verdade mais de um assunto (por exemplo, interdisciplinar), liste os outros em "ex" como [{"mat": matéria, "sub": área da matéria, "ass": assunto}], do mais importante para o menos importante, no máximo 2; se cobra um só, omita "ex".${AV_ITEM}\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}${baseTag(q)}`; }).join('\n\n');
     let blobs = null; if (bt.pages) { try { blobs = await vis.render(bt.pages); } catch (e) { blobs = null; } }
     let out = null;
     try { out = await S.ai.json(mk(blobs), { modelTier: 'default', signal: ui.ctl.signal, ...(blobs ? { images: blobs } : {}) }); }
@@ -1885,7 +1928,8 @@ async function scanPages(doc, lib, ui) {
 async function runImport(o, ui) {
   if (!S.ai) throw new Error('O Claude não está disponível nesta visualização.');
   ui.log('Lendo o PDF…'); ui.prog(0.03);
-  const { pages, doc, lib } = await readPdf(o.file, (p, n) => ui.prog(0.03 + 0.25 * p / n));
+  const { pages: pagesRaw, doc, lib } = await readPdf(o.file, (p, n) => ui.prog(0.03 + 0.25 * p / n));
+  const pages = trimRed(pagesRaw); if (pages.red) ui.log(`Ignorei ${pages.red} ${pages.red === 1 ? 'página' : 'páginas'} de redação no fim do PDF.`);
   const simPre = o.simId ? S.sims.find(s => s.id === o.simId) : null, Mdl = simPre ? modeloOf(simPre) : (modelosAll().find(m => m.id === (o.modelo || activeModelo().id)) || activeModelo());
   const chars = pages.join('').replace(/\s/g, '').length; let items = [], cls = new Map(), vis = null;
   if (chars < 120 * pages.length) {
@@ -1896,7 +1940,8 @@ async function runImport(o, ui) {
     const full = pages.join('\n'); items = splitQuestions(full);
     if (items.length < 3) items = await splitByAI(full, ui);
     items.forEach(q => { q.pg = pageOfQ(pages, q.n); });
-    vis = await visOf(doc).catch(() => null);
+    const bases = baseFor(items, pages, true); if (bases.length) ui.log(`${bases.length} ${bases.length === 1 ? 'texto-base compartilhado encontrado' : 'textos-base compartilhados encontrados'}.`);
+    vis = await visOf(doc, pages).catch(() => null);
     if (vis && items.length) { const extra = await rescueMissing(pages, Mdl, items, ui, vis); extra.forEach(e => items.push({ n: e.n, raw: e.raw, pg: e.pg, pre: e })); items.sort((a, b) => a.n - b.n); }
     ui.log(`${items.length} questões encontradas.`);
     if (items.length) { cls = await classify(items, ui, Mdl, vis); items.forEach(q => { if (q.pre && !cls.has(q.n)) cls.set(q.n, { mat: q.pre.mat, sub: q.pre.sub, ass: q.pre.ass, area: '' }); }); }
@@ -1905,7 +1950,7 @@ async function runImport(o, ui) {
   ui.prog(0.92);
   let pdfId = null;
   if (S.assets) { try { pdfId = (await S.assets.upload(o.file, { type: 'application/pdf' })).id; ui.log('PDF guardado no painel.'); } catch (e) { ui.log('Não guardei o arquivo do PDF (' + (e && (e.code || e.message)) + '), mas as questões foram lidas.', 'warn'); } }
-  const itens = items.map(q => { const c = cls.get(q.n) || {}; return { n: q.n, mat: c.mat || 'Outra', ex: c.ex || [], sub: c.sub || '', area: c.area || '', pg: q.pg || 0, ass: c.ass || '', txt: cleanTxt(q.raw).slice(0, 1400), st: '', gab: '', resp: '' }; });
+  const itens = items.map(q => { const c = cls.get(q.n) || {}; return { n: q.n, mat: c.mat || 'Outra', ex: c.ex || [], sub: c.sub || '', area: c.area || '', pg: q.pg || 0, ass: c.ass || '', txt: cleanTxt(q.raw).slice(0, q.base ? 900 : 1400) + baseSave(q), st: '', gab: '', resp: '' }; });
   let size = JSON.stringify({ itens }).length; for (let lim = 1400; size > 235000 && lim > 100; lim = Math.floor(lim / 2)) { itens.forEach(q => { q.txt = q.txt.slice(0, lim); }); size = JSON.stringify({ itens }).length; }
   let sid = o.simId, sim = sid ? S.sims.find(s => s.id === sid) : null;
   if (!sim) { sid = uid(); sim = { nome: o.nome || trunc(o.file.name.replace(/\.pdf$/i, ''), 60), data: o.data || TODAY_ISO, modelo: o.modelo || activeModelo().id, banca: (modelosAll().find(m => m.id === (o.modelo || activeModelo().id)) || activeModelo()).nome, mats: [], obs: '', ts: Date.now() }; }
@@ -2199,7 +2244,7 @@ async function classifyCH(items, M, ui, vis) {
   for (const bt of batches) {
     const batch = bt.list, keys = [...new Set(batch.map(areaKey).filter(k => MX[k]))];
     ui.log(`Competências e habilidades: questões ${batch[0].n} a ${batch.at(-1).n}${bt.pages ? ' (texto e imagens)' : ''}…`);
-    const mk = img => `Classifique cada questão de um simulado do ENEM pela COMPETÊNCIA de área (C) e pela HABILIDADE (H) da Matriz de Referência abaixo. As habilidades são numeradas de 1 a 30 dentro de cada área e cada habilidade pertence a uma competência. Escolha a habilidade mais provável e informe a competência a que ela pertence. Use só números que existem na matriz da área da questão. Se houver mais de uma possibilidade, escolha a habilidade que melhor descreve o que a questão pede do aluno.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem; use as figuras, gráficos e tabelas junto com o texto.\n` : ''}\n${keys.map(k => mxRaw[k]).join('\n')}\nQUESTÕES (área do caderno, matéria e assunto entre parênteses):\n` + batch.map(q => `[${q.n}] (${(areaOf(q.n) || {}).n || areaDeQ(M, q)} · ${q.mat || '?'}${q.ass ? ' · ' + q.ass : ''}) ${trunc(q.raw, 800)}`).join('\n\n') + '\n\nResponda só com um array JSON de objetos {"n": número, "c": número da competência, "h": número da habilidade}, um por questão.';
+    const mk = img => `Classifique cada questão de um simulado do ENEM pela COMPETÊNCIA de área (C) e pela HABILIDADE (H) da Matriz de Referência abaixo. As habilidades são numeradas de 1 a 30 dentro de cada área e cada habilidade pertence a uma competência. Escolha a habilidade mais provável e informe a competência a que ela pertence. Use só números que existem na matriz da área da questão. Se houver mais de uma possibilidade, escolha a habilidade que melhor descreve o que a questão pede do aluno.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem; use as figuras, gráficos e tabelas junto com o texto.\n` : ''}\n${keys.map(k => mxRaw[k]).join('\n')}\nQUESTÕES (área do caderno, matéria e assunto entre parênteses):\n` + batch.map(q => `[${q.n}] (${(areaOf(q.n) || {}).n || areaDeQ(M, q)} · ${q.mat || '?'}${q.ass ? ' · ' + q.ass : ''}) ${trunc(q.raw, 800)}${baseTag(q)}`).join('\n\n') + '\n\nResponda só com um array JSON de objetos {"n": número, "c": número da competência, "h": número da habilidade}, um por questão.';
     let blobs = null; if (bt.pages) { try { blobs = await vis.render(bt.pages); } catch (e) { blobs = null; } }
     let out = null;
     try { out = await S.ai.json(mk(blobs), { modelTier: 'default', signal: ui.ctl.signal, ...(blobs ? { images: blobs } : {}) }); }
@@ -2215,8 +2260,9 @@ async function classifyCH(items, M, ui, vis) {
 async function fillCH(doc, sim, M, ui, all, pre) {
   const pend = doc.itens.filter(q => all ? !['gab', 'manual'].includes(q.chSrc) : !(q.comp || q.hab)); if (!pend.length) return { res: new Map(), n: 0 };
   let pages = pre ? pre.pages : null, vis = pre ? pre.vis : null;
-  if (!pre && sim && sim.pdfId && S.assets) { try { const pdf = await loadSimPdf(sim); if (pdf) { pages = await pdfPages(pdf); vis = await visOf(pdf); } } catch (e) { vis = null; } }
+  if (!pre && sim && sim.pdfId && S.assets) { try { const pdf = await loadSimPdf(sim); if (pdf) { pages = trimRed(await pdfPages(pdf)); vis = await visOf(pdf, pages); } } catch (e) { vis = null; } }
   const items = pend.map(q => ({ n: q.n, mat: q.mat, ass: q.ass, raw: q.txt || '', pg: q.pg || (pages ? pageOfQ(pages, q.n) : 0) }));
+  if (pages) baseFor(items, pages);
   const res = await classifyCH(items, M, ui, vis); return { res, n: res.size };
 }
 /* aplica o resultado em cima do documento mais recente (o aluno pode ter marcado letras enquanto o Claude trabalhava) */
@@ -2334,7 +2380,11 @@ function avisosCalc() {
   });
   return out;
 }
-const avTodos = () => (S.demo ? [] : [...(S.cfg.avisos || []), ...avisosCalc()]);
+const avTodos = () => {
+  if (S.demo) return [];
+  if (!S.cfg.avLimpo && (S.cfg.avisos || []).length) { S.cfg = { ...S.cfg, avLimpo: 1 }; avSave((S.cfg.avisos || []).filter(a => !(a.o === 'Classificação' && /texto[- ]base/i.test(a.t)))); }
+  return [...(S.cfg.avisos || []), ...avisosCalc()];
+};
 const avDaPagina = (rota, sid) => rota === 'visao' ? avTodos() : avTodos().filter(a => a.r === rota && (!a.s || !sid || a.s === sid));
 function avisosBox(rota, sid) {
   const L = avDaPagina(rota, sid); if (!L.length) return '';
@@ -2350,7 +2400,7 @@ function avTira(text) {
 }
 const AV_PEDIDO = ' Se, ao analisar, encontrar alguma contradição, paradoxo ou dúvida real nos dados (números que não batem, informações incompatíveis, algo que você não consegue afirmar com segurança), escreva ao final um bloco exatamente assim: [[DUVIDAS]] seguido de uma linha "- ..." por dúvida (curta e específica, com os números) e depois [[/DUVIDAS]]. Se não tiver nenhuma, NÃO escreva o bloco.';
 const avDuvItens = (out, ctx) => (Array.isArray(out) ? out : []).filter(o => o && o.duvida && String(o.duvida).trim().length > 7).map(o => ({ texto: `Questão ${o.n}${ctx.nome ? ` (${ctx.nome})` : ''}: ${String(o.duvida).trim()}`, rota: 'sim-questoes', simId: ctx.simId || '', origem: ctx.origem || 'Classificação' }));
-const AV_ITEM = ' Se tiver dúvida real sobre uma questão ou achar contradição (enunciado cortado ou ambíguo, matéria duvidosa, dados que não batem), acrescente nesse objeto o campo "duvida" com uma frase curta; se não tiver, omita o campo.';
+const AV_ITEM = ' Se tiver dúvida real sobre uma questão ou achar contradição (enunciado cortado ou ambíguo, matéria duvidosa, dados que não batem), (texto-base compartilhado entre questões, "Texto para as questões X a Y", não é dúvida) acrescente nesse objeto o campo "duvida" com uma frase curta; se não tiver, omita o campo.';
 
 /* ============ formulários e janelas ============ */
 function leaveDemo() { if (S.demo) { S.demoOff = true; S.demoForce = false; S.demo = false; render(true); } }
@@ -3140,10 +3190,11 @@ async function reclassify(all) {
   try {
     let pdf = null, pages = null, vis = null, why = '';
     if (all && sim && sim.pdfId && S.assets) {
-      try { pdf = await loadSimPdf(sim); if (pdf) { pages = await pdfPages(pdf); vis = await visOf(pdf); } } catch (e) { pdf = null; }
+      try { pdf = await loadSimPdf(sim); if (pdf) { pages = trimRed(await pdfPages(pdf)); vis = await visOf(pdf, pages); } } catch (e) { pdf = null; }
       if (!pdf) why = ' Não consegui abrir o PDF guardado, então usei só o texto; para olhar as imagens, use "Trocar PDF".';
     } else if (all) why = ' Este simulado não tem o PDF guardado, então usei só o texto.';
     const items = todo.map(q => ({ n: q.n, raw: q.txt || '', pg: q.pg || (pages ? pageOfQ(pages, q.n) : 0) }));
+    if (pages) baseFor(items, pages);
     let extra = [];
     if (all && vis) { extra = await rescueMissing(pages, M, doc.itens.map(q => ({ n: q.n, pg: q.pg || pageOfQ(pages, q.n) })), ui, vis); extra.forEach(e => items.push({ n: e.n, raw: e.raw, pg: e.pg })); }
     const res = await classify(items, ui, M, vis);
