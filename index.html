@@ -624,6 +624,9 @@ input.q-ch { width: 96px; }
 .aviso-a { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
 .aviso-o { margin-right: auto; font-size: 11px; color: #fca5a5; text-transform: uppercase; letter-spacing: .06em; }
 .av-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.25); margin-left: auto; flex: none; }
+.q-ex { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; }
+.q-ex .tag .x { margin-left: 6px; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; }
+.q-ex .tag .x:hover { color: var(--ink); }
 
 </style>
 </head>
@@ -1490,6 +1493,7 @@ function qCardHTML(q, mats, doc) {
       <select data-bind="qSub" data-n="${q.n}" aria-label="Área da matéria da questão ${q.n}"><option value="">área da matéria</option>${subGroups(q.mat || 'Outra').map(([g, l]) => `<optgroup label="${esc(g)}">${l.map(x => `<option ${x === q.sub ? 'selected' : ''}>${esc(x)}</option>`).join('')}</optgroup>`).join('')}${q.sub && !subsOf(q.mat || 'Outra').includes(q.sub) ? `<option selected>${esc(q.sub)}</option>` : ''}</select>
       <input type="text" data-bind="qAss" data-n="${q.n}" value="${esc(q.ass || '')}" placeholder="assunto" aria-label="Assunto da questão ${q.n}">
       ${enem ? `<input type="text" class="q-ch" data-bind="qCH" data-n="${q.n}" value="${esc(ch)}" placeholder="C · H" title="${esc(tip || 'Competência e habilidade, ex.: C5 H17')}" aria-label="Competência e habilidade da questão ${q.n}">` : ''}</div>
+    ${(q.ex || []).length ? `<div class="q-ex" aria-label="Assuntos da questão ${q.n}, do principal ao secundário"><span class="sub">Assuntos, do principal ao secundário:</span><span class="tag solid">1º ${esc(q.sub || q.ass || q.mat || '')}</span>${q.ex.map((e, i) => `<span class="tag">${i + 2}º ${esc(e.sub || e.ass)}${e.mat && e.mat !== q.mat ? ` <span class="sub">(${esc(e.mat)})</span>` : ''}<button class="x" data-act="qExDel" data-n="${q.n}" data-i="${i}" title="Tirar este assunto" aria-label="Tirar este assunto">×</button></span>`).join('')}</div>` : ''}
     <div class="q-resp"><div class="q-st q-let" role="group" aria-label="Alternativa marcada na questão ${q.n}">${altLetters(doc || S.simq[S.ui.simSel], q).map(k => `<button class="st let" data-act="qLet" data-n="${q.n}" data-v="${k}" aria-pressed="${q.resp === k}">${k}</button>`).join('')}<button class="st" data-act="qChute" data-n="${q.n}" aria-pressed="${!!q.ch}" title="Marque se foi chute">Chute</button></div>
       ${ok === null ? (q.gab ? '<span class="q-res sub">gabarito carregado</span>' : '') : `<span class="q-res ${ok ? 'ok' : 'bad'}">${ok ? (q.ch ? 'Acertou no chute' : 'Acertou') : 'Errou'} · gabarito ${esc(q.gab)}</span>`}
       ${semGab ? `<span class="q-man sub">sem gabarito: ${['a', 'e', 'c'].map(k => `<button class="st sm" data-act="qSt" data-n="${q.n}" data-v="${k}" aria-pressed="${q.st === k && !q.resp}">${ST_LABEL[k]}</button>`).join('')}</span>` : ''}</div>
@@ -1659,7 +1663,7 @@ function ctxDetail(ctx) {
     t = `MATÉRIA EM FOCO: ${ctx.id}.${x ? ` Série (% por simulado, antigo → novo): ${x.series.map(v => v == null ? '–' : nf(v, 0)).join(', ')}.` : ''}${e ? ` Assuntos com erro: ${Object.values(e.ass).sort((a, b) => (b.e + b.c) - (a.e + a.c)).map(a => `${a.nome} (${a.e + a.c})`).join(', ')}.` : ''}${(() => { const rx = rxMat(ctx.id); return rx ? `\nRAIO-X: ${rx.n} tem peso ${nf(rx.share * 100, 1)}% da área (${rxQ(rx.q)}), incidência ${rx.cls}. Assuntos mais cobrados: ${rx.a.slice(0, 6).map(x => `${x[0]} ${nf(x[1] / rx.it * 100, 1)}%`).join('; ')}.` : ''; })()}`;
   } else if (ctx.k === 'q') {
     const [sid, n] = String(ctx.id).split(':'); const doc = d.simq[sid]; const q = doc && (doc.itens || []).find(x => String(x.n) === n); const s = d.sims.find(x => x.id === sid);
-    if (q) t = `QUESTÃO EM FOCO: Q${q.n} do simulado "${s ? s.nome : ''}" — matéria ${q.mat}, assunto ${q.ass || '?'}, situação: ${q.st ? ST_LABEL[q.st] : 'sem marcação'}${q.ch ? ' (marcada como chute)' : ''}${q.gab || q.resp ? `, gabarito ${q.gab || '?'}, minha resposta ${q.resp || '?'}` : ''}${q.comp || q.hab ? `, ${q.comp ? 'competência C' + q.comp : ''}${q.hab ? ' habilidade H' + q.hab : ''}` : ''}.\nENUNCIADO (extraído do PDF, pode ter falhas de formatação):\n${q.txt || '(sem texto)'}`;
+    if (q) t = `QUESTÃO EM FOCO: Q${q.n} do simulado "${s ? s.nome : ''}" — matéria ${q.mat}, assunto principal ${q.ass || q.sub || '?'}${(q.ex || []).length ? ', assuntos secundários (do mais ao menos importante): ' + q.ex.map(e => e.sub || e.ass).join('; ') : ''}, situação: ${q.st ? ST_LABEL[q.st] : 'sem marcação'}${q.ch ? ' (marcada como chute)' : ''}${q.gab || q.resp ? `, gabarito ${q.gab || '?'}, minha resposta ${q.resp || '?'}` : ''}${q.comp || q.hab ? `, ${q.comp ? 'competência C' + q.comp : ''}${q.hab ? ' habilidade H' + q.hab : ''}` : ''}.\nENUNCIADO (extraído do PDF, pode ter falhas de formatação):\n${q.txt || '(sem texto)'}`;
   } else if (ctx.k === 'an') {
     const a = d.ans.find(x => x.id === ctx.id); if (a) t = `ANÁLISE ANTERIOR EM FOCO (${AN_NOME[a.tipo]}, ${hm(a.ts)}):\n${a.texto.slice(0, 6000)}`;
   }
@@ -1826,6 +1830,12 @@ async function splitByAI(full, ui) {
   (Array.isArray(out) ? out : []).forEach(o => { const ini = String(o.ini || '').replace(/\s+/g, ' ').trim(); if (!ini) return; const i = flat.indexOf(ini, cur); if (i >= 0) { pos.push({ n: +o.n, i }); cur = i + ini.length; } });
   return pos.map((p, k) => ({ n: p.n, raw: flat.slice(p.i, k + 1 < pos.length ? pos[k + 1].i : flat.length) }));
 }
+/* assuntos secundários da questão, do mais para o menos importante (no máximo 2), sempre em matérias que existem nesta parte da prova */
+function exPick(list, mat, M, area, mainSub) {
+  const ok = m => m && (S.cfg.materias.includes(m) || EXTRA_MAT[m]) && !matInvalida(M, area, m), seen = new Set([subNorm(mainSub)]);
+  return (Array.isArray(list) ? list : []).slice(0, 2).map(e => { const m = e && ok(e.mat) ? e.mat : mat; return { mat: m, sub: subPick(m, e && e.sub), ass: String(e && e.ass || '').slice(0, 80) }; })
+    .filter(e => { const k = subNorm(e.sub || e.ass); if (!k || seen.has(k)) return false; seen.add(k); return true; });
+}
 async function classify(items, ui, M, vis) {
   const res = new Map(), areaOf = areaOfN(M, items);
   /* qualquer matéria pode aparecer em qualquer parte do caderno (ex.: Educação Física em Natureza ou Humanas) */
@@ -1836,7 +1846,7 @@ async function classify(items, ui, M, vis) {
   let done = 0;
   for (const bt of batches) {
     const batch = bt.list; ui.log(`Classificando questões ${batch[0].n} a ${batch.at(-1).n}${bt.pages ? ' (texto e imagens)' : ''}…`); ui.prog(0.35 + 0.55 * (done / items.length));
-    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}. ${(M && M.areas && M.areas.length > 1) ? `Matérias de cada parte do caderno (Educação Física vale em qualquer parte): ${M.areas.map(a => a.n + ': ' + (a.mats || []).join(', ')).join('; ')}. ` : ''}Só existem questões dessas matérias nesta prova: se o tema parecer de uma matéria que não está na lista (por exemplo, ambiente ou saúde numa prova de Linguagens e Humanas), escolha a matéria permitida que trata o tema (Geografia, História, Filosofia e Sociologia…). Matérias diferentes podem compartilhar assuntos.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto}, um por questão, na mesma ordem.${AV_ITEM}\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
+    const mk = img => `Classifique cada questão de um simulado do ENEM/vestibular de Medicina pelo CONTEÚDO que ela cobra.\nCada questão traz entre parênteses a parte do caderno em que está. Isso é só uma dica: qualquer matéria pode aparecer em qualquer parte (por exemplo, Educação Física em Ciências da Natureza ou Humanas, ou Biologia em Linguagens). Se o conteúdo for de outra matéria, use a matéria do conteúdo. Pistas: texto que cobra leitura, gênero textual, coesão ou função da linguagem é Português, qualquer que seja o tema; esporte, corpo e atividade física são Educação Física; questão de Geografia ou História que cita ambiente ou tecnologia continua sendo Geografia ou História.\n${img ? `As ${img.length} imagens anexas são as páginas ${bt.pages[0]} a ${bt.pages.at(-1)} do caderno, na ordem. Muitas questões têm figuras, gráficos, mapas, tirinhas, charges, cartazes e tabelas que não aparecem no texto: use as imagens junto com o texto para entender o que cada questão cobra e classificá-la.\n` : ''}Matérias permitidas (use exatamente um destes nomes): ${mats.join('; ')}. ${(M && M.areas && M.areas.length > 1) ? `Matérias de cada parte do caderno (Educação Física vale em qualquer parte): ${M.areas.map(a => a.n + ': ' + (a.mats || []).join(', ')).join('; ')}. ` : ''}Só existem questões dessas matérias nesta prova: se o tema parecer de uma matéria que não está na lista (por exemplo, ambiente ou saúde numa prova de Linguagens e Humanas), escolha a matéria permitida que trata o tema (Geografia, História, Filosofia e Sociologia…). Matérias diferentes podem compartilhar assuntos.\nA área da matéria é o assunto no nível do Raio-X do ENEM (por exemplo Calorimetria, Circuitos Elétricos, Filosofia política, Urbanização), não só a grande frente. Para cada matéria, as áreas da matéria possíveis, agrupadas por frente (prefira um item da lista da matéria que você escolheu; a lista é só um guia, porque pode cair assunto que não está nela: se nenhum item servir, escreva você mesmo o assunto específico no campo "sub", com 2 a 6 palavras, no estilo do Raio-X):\n${guia}\nDevolva também o assunto específico, com 2 a 5 palavras (ex.: "Genética: ligação gênica", "Trigonometria: lei dos senos").\nResponda só com um array JSON de objetos {"n": número, "mat": matéria, "sub": área da matéria, "ass": assunto, "ex": [...]}, um por questão, na mesma ordem. "sub" e "ass" são o assunto PRINCIPAL. Se a questão cobra de verdade mais de um assunto (por exemplo, interdisciplinar), liste os outros em "ex" como [{"mat": matéria, "sub": área da matéria, "ass": assunto}], do mais importante para o menos importante, no máximo 2; se cobra um só, omita "ex".${AV_ITEM}\n\nQUESTÕES:\n` + batch.map(q => { const a = areaOf(q.n); return `[${q.n}]${a ? ` (parte: ${a.n})` : ''} ${trunc(q.raw, 900)}`; }).join('\n\n');
     let blobs = null; if (bt.pages) { try { blobs = await vis.render(bt.pages); } catch (e) { blobs = null; } }
     let out = null;
     try { out = await S.ai.json(mk(blobs), { modelTier: 'default', signal: ui.ctl.signal, ...(blobs ? { images: blobs } : {}) }); }
@@ -1846,7 +1856,7 @@ async function classify(items, ui, M, vis) {
       else ui.log('Falhou neste bloco: ' + aiMsg(e), 'warn');
     }
     (ui.duv = ui.duv || []).push(...avDuvItens(out, { origem: 'Classificação' }));
-    (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const a = areaOf(n), mat = mats.includes(o.mat) ? o.mat : (S.cfg.materias.includes(o.mat) ? o.mat : 'Outra'); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '' }); });
+    (Array.isArray(out) ? out : []).forEach((o, k) => { const n = o && o.n != null ? +o.n : batch[k] && batch[k].n; if (n == null) return; const a = areaOf(n), mat = mats.includes(o.mat) ? o.mat : (S.cfg.materias.includes(o.mat) ? o.mat : 'Outra'); res.set(n, { mat, sub: subPick(mat, o.sub), ass: String(o.ass || '').slice(0, 80), area: a ? a.n : '', ex: exPick(o.ex, mat, M, a ? a.n : '', subPick(mat, o.sub)) }); });
     done += batch.length;
   }
   /* o Claude marcou matéria que não existe nesta parte da prova: reanalisa em qual das permitidas a questão também se encaixa */
@@ -1881,7 +1891,7 @@ async function runImport(o, ui) {
   if (chars < 120 * pages.length) {
     ui.log('O PDF não tem texto selecionável; vou ler as páginas como imagem.');
     items = await scanPages(doc, lib, ui); items.forEach(q => cls.set(q.n, { mat: q.mat, ass: q.ass, sub: '' }));
-    if (items.length) { const c2 = await classify(items.map(q => ({ n: q.n, raw: q.raw })), ui, Mdl); c2.forEach((v, n) => { const o = cls.get(n) || {}; cls.set(n, { mat: v.mat !== 'Outra' ? v.mat : o.mat || v.mat, sub: v.sub, ass: v.ass || o.ass, area: v.area }); }); }
+    if (items.length) { const c2 = await classify(items.map(q => ({ n: q.n, raw: q.raw })), ui, Mdl); c2.forEach((v, n) => { const o = cls.get(n) || {}; cls.set(n, { mat: v.mat !== 'Outra' ? v.mat : o.mat || v.mat, sub: v.sub, ass: v.ass || o.ass, area: v.area, ex: v.ex }); }); }
   } else {
     const full = pages.join('\n'); items = splitQuestions(full);
     if (items.length < 3) items = await splitByAI(full, ui);
@@ -1895,7 +1905,7 @@ async function runImport(o, ui) {
   ui.prog(0.92);
   let pdfId = null;
   if (S.assets) { try { pdfId = (await S.assets.upload(o.file, { type: 'application/pdf' })).id; ui.log('PDF guardado no painel.'); } catch (e) { ui.log('Não guardei o arquivo do PDF (' + (e && (e.code || e.message)) + '), mas as questões foram lidas.', 'warn'); } }
-  const itens = items.map(q => { const c = cls.get(q.n) || {}; return { n: q.n, mat: c.mat || 'Outra', sub: c.sub || '', area: c.area || '', pg: q.pg || 0, ass: c.ass || '', txt: cleanTxt(q.raw).slice(0, 1400), st: '', gab: '', resp: '' }; });
+  const itens = items.map(q => { const c = cls.get(q.n) || {}; return { n: q.n, mat: c.mat || 'Outra', ex: c.ex || [], sub: c.sub || '', area: c.area || '', pg: q.pg || 0, ass: c.ass || '', txt: cleanTxt(q.raw).slice(0, 1400), st: '', gab: '', resp: '' }; });
   let size = JSON.stringify({ itens }).length; for (let lim = 1400; size > 235000 && lim > 100; lim = Math.floor(lim / 2)) { itens.forEach(q => { q.txt = q.txt.slice(0, lim); }); size = JSON.stringify({ itens }).length; }
   let sid = o.simId, sim = sid ? S.sims.find(s => s.id === sid) : null;
   if (!sim) { sid = uid(); sim = { nome: o.nome || trunc(o.file.name.replace(/\.pdf$/i, ''), 60), data: o.data || TODAY_ISO, modelo: o.modelo || activeModelo().id, banca: (modelosAll().find(m => m.id === (o.modelo || activeModelo().id)) || activeModelo()).nome, mats: [], obs: '', ts: Date.now() }; }
@@ -2023,15 +2033,18 @@ const matsDaArea = a => { const L = [...(a.mats || [])]; Object.entries(EXTRA_MA
 const assKey = q => ((q.sub || q.ass || '') + '').trim();
 function simFreq(doc) {
   const out = {};
-  (doc && doc.itens || []).forEach(q => { const k = assKey(q); if (!k) return; const m = q.mat || 'Outra'; const o = (out[m] = out[m] || {}); const x = (o[k] = o[k] || { nome: k, n: 0, e: 0, c: 0, a: 0, q: [] }); x.n++; x.q.push(q.n); if (q.st === 'e') x.e++; else if (q.st === 'c') x.c++; else if (q.st === 'a') x.a++; });
-  return Object.entries(out).map(([m, o]) => ({ m, tot: Object.values(o).reduce((s, x) => s + x.n, 0), L: Object.values(o).sort((a, b) => b.n - a.n || (b.e + b.c) - (a.e + a.c)) }))
+  (doc && doc.itens || []).forEach(q => { const k = assKey(q); if (!k) return; const m = q.mat || 'Outra'; const o = (out[m] = out[m] || {}); const x = (o[k] = o[k] || { nome: k, n: 0, s: 0, e: 0, c: 0, a: 0, q: [] }); x.n++; x.q.push(q.n); if (q.st === 'e') x.e++; else if (q.st === 'c') x.c++; else if (q.st === 'a') x.a++;
+    /* assuntos secundários: contam à parte, não somam nas questões que "caíram" */
+    (q.ex || []).forEach(e => { const k2 = ((e.sub || e.ass || '') + '').trim(); if (!k2) return; const o2 = (out[e.mat || m] = out[e.mat || m] || {}); const y = (o2[k2] = o2[k2] || { nome: k2, n: 0, s: 0, e: 0, c: 0, a: 0, q: [] }); y.s++; });
+  });
+  return Object.entries(out).map(([m, o]) => ({ m, tot: Object.values(o).reduce((s, x) => s + x.n, 0), L: Object.values(o).sort((a, b) => b.n - a.n || b.s - a.s || (b.e + b.c) - (a.e + a.c)) }))
     .sort((a, b) => (S.cfg.materias.indexOf(a.m) + 99 * (S.cfg.materias.indexOf(a.m) < 0)) - (S.cfg.materias.indexOf(b.m) + 99 * (S.cfg.materias.indexOf(b.m) < 0)));
 }
-const freqFrase = x => `${x.n} ${x.n === 1 ? 'questão' : 'questões'} de ${x.nome}`;
+const freqFrase = x => `${x.n ? `${x.n} ${x.n === 1 ? 'questão' : 'questões'} de ${x.nome}` : `${x.nome}: só como assunto secundário`}${x.s && x.n ? `; apareceu também como secundário em ${x.s}` : x.s ? ` (${x.s}×)` : ''}`;
 function freqPack(sim, doc, tit) {
   if (!enemOn()) tit = tit.replace(/ e compare com o Raio-X/, '').replace(/, e compare com a incidência no Raio-X/, '');
   const F = simFreq(doc); if (!F.length) return '';
-  return `${tit}\n` + F.map(g => `- ${g.m} (${g.tot} questões classificadas): ${g.L.slice(0, 12).map(x => `${x.nome} ${x.n}${x.e + x.c ? ` (${x.e + x.c} erradas/chutes)` : ''}`).join('; ')}`).join('\n');
+  return `${tit}\n` + F.map(g => `- ${g.m} (${g.tot} questões classificadas): ${g.L.slice(0, 12).map(x => `${x.nome} ${x.n}${x.e + x.c ? ` (${x.e + x.c} erradas/chutes)` : ''}${x.s ? ` [+${x.s} como assunto secundário]` : ''}`).join('; ')}`).join('\n');
 }
 function freqAllPack() {
   const d = D(), docs = Object.entries(d.simq || {}).filter(([sid]) => simsAllSorted().some(s => s.id === sid)); if (docs.length < 2) return '';
@@ -2043,7 +2056,7 @@ function freqHTML(doc) {
   const rx = typeof rxMat === 'function' && simEnem(S.sims.find(x => x.id === S.ui.simSel)) ? rxMat : () => null;
   return `<section class="card"><details class="fold" data-k="qfreq" ${foldOpen('qfreq')}><summary><span class="lbl">O que caiu neste simulado</span><span class="sub">assuntos por matéria, com quantas questões caíram</span></summary><div style="display:grid;gap:14px;margin-top:12px">` + F.map(g => {
     const r = rx(g.m);
-    return `<div><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><b>${esc(g.m)}</b><span class="sub mono">${g.tot} questões</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">${g.L.map(x => { const hit = r && typeof rxAssunto === 'function' ? rxAssunto(r, x.nome) : null; const ruim = x.e + x.c; return `<span class="tag ${x.n > 1 ? 'solid' : ''}" title="${esc(freqFrase(x))}${ruim ? ` · você errou ou chutou ${ruim}` : ''}${hit ? ` · no ENEM: ${nf(hit.p, 1)}% dos itens de ${r.n}` : ''}">${esc(x.nome)} <b class="mono">×${x.n}</b>${ruim ? ` <span style="color:var(--bad,#e5646b)">· ${ruim} ${ruim === 1 ? 'erro' : 'erros'}</span>` : ''}</span>`; }).join('')}</div></div>`;
+    return `<div><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><b>${esc(g.m)}</b><span class="sub mono">${g.tot ? g.tot + ' questões' : 'só como assunto secundário'}</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">${g.L.map(x => { const hit = r && typeof rxAssunto === 'function' ? rxAssunto(r, x.nome) : null; const ruim = x.e + x.c; return `<span class="tag ${x.n > 1 ? 'solid' : ''}" style="${x.n ? '' : 'opacity:.6;border-style:dashed'}" title="${esc(freqFrase(x))}${ruim ? ` · você errou ou chutou ${ruim}` : ''}${hit ? ` · no ENEM: ${nf(hit.p, 1)}% dos itens de ${r.n}` : ''}">${esc(x.nome)} ${x.n ? `<b class="mono">×${x.n}</b>` : ''}${x.s ? ` <span class="sub mono" title="assunto secundário em outras questões">${x.n ? '+' : ''}${x.s} sec.</span>` : ''}${ruim ? ` <span style="color:var(--bad,#e5646b)">· ${ruim} ${ruim === 1 ? 'erro' : 'erros'}</span>` : ''}</span>`; }).join('')}</div></div>`;
   }).join('') + `</div></details></section>`;
 }
 
@@ -3136,7 +3149,7 @@ async function reclassify(all) {
     const res = await classify(items, ui, M, vis);
     avisar((ui.duv || []).map(d => ({ ...d, simId: sid })));
     const nd = clone(S.simq[sid] || doc); let n = 0;
-    nd.itens.forEach(q => { const it = items.find(x => x.n === q.n), r = res.get(q.n); if (it && it.pg && !q.pg) q.pg = it.pg; if (!r) return; if (all) { q.mat = r.mat; q.sub = r.sub; q.area = r.area; if (r.ass) q.ass = r.ass; n++; } else if (!q.mat || q.mat === 'Outra') { q.mat = r.mat; q.sub = r.sub; q.area = r.area; if (!q.ass) q.ass = r.ass; n++; } });
+    nd.itens.forEach(q => { const it = items.find(x => x.n === q.n), r = res.get(q.n); if (it && it.pg && !q.pg) q.pg = it.pg; if (!r) return; if (all) { q.mat = r.mat; q.sub = r.sub; q.area = r.area; q.ex = r.ex || []; if (r.ass) q.ass = r.ass; n++; } else if (!q.mat || q.mat === 'Outra') { q.mat = r.mat; q.sub = r.sub; q.area = r.area; q.ex = r.ex || []; if (!q.ass) q.ass = r.ass; n++; } });
     extra.forEach(e => { const r = res.get(e.n) || e; nd.itens.push({ n: e.n, mat: r.mat || 'Outra', sub: r.sub || '', area: r.area || '', pg: e.pg || 0, ass: r.ass || '', txt: cleanTxt(e.raw || '').slice(0, 1400), st: '', gab: '', resp: '' }); });
     nd.itens.sort((a, b) => a.n - b.n);
     let chN = 0; if (all && isEnem(M)) { try { const f = await fillCH(nd, sim, M, ui, false, { pages, vis }); chN = applyCH(nd, f.res); } catch (e) { if (['cancelled', 'not_granted', 'rate_limited', 'session_expired'].includes(e && e.code)) throw e; } }
@@ -3188,6 +3201,7 @@ const ACT = {
   },
   qCHFill: () => chFillAction(),
   avOk: el => avOk(el.dataset.id),
+  qExDel: el => { const sid = S.ui.simSel, nd = clone(S.simq[sid]), q = nd.itens.find(x => x.n === +el.dataset.n); if (!q || !q.ex) return; q.ex.splice(+el.dataset.i, 1); setQDoc(sid, nd); refreshQ(el.dataset.n); },
   avGo: el => { if (el.dataset.s) S.ui.simSel = el.dataset.s; go(el.dataset.r); },
   qSt: el => {
     const sid = S.ui.simSel, doc = S.simq[sid]; if (!doc) return; const nd = clone(doc), q = nd.itens.find(x => String(x.n) === el.dataset.n); if (!q) return;
